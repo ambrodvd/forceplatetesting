@@ -8,6 +8,7 @@ dependencies = [
     "constants>=0.6.0",
     "future>=1.0.0",
     "openpyxl>=3.1.5",
+    "plotly>=6.9.0",
     "streamlit>=1.60.0",
 ]
 

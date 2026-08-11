@@ -23,6 +23,7 @@ import datetime as dt
 from dataclasses import dataclass, field
 
 import streamlit as st
+import pandas as pd
 import plotly.graph_objects as go
 import openpyxl
 from docx import Document
@@ -59,7 +60,16 @@ def banda_da_tscore(t):
 
 # sd sempre positiva: la direzione "minore è meglio" è gestita dal flag
 # lower_is_better nella metrica, non dal segno della deviazione standard.
-POP = {
+#
+# Questi sono i valori DI DEFAULT: l'utente può visionarli, modificarli,
+# scaricarli e ricaricarli da un file Excel nella scheda "⚙️ Costanti"
+# (vedi PARTE 4bis). A runtime l'app usa sempre st.session_state["pop"],
+# inizializzato da questo dizionario alla prima esecuzione.
+#
+# NB: EUR è definito come rapporto puro CMJ height / SJ height (non come
+# differenza percentuale), coerente con la tabella costanti fornita
+# dall'utente (~1.11 uomini, ~1.09 donne).
+DEFAULT_POP = {
     "imtp_peak_force":        dict(mean_m=2606.8,      sd_m=646.1163194,  mean_f=1575.0,      sd_f=386.145544),
     "imtp_rel_peak_force":    dict(mean_m=34.56,        sd_m=5.27,         mean_f=34.56,        sd_f=5.27),
     "sj_mean_power":          dict(mean_m=1180.0,       sd_m=414.1638849,  mean_f=823.0,        sd_f=240.2447942),
@@ -68,12 +78,115 @@ POP = {
     "cmj_height":             dict(mean_m=30.01,        sd_m=6.5,          mean_f=20.91,        sd_f=5.84),
     "mrsi_cmj":               dict(mean_m=0.419,        sd_m=0.098531539,  mean_f=0.308,        sd_f=0.093831019),
     "dsi":                    dict(mean_m=0.7,          sd_m=0.074074074,  mean_f=0.7,          sd_f=0.074074074),
-    "eur":                    dict(mean_m=0.107708605,  sd_m=0.038034873,  mean_f=0.090563116,  sd_f=0.02656191),
+    "eur":                    dict(mean_m=1.107708605,  sd_m=0.038034873,  mean_f=1.090563116,  sd_f=0.02656191),
     "cmj_re_rebound_height":  dict(mean_m=38.5,         sd_m=5.5996817,    mean_f=38.5,         sd_f=5.5996817),
     "cmj_re_contact_time":    dict(mean_m=0.25,         sd_m=0.148005087,  mean_f=0.25,         sd_f=0.148005087),
     "cmj_re_rebound_impulse": dict(mean_m=541.5,        sd_m=53.82161458,  mean_f=541.5,        sd_f=53.82161458),
     "mrsi_cmj_re":            dict(mean_m=1.37,         sd_m=0.331705729,  mean_f=1.37,         sd_f=0.331705729),
 }
+
+# Etichetta e unità di misura di ciascuna costante, usate sia per la
+# tabella a schermo sia per il file Excel scaricabile/ricaricabile.
+# Le etichette ricalcano quelle del file "DATO" fornito dall'utente, in
+# modo che un file con quella struttura venga riconosciuto automaticamente.
+CONST_LABELS = {
+    "imtp_peak_force":        ("IMTP abs", "N", "FORZA MAX"),
+    "imtp_rel_peak_force":    ("IMTP rel", "N/kg", "FORZA MAX"),
+    "sj_mean_power":          ("SJ mean power", "W", "POTENZA"),
+    "sj_height":               ("SJ height", "cm", "POTENZA"),
+    "sj_contraction_time":     ("SJ contraction time", "s", "POTENZA"),
+    "cmj_height":              ("CMJ height", "cm", "ESPLOSIVITA'"),
+    "mrsi_cmj":                ("Mrsi-CMJ", "m/s", "ESPLOSIVITA'"),
+    "cmj_re_rebound_height":   ("CMJ RE Rebound Jump height", "cm", "REATTIVITA'"),
+    "cmj_re_contact_time":     ("CMJ RE Contact Time", "s", "REATTIVITA'"),
+    "cmj_re_rebound_impulse":  ("CMJ RE propulsive impulse", "N\u00b7s", "REATTIVITA'"),
+    "mrsi_cmj_re":             ("mRSI-CMJ RE", "m/s", "REATTIVITA'"),
+    "dsi":                     ("DSI", "", "INDICI"),
+    "eur":                     ("EUR", "", "INDICI"),
+}
+
+
+def costanti_dataframe(pop_dict):
+    """Costruisce il DataFrame mostrato/editato nella scheda Costanti."""
+    rows = []
+    for key, (label, unit, categoria) in CONST_LABELS.items():
+        c = pop_dict[key]
+        rows.append({
+            "Categoria": categoria, "Costante": label, "Unità": unit,
+            "Media Uomini": c["mean_m"], "Dev.Std Uomini": c["sd_m"],
+            "Media Donne": c["mean_f"], "Dev.Std Donne": c["sd_f"],
+        })
+    return pd.DataFrame(rows)
+
+
+def genera_costanti_xlsx(pop_dict):
+    """Esporta le costanti nello stesso formato del file caricabile:
+    DATO | UdM | MEDIA | DEV ST | MEDIA2 | DEV ST3, con riga SESSO."""
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "TABELLA metrics data"
+    ws.append(["DATO", "UdM", "MEDIA", "DEV ST", "MEDIA2", "DEV ST3"])
+    ws.append(["SESSO", None, "UOMO", "UOMO", "DONNA", "DONNA"])
+    for key, (label, unit, _categoria) in CONST_LABELS.items():
+        c = pop_dict[key]
+        ws.append([label, unit, c["mean_m"], c["sd_m"], c["mean_f"], c["sd_f"]])
+    for col in ("A", "C", "D", "E", "F"):
+        ws.column_dimensions[col].width = 16
+    ws.column_dimensions["A"].width = 30
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+    return buf.getvalue()
+
+
+def parse_constants_workbook(file_like):
+    """Legge un file Excel nel formato DATO/UdM/MEDIA/DEV ST/MEDIA2/DEV ST3
+    e restituisce (updates, unmatched): un dict {key: {mean_m, sd_m, mean_f,
+    sd_f}} per le costanti riconosciute, e la lista di righe non riconosciute."""
+    wb = openpyxl.load_workbook(file_like, data_only=True)
+    ws = wb.worksheets[0]
+    rows = list(ws.iter_rows(values_only=True))
+
+    label_to_key = {label.strip().lower(): key for key, (label, _u, _c) in CONST_LABELS.items()}
+
+    header_idx = None
+    for i, row in enumerate(rows):
+        if row and row[0] and str(row[0]).strip().upper() == "DATO":
+            header_idx = i
+            break
+    if header_idx is None:
+        return {}, []
+
+    def to_num(v):
+        if isinstance(v, (int, float)):
+            return float(v)
+        if isinstance(v, str):
+            try:
+                return float(v.replace(",", "."))
+            except ValueError:
+                return None
+        return None
+
+    updates, unmatched = {}, []
+    for row in rows[header_idx + 1:]:
+        if not row or row[0] is None:
+            continue
+        name = str(row[0]).strip()
+        if not name or name.upper() == "SESSO":
+            continue
+        if "DATI DA LETTERATURA" in name.upper():
+            break
+        key = label_to_key.get(name.lower())
+        mean_m = to_num(row[2]) if len(row) > 2 else None
+        sd_m = to_num(row[3]) if len(row) > 3 else None
+        mean_f = to_num(row[4]) if len(row) > 4 else None
+        sd_f = to_num(row[5]) if len(row) > 5 else None
+        if key is None:
+            unmatched.append(name)
+            continue
+        if None not in (mean_m, sd_m, mean_f, sd_f):
+            updates[key] = dict(mean_m=mean_m, sd_m=abs(sd_m), mean_f=mean_f, sd_f=abs(sd_f))
+    return updates, unmatched
 
 
 def _safe_div(a, b):
@@ -166,7 +279,9 @@ METRICS = [
 ]
 
 # Controlli a soglia (equivalenti a "Jump to rebound Ratio", "CMJ to CMJ RE
-# check", "Unbalanced landing check" del foglio originale)
+# check", "Unbalanced landing check" del foglio originale). Riguardano
+# esclusivamente il CMJ Rebound, quindi vengono mostrati insieme alla
+# categoria REATTIVITA' nel Dettaglio Test.
 CHECKS = [
     dict(key="jump_to_rebound_ratio", label="Jump to Rebound Ratio",
          desc="Rapporto tra altezza del rimbalzo e altezza del salto iniziale nel CMJ RE.",
@@ -368,8 +483,22 @@ def z_t_score(value, pop_mean, pop_sd, lower_is_better):
     return z, 50 + 10 * z
 
 
-def collect_reps(files, jump_type):
+def collect_reps_all(files, jump_type):
+    """Tutte le ripetizioni di un tipo, nell'ordine di caricamento — senza
+    applicare le esclusioni scelte dall'utente. Usata per popolare le
+    colonne 'Salto N' nel Dettaglio Test."""
     return [rep for pf in files for rep in pf.reps if rep["jump_type"] == jump_type]
+
+
+def is_rep_included(jump_type, index, default=True):
+    return st.session_state.get(f"incl_{jump_type}_{index}", default)
+
+
+def collect_reps(files, jump_type):
+    """Ripetizioni di un tipo, filtrate escludendo i salti deselezionati
+    dall'utente nella scheda Dettaglio Test (checkbox 'Salto N')."""
+    reps_all = collect_reps_all(files, jump_type)
+    return [rep for i, rep in enumerate(reps_all) if is_rep_included(jump_type, i)]
 
 
 def compute_metric_values(files, metric):
@@ -387,6 +516,36 @@ def compute_metric_values(files, metric):
     return values
 
 
+def per_rep_metric_values(files, metric):
+    """Valore della metrica per OGNI ripetizione (inclusi i salti esclusi
+    dal calcolo), nello stesso ordine delle colonne 'Salto N'."""
+    reps_all = collect_reps_all(files, metric["jump_type"])
+    values = []
+    for rep in reps_all:
+        if metric.get("raw_var"):
+            v = rep["vars"].get(metric["raw_var"])
+        elif metric.get("derive"):
+            v = metric["derive"](rep["vars"])
+        else:
+            v = None
+        values.append(v if isinstance(v, (int, float)) else None)
+    return values
+
+
+def best_worst_indices(values, incl_mask, lower_is_better):
+    """Indice del salto migliore e peggiore tra quelli inclusi e numerici."""
+    candidates = [(i, v) for i, (v, inc) in enumerate(zip(values, incl_mask))
+                  if inc and isinstance(v, (int, float))]
+    if len(candidates) < 2:
+        return None, None
+    key = (lambda t: t[1])
+    best = (min if lower_is_better else max)(candidates, key=key)[0]
+    worst = (max if lower_is_better else min)(candidates, key=key)[0]
+    if best == worst:
+        return None, None
+    return best, worst
+
+
 def sesso_da_file(files):
     for pf in files:
         if pf.metadata.get("sesso"):
@@ -394,7 +553,7 @@ def sesso_da_file(files):
     return "UOMO"
 
 
-def build_results(files):
+def build_results(files, pop_dict):
     sesso_raw = sesso_da_file(files)
     is_female = sesso_raw and sesso_raw.upper().startswith("F")
 
@@ -410,7 +569,7 @@ def build_results(files):
             z = t = banda = colore = None
             pop_mean = pop_sd = None
             if metric.get("pop_key"):
-                pop = POP[metric["pop_key"]]
+                pop = pop_dict[metric["pop_key"]]
                 pop_mean = pop["mean_f"] if is_female else pop["mean_m"]
                 pop_sd = pop["sd_f"] if is_female else pop["sd_m"]
                 if metric["kind"] == "score":
@@ -428,15 +587,14 @@ def build_results(files):
     imtp_peak = support.get("imtp_peak_force", {}).get("mean")
     dsi_val = (cmj_peak / imtp_peak) if (cmj_peak and imtp_peak) else None
 
-    # EUR = (CMJ height - SJ height) / SJ height. Coerente con la media di
-    # popolazione del foglio originale (~0,11): un rapporto puro CMJ/SJ
-    # varrebbe tipicamente ~1,1 e sarebbe incompatibile con quella norma.
+    # EUR = CMJ height / SJ height (rapporto puro), coerente con la tabella
+    # costanti fornita dall'utente (~1,11 uomini, ~1,09 donne).
     cmj_h = support.get("cmj_height", {}).get("mean")
     sj_h = support.get("sj_height", {}).get("mean")
-    eur_val = ((cmj_h - sj_h) / sj_h) if (cmj_h and sj_h) else None
+    eur_val = (cmj_h / sj_h) if (cmj_h and sj_h) else None
 
     for key, val in (("dsi", dsi_val), ("eur", eur_val)):
-        pop = POP[key]
+        pop = pop_dict[key]
         pop_mean = pop["mean_f"] if is_female else pop["mean_m"]
         pop_sd = pop["sd_f"] if is_female else pop["sd_m"]
         z, t = z_t_score(val, pop_mean, pop_sd, False)
@@ -477,14 +635,12 @@ def profilo_forza(results):
     return out
 
 
-results_bundle = build_results(parsed_files)
-results = results_bundle["results"]
-checks = results_bundle["checks"]
-profilo = profilo_forza(results)
+if "pop" not in st.session_state:
+    st.session_state["pop"] = {k: dict(v) for k, v in DEFAULT_POP.items()}
 
 meta0 = parsed_files[0].metadata
 nome = meta0.get("nome") or "Atleta"
-sesso = results_bundle["sesso"] or "-"
+sesso = sesso_da_file(parsed_files) or "-"
 date_tests = [pf.metadata.get("data_test") for pf in parsed_files if pf.metadata.get("data_test")]
 data_min = min(date_tests).strftime("%d/%m/%Y") if date_tests else "-"
 data_max = max(date_tests).strftime("%d/%m/%Y") if date_tests else "-"
@@ -502,9 +658,178 @@ c2.metric("Data test", periodo)
 c3.metric("File caricati", len(parsed_files))
 c4.metric("Ripetizioni totali", sum(len(pf.reps) for pf in parsed_files))
 
-tab_profilo, tab_dettaglio, tab_checks, tab_report = st.tabs(
-    ["📊 Profilo di Forza", "🔍 Dettaglio Test", "✅ Controlli Tecnici", "📄 Report"]
+tab_costanti, tab_dettaglio, tab_profilo, tab_report = st.tabs(
+    ["⚙️ Costanti", "🔍 Dettaglio Test", "📊 Profilo di Forza", "📄 Report"]
 )
+
+with tab_costanti:
+    st.markdown(
+        "Valori di riferimento della popolazione (media e deviazione standard, per uomini e "
+        "donne) usati per calcolare i T-score. Modificabili direttamente nella tabella; le "
+        "modifiche si applicano subito alle altre schede."
+    )
+
+    df_pop = costanti_dataframe(st.session_state["pop"])
+    edited_pop = st.data_editor(
+        df_pop, use_container_width=True, hide_index=True, key="pop_editor",
+        column_config={
+            "Categoria": st.column_config.TextColumn(disabled=True),
+            "Costante": st.column_config.TextColumn(disabled=True),
+            "Unità": st.column_config.TextColumn(disabled=True),
+            "Media Uomini": st.column_config.NumberColumn(format="%.4f"),
+            "Dev.Std Uomini": st.column_config.NumberColumn(format="%.4f", min_value=0.0),
+            "Media Donne": st.column_config.NumberColumn(format="%.4f"),
+            "Dev.Std Donne": st.column_config.NumberColumn(format="%.4f", min_value=0.0),
+        },
+    )
+    for key, row in zip(CONST_LABELS.keys(), edited_pop.to_dict("records")):
+        mm, sm, mf, sf = row["Media Uomini"], row["Dev.Std Uomini"], row["Media Donne"], row["Dev.Std Donne"]
+        if None not in (mm, sm, mf, sf):
+            st.session_state["pop"][key] = dict(mean_m=float(mm), sd_m=float(sm), mean_f=float(mf), sd_f=float(sf))
+
+    st.markdown("---")
+    col_dl, col_ul, col_reset = st.columns([1, 1, 1])
+    with col_dl:
+        st.markdown("**Scarica costanti**")
+        xlsx_bytes = genera_costanti_xlsx(st.session_state["pop"])
+        st.download_button(
+            "⬇️ Scarica (.xlsx)", data=xlsx_bytes, file_name="costanti_force_plate.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+    with col_ul:
+        st.markdown("**Ricarica da file**")
+        const_file = st.file_uploader(
+            "Formato: DATO / UdM / MEDIA / DEV ST / MEDIA2 / DEV ST3", type=["xlsx"], key="const_uploader"
+        )
+        if const_file is not None:
+            updates, unmatched = parse_constants_workbook(io.BytesIO(const_file.getvalue()))
+            if updates:
+                st.session_state["pop"].update(updates)
+                if "pop_editor" in st.session_state:
+                    del st.session_state["pop_editor"]
+                st.success(f"Aggiornate {len(updates)} costanti da '{const_file.name}'.")
+                if unmatched:
+                    st.caption("Righe non riconosciute: " + ", ".join(unmatched))
+                st.rerun()
+            else:
+                st.warning("Nessuna costante riconosciuta nel file caricato. Verifica che segua il formato indicato.")
+    with col_reset:
+        st.markdown("**Ripristina**")
+        if st.button("↺ Valori di default"):
+            st.session_state["pop"] = {k: dict(v) for k, v in DEFAULT_POP.items()}
+            if "pop_editor" in st.session_state:
+                del st.session_state["pop_editor"]
+            st.rerun()
+
+results_bundle = build_results(parsed_files, st.session_state["pop"])
+results = results_bundle["results"]
+checks = results_bundle["checks"]
+profilo = profilo_forza(results)
+
+with tab_dettaglio:
+    for cat in CATEGORIES:
+        cat_results = [r for r in results if r["category"] == cat and r["mean"] is not None]
+        if not cat_results:
+            continue
+        st.markdown(f"### {cat}")
+        cols = st.columns(2)
+
+        scored = [r for r in cat_results if r["t"] is not None]
+        if scored:
+            fig = go.Figure()
+            fig.add_trace(go.Bar(
+                x=[r["label"] for r in scored], y=[r["t"] for r in scored],
+                marker_color=[r["colore"] for r in scored],
+                text=[f"{r['t']:.0f}" for r in scored], textposition="outside",
+            ))
+            fig.add_hline(y=50, line_dash="dash", line_color="gray", annotation_text="Media pop.")
+            fig.update_layout(yaxis_title="T-score", height=380, margin=dict(t=20, b=20))
+            cols[0].plotly_chart(fig, use_container_width=True)
+
+        pop_comp = [r for r in cat_results if r.get("pop_mean") is not None]
+        if pop_comp:
+            fig2 = go.Figure()
+            fig2.add_trace(go.Bar(name=nome, x=[r["label"] for r in pop_comp], y=[r["mean"] for r in pop_comp], marker_color=PRIMARY))
+            fig2.add_trace(go.Bar(name="Media popolazione", x=[r["label"] for r in pop_comp], y=[r["pop_mean"] for r in pop_comp], marker_color="lightgray"))
+            fig2.update_layout(barmode="group", height=380, margin=dict(t=20, b=20))
+            cols[1].plotly_chart(fig2, use_container_width=True)
+
+        # --- Salti individuali: inclusione e valori per colonna ---
+        cat_metrics = [m for m in METRICS if m["category"] == cat and m.get("jump_type")]
+        jump_type = cat_metrics[0]["jump_type"] if cat_metrics else None
+        reps_all = collect_reps_all(parsed_files, jump_type) if jump_type else []
+        n_reps = len(reps_all)
+
+        if n_reps == 0:
+            st.info("Nessuna ripetizione disponibile per questa categoria.")
+            st.markdown("---")
+            continue
+
+        st.markdown("**Ripetizioni incluse nel calcolo**")
+        st.caption("Deseleziona un salto per escluderlo da media, dev.std e T-score di questa categoria.")
+        chk_cols = st.columns(n_reps)
+        incl_mask = []
+        for i in range(n_reps):
+            key = f"incl_{jump_type}_{i}"
+            checked = chk_cols[i].checkbox(f"Salto {i + 1}", value=st.session_state.get(key, True), key=key)
+            incl_mask.append(checked)
+
+        rows, best_per_row, worst_per_row = [], [], []
+        jump_cols = [f"Salto {i + 1}" for i in range(n_reps)]
+        for m in cat_metrics:
+            r = next((x for x in results if x["key"] == m["key"]), None)
+            values = per_rep_metric_values(parsed_files, m)
+            best_i, worst_i = best_worst_indices(values, incl_mask, m["lower_is_better"])
+            best_per_row.append(best_i)
+            worst_per_row.append(worst_i)
+            row = {"Metrica": m["label"], "Unità": m["unit"]}
+            for i, v in enumerate(values):
+                row[jump_cols[i]] = round(v, 3) if isinstance(v, (int, float)) else None
+            row["Media"] = round(r["mean"], 3) if r and r["mean"] is not None else None
+            row["Dev.Std"] = round(r["sd"], 3) if r and r["sd"] else None
+            row["T-score"] = round(r["t"], 1) if r and r["t"] is not None else "—"
+            row["Valutazione"] = (r["banda"] if r and r["banda"] else "—")
+            rows.append(row)
+
+        df = pd.DataFrame(rows).reset_index(drop=True)
+
+        def _highlight(row):
+            styles = [""] * len(row)
+            ridx = row.name
+            best_i, worst_i = best_per_row[ridx], worst_per_row[ridx]
+            for i, col in enumerate(jump_cols):
+                pos = df.columns.get_loc(col)
+                if not incl_mask[i]:
+                    styles[pos] = "color:#adb5bd; text-decoration: line-through;"
+                elif i == best_i:
+                    styles[pos] = "background-color:#3b8f3d; font-weight:600;"
+                elif i == worst_i:
+                    styles[pos] = "background-color:#d13242; font-weight:600;"
+            return styles
+
+        styled = df.style.apply(_highlight, axis=1)
+        st.dataframe(styled, use_container_width=True, hide_index=True)
+
+        # I controlli a soglia riguardano esclusivamente il CMJ Rebound:
+        # vengono mostrati qui, subito dopo la tabella della REATTIVITA'.
+        if cat == "REATTIVITA'":
+            st.markdown("#### ✅ Controlli Tecnici (CMJ Rebound)")
+            st.caption("Controlli a soglia sul CMJ Rebound, per individuare asimmetrie o esecuzioni tecnicamente scorrette.")
+            for c in checks:
+                ccol1, ccol2 = st.columns([3, 1])
+                with ccol1:
+                    st.markdown(f"**{c['label']}**")
+                    st.caption(c["desc"])
+                with ccol2:
+                    if c["value"] is None:
+                        st.markdown("—")
+                    else:
+                        icon = "✅" if c["passed"] else "⚠️"
+                        st.markdown(f"##### {icon} {c['value']*100:.1f}%")
+                        soglia_lbl = "min" if c["direction"] == "min" else "max"
+                        st.caption(f"soglia {soglia_lbl} {c['threshold']*100:.0f}%")
+
+        st.markdown("---")
 
 with tab_profilo:
     cats_valide = [c for c in CATEGORIES if profilo.get(c) is not None]
@@ -545,61 +870,6 @@ with tab_profilo:
         for col, r in zip(icols, indici):
             col.metric(r["label"], f"{r['mean']:.3f}",
                        help=f"T-score: {r['t']:.0f} ({r['banda']})" if r["t"] else None)
-
-with tab_dettaglio:
-    for cat in CATEGORIES:
-        cat_results = [r for r in results if r["category"] == cat and r["mean"] is not None]
-        if not cat_results:
-            continue
-        st.markdown(f"### {cat}")
-        cols = st.columns(2)
-
-        scored = [r for r in cat_results if r["t"] is not None]
-        if scored:
-            fig = go.Figure()
-            fig.add_trace(go.Bar(
-                x=[r["label"] for r in scored], y=[r["t"] for r in scored],
-                marker_color=[r["colore"] for r in scored],
-                text=[f"{r['t']:.0f}" for r in scored], textposition="outside",
-            ))
-            fig.add_hline(y=50, line_dash="dash", line_color="gray", annotation_text="Media pop.")
-            fig.update_layout(yaxis_title="T-score", height=380, margin=dict(t=20, b=20))
-            cols[0].plotly_chart(fig, use_container_width=True)
-
-        pop_comp = [r for r in cat_results if r.get("pop_mean") is not None]
-        if pop_comp:
-            fig2 = go.Figure()
-            fig2.add_trace(go.Bar(name=nome, x=[r["label"] for r in pop_comp], y=[r["mean"] for r in pop_comp], marker_color=PRIMARY))
-            fig2.add_trace(go.Bar(name="Media popolazione", x=[r["label"] for r in pop_comp], y=[r["pop_mean"] for r in pop_comp], marker_color="lightgray"))
-            fig2.update_layout(barmode="group", height=380, margin=dict(t=20, b=20))
-            cols[1].plotly_chart(fig2, use_container_width=True)
-
-        table_rows = [{
-            "Metrica": r["label"], "Unità": r["unit"], "N": r["n"],
-            "Media": round(r["mean"], 3) if r["mean"] is not None else None,
-            "Dev.Std": round(r["sd"], 3) if r["sd"] else None,
-            "T-score": round(r["t"], 1) if r["t"] is not None else "—",
-            "Valutazione": r["banda"] or "—",
-        } for r in cat_results]
-        st.dataframe(table_rows, use_container_width=True, hide_index=True)
-        st.markdown("---")
-
-with tab_checks:
-    st.caption("Controlli a soglia sul CMJ Rebound, per individuare asimmetrie o esecuzioni tecnicamente scorrette.")
-    for c in checks:
-        col1, col2 = st.columns([3, 1])
-        with col1:
-            st.markdown(f"**{c['label']}**")
-            st.caption(c["desc"])
-        with col2:
-            if c["value"] is None:
-                st.markdown("—")
-            else:
-                icon = "✅" if c["passed"] else "⚠️"
-                st.markdown(f"### {icon} {c['value']*100:.1f}%")
-                soglia_lbl = "min" if c["direction"] == "min" else "max"
-                st.caption(f"soglia {soglia_lbl} {c['threshold']*100:.0f}%")
-        st.markdown("---")
 
 
 # ============================================================================
