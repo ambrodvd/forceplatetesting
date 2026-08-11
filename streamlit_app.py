@@ -309,10 +309,11 @@ uploaded = st.sidebar.file_uploader(
     "Carica i file XLSX esportati da ForceMate", type=["xlsx"], accept_multiple_files=True
 )
 
-if not uploaded:
-    st.title("🏋️ Force Plate Test Report")
-    st.info("Carica uno o più file XLSX esportati da ForceMate (IMTP, SJ, CMJ, CMJ RE) dalla barra laterale per iniziare.")
-    st.stop()
+# Le costanti di popolazione (scheda "⚙️ Costanti") non dipendono dai file
+# caricati: inizializziamo subito lo stato in modo che quella scheda sia
+# consultabile/modificabile anche prima di caricare qualsiasi file.
+if "pop" not in st.session_state:
+    st.session_state["pop"] = {k: dict(v) for k, v in DEFAULT_POP.items()}
 
 
 # ============================================================================
@@ -512,23 +513,24 @@ def _parse_imtp_trial_rows(rows, filename: str) -> ParsedFile:
     return ParsedFile(filename=filename, metadata=metadata, reps=reps)
 
 parsed_files = []
-st.sidebar.markdown("---")
-st.sidebar.subheader("Tipo di esercizio per file")
-st.sidebar.caption("Verificare soprattutto l'IMTP: spesso non viene taggato automaticamente dal software.")
+if uploaded:
+    st.sidebar.markdown("---")
+    st.sidebar.subheader("Tipo di esercizio per file")
+    st.sidebar.caption("Verificare soprattutto l'IMTP: spesso non viene taggato automaticamente dal software.")
 
-for f in uploaded:
-    pf = parse_forcemate_workbook(io.BytesIO(f.getvalue()), f.name)
-    guess = guess_type_from_filename(f.name)
-    detected_types = {r["jump_type"] for r in pf.reps if r["jump_type"]}
-    default = guess or (list(detected_types)[0] if len(detected_types) == 1 else None)
-    options = ["imtp", "sj", "cmj", "cmrj"]
-    idx = options.index(default) if default in options else 0
-    choice = st.sidebar.selectbox(
-        f.name, options, index=idx, format_func=lambda x: JUMP_TYPE_LABELS.get(x, x),
-        key=f"type_{f.name}",
-        help="Applicato solo alle ripetizioni prive di tag automatico nel file."
-    )
-    parsed_files.append(apply_type_override(pf, choice))
+    for f in uploaded:
+        pf = parse_forcemate_workbook(io.BytesIO(f.getvalue()), f.name)
+        guess = guess_type_from_filename(f.name)
+        detected_types = {r["jump_type"] for r in pf.reps if r["jump_type"]}
+        default = guess or (list(detected_types)[0] if len(detected_types) == 1 else None)
+        options = ["imtp", "sj", "cmj", "cmrj"]
+        idx = options.index(default) if default in options else 0
+        choice = st.sidebar.selectbox(
+            f.name, options, index=idx, format_func=lambda x: JUMP_TYPE_LABELS.get(x, x),
+            key=f"type_{f.name}",
+            help="Applicato solo alle ripetizioni prive di tag automatico nel file."
+        )
+        parsed_files.append(apply_type_override(pf, choice))
 
 
 # ============================================================================
@@ -712,28 +714,130 @@ def profilo_forza(results):
     return out
 
 
-if "pop" not in st.session_state:
-    st.session_state["pop"] = {k: dict(v) for k, v in DEFAULT_POP.items()}
+# ============================================================================
+# PARTE 4bis — GRAFICI A QUADRANTI (RSQ / EUR quadrant plot)
+# ============================================================================
+# Incrociano due metriche (es. altezza salto e tempo di contatto, oppure
+# altezza SJ e altezza CMJ) mettendo in relazione ogni ripetizione rispetto
+# al proprio valore medio, così da leggere non solo "quanto" ma "come"
+# l'atleta esprime la prestazione. Il crosshair è sempre centrato sulla
+# media (x, y) dei punti mostrati nel grafico.
 
-meta0 = parsed_files[0].metadata
-nome = meta0.get("nome") or "Atleta"
-sesso = sesso_da_file(parsed_files) or "-"
-date_tests = [pf.metadata.get("data_test") for pf in parsed_files if pf.metadata.get("data_test")]
-data_min = min(date_tests).strftime("%d/%m/%Y") if date_tests else "-"
-data_max = max(date_tests).strftime("%d/%m/%Y") if date_tests else "-"
-periodo = data_min if data_min == data_max else f"{data_min} → {data_max}"
+def quadrant_chart(x_vals, y_vals, x_label, y_label, quadrant_defs,
+                    point_labels=None, point_color=PRIMARY, diagonal=False, height=430):
+    """quadrant_defs: dict con chiavi 'tl','tr','bl','br' -> (etichetta, colore).
+    Ritorna una go.Figure oppure None se non ci sono abbastanza dati."""
+    pairs = [(x, y, i) for i, (x, y) in enumerate(zip(x_vals, y_vals))
+             if isinstance(x, (int, float)) and isinstance(y, (int, float))]
+    if len(pairs) < 2:
+        return None
+    xs, ys, idxs = zip(*pairs)
+    cx, cy = sum(xs) / len(xs), sum(ys) / len(ys)
+    x_min, x_max, y_min, y_max = min(xs), max(xs), min(ys), max(ys)
+    x_pad = (x_max - x_min) * 0.2 or abs(cx) * 0.1 or 1
+    y_pad = (y_max - y_min) * 0.2 or abs(cy) * 0.1 or 1
+    x0, x1 = min(x_min - x_pad, cx - x_pad), max(x_max + x_pad, cx + x_pad)
+    y0, y1 = min(y_min - y_pad, cy - y_pad), max(y_max + y_pad, cy + y_pad)
+
+    tl_label, tl_color = quadrant_defs["tl"]
+    tr_label, tr_color = quadrant_defs["tr"]
+    bl_label, bl_color = quadrant_defs["bl"]
+    br_label, br_color = quadrant_defs["br"]
+
+    fig = go.Figure()
+    for x_a, x_b, y_a, y_b, color in (
+        (x0, cx, cy, y1, tl_color), (cx, x1, cy, y1, tr_color),
+        (x0, cx, y0, cy, bl_color), (cx, x1, y0, cy, br_color),
+    ):
+        fig.add_shape(type="rect", x0=x_a, x1=x_b, y0=y_a, y1=y_b,
+                       fillcolor=color, opacity=0.15, line_width=0)
+
+    for x_pos, y_pos, text, anchor in (
+        ((x0 + cx) / 2, y1, tl_label, "top"), ((cx + x1) / 2, y1, tr_label, "top"),
+        ((x0 + cx) / 2, y0, bl_label, "bottom"), ((cx + x1) / 2, y0, br_label, "bottom"),
+    ):
+        fig.add_annotation(x=x_pos, y=y_pos, text=text, showarrow=False,
+                            font=dict(size=10, color="#666"), yanchor=anchor)
+
+    if diagonal:
+        d0, d1 = min(x0, y0), max(x1, y1)
+        fig.add_shape(type="line", x0=d0, y0=d0, x1=d1, y1=d1,
+                       line=dict(color="#FB8C00", dash="dash", width=2))
+
+    fig.add_vline(x=cx, line_dash="dash", line_color="gray")
+    fig.add_hline(y=cy, line_dash="dash", line_color="gray")
+
+    labels = point_labels or [f"Prova {i + 1}" for i in idxs]
+    fig.add_trace(go.Scatter(
+        x=xs, y=ys, mode="markers",
+        marker=dict(size=10, color=point_color, line=dict(width=1, color="white")),
+        text=labels,
+        hovertemplate="%{text}<br>" + x_label + ": %{x:.2f}<br>" + y_label + ": %{y:.2f}<extra></extra>",
+        name="Ripetizioni",
+    ))
+    fig.add_trace(go.Scatter(
+        x=[cx], y=[cy], mode="markers",
+        marker=dict(size=15, color="black", symbol="x"),
+        name="Media",
+        hovertemplate=f"Media<br>{x_label}: %{{x:.2f}}<br>{y_label}: %{{y:.2f}}<extra></extra>",
+    ))
+
+    fig.update_layout(
+        xaxis_title=x_label, yaxis_title=y_label,
+        xaxis_range=[x0, x1], yaxis_range=[y0, y1],
+        xaxis_showgrid=False, yaxis_showgrid=False,
+        height=height, margin=dict(t=30, b=20), showlegend=False,
+        plot_bgcolor="white",
+    )
+    return fig
+
+
+RSQ_QUADRANTS = dict(
+    tl=("Alta Reattività", "#4FC3F7"),
+    tr=("Forza-Dominante", "#EF5350"),
+    bl=("Elastico-Dominante", "#66BB6A"),
+    br=("Bassa Reattività", "#FFEE58"),
+)
+
+EUR_QUADRANTS = dict(
+    tl=("Alta prestaz. SJ, bassa CMJ (EUR < 1.0)", "#FFB74D"),
+    tr=("Alta prestazione in SJ e CMJ (EUR ~ 1.0)", "#81C784"),
+    bl=("Bassa prestazione in SJ e CMJ", "#E57373"),
+    br=("Alta prestaz. CMJ, bassa SJ (EUR > 1.0)", "#FFF176"),
+)
+
+
+if parsed_files:
+    meta0 = parsed_files[0].metadata
+    nome = meta0.get("nome") or "Atleta"
+    sesso = sesso_da_file(parsed_files) or "-"
+    date_tests = [pf.metadata.get("data_test") for pf in parsed_files if pf.metadata.get("data_test")]
+    data_min = min(date_tests).strftime("%d/%m/%Y") if date_tests else "-"
+    data_max = max(date_tests).strftime("%d/%m/%Y") if date_tests else "-"
+    periodo = data_min if data_min == data_max else f"{data_min} → {data_max}"
+else:
+    nome, sesso, periodo = "Atleta", "-", "-"
 
 
 # ============================================================================
 # PARTE 5 — REPORT LIVE (interfaccia a schede)
 # ============================================================================
 
-st.title(f"🏋️ Force Plate Test Report — {nome}")
-c1, c2, c3, c4 = st.columns(4)
-c1.metric("Sesso", sesso)
-c2.metric("Data test", periodo)
-c3.metric("File caricati", len(parsed_files))
-c4.metric("Ripetizioni totali", sum(len(pf.reps) for pf in parsed_files))
+if parsed_files:
+    st.title(f"🏋️ Force Plate Test Report — {nome}")
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("Sesso", sesso)
+    c2.metric("Data test", periodo)
+    c3.metric("File caricati", len(parsed_files))
+    c4.metric("Ripetizioni totali", sum(len(pf.reps) for pf in parsed_files))
+else:
+    st.title("🏋️ Force Plate Test Report")
+    st.info(
+        "Carica uno o più file XLSX esportati da ForceMate (IMTP, SJ, CMJ, CMJ RE) dalla "
+        "barra laterale per vedere il dettaglio dei test, il profilo di forza e generare il "
+        "report. Nel frattempo puoi consultare e modificare le costanti di popolazione nella "
+        "scheda '⚙️ Costanti'."
+    )
 
 tab_costanti, tab_dettaglio, tab_profilo, tab_report = st.tabs(
     ["⚙️ Costanti", "🔍 Dettaglio Test", "📊 Profilo di Forza", "📄 Report"]
@@ -798,158 +902,241 @@ with tab_costanti:
                 del st.session_state["pop_editor"]
             st.rerun()
 
-results_bundle = build_results(parsed_files, st.session_state["pop"])
-results = results_bundle["results"]
-checks = results_bundle["checks"]
-profilo = profilo_forza(results)
+if parsed_files:
+    results_bundle = build_results(parsed_files, st.session_state["pop"])
+    results = results_bundle["results"]
+    checks = results_bundle["checks"]
+    profilo = profilo_forza(results)
+else:
+    results, checks, profilo = [], [], {}
 
 with tab_dettaglio:
-    for cat in CATEGORIES:
-        cat_results = [r for r in results if r["category"] == cat and r["mean"] is not None]
-        if not cat_results:
-            continue
-        st.markdown(f"### {cat}")
-        cols = st.columns(2)
+    if not parsed_files:
+        st.info("Carica dei file dalla barra laterale per vedere il dettaglio dei test.")
+    else:
+        for cat in CATEGORIES:
+            cat_results = [r for r in results if r["category"] == cat and r["mean"] is not None]
+            if not cat_results:
+                continue
+            st.markdown(f"### {cat}")
 
-        scored = [r for r in cat_results if r["t"] is not None]
-        if scored:
-            fig = go.Figure()
-            fig.add_trace(go.Bar(
-                x=[r["label"] for r in scored], y=[r["t"] for r in scored],
-                marker_color=[r["colore"] for r in scored],
-                text=[f"{r['t']:.0f}" for r in scored], textposition="outside",
-            ))
-            fig.add_hline(y=50, line_dash="dash", line_color="gray", annotation_text="Media pop.")
-            fig.update_layout(yaxis_title="T-score", height=380, margin=dict(t=20, b=20))
-            cols[0].plotly_chart(fig, use_container_width=True)
+            scored = [r for r in cat_results if r["t"] is not None]
+            if scored:
+                # Grafico a barre divergenti, ancorato alla media di popolazione
+                # (T-score = 50): la barra si estende verso destra se l'atleta è
+                # sopra media, verso sinistra se è sotto. Le bande di valutazione
+                # sono mostrate come contesto sullo sfondo (vedi BANDS).
+                scored_sorted = sorted(scored, key=lambda r: r["t"])
+                labels = [r["label"] for r in scored_sorted]
+                tvals = [r["t"] for r in scored_sorted]
+                colors = [r["colore"] for r in scored_sorted]
 
-        pop_comp = [r for r in cat_results if r.get("pop_mean") is not None]
-        if pop_comp:
-            fig2 = go.Figure()
-            fig2.add_trace(go.Bar(name=nome, x=[r["label"] for r in pop_comp], y=[r["mean"] for r in pop_comp], marker_color=PRIMARY))
-            fig2.add_trace(go.Bar(name="Media popolazione", x=[r["label"] for r in pop_comp], y=[r["pop_mean"] for r in pop_comp], marker_color="lightgray"))
-            fig2.update_layout(barmode="group", height=380, margin=dict(t=20, b=20))
-            cols[1].plotly_chart(fig2, use_container_width=True)
+                fig = go.Figure()
 
-        # --- Salti individuali: inclusione e valori per colonna ---
-        cat_metrics = [m for m in METRICS if m["category"] == cat and m.get("jump_type")]
-        jump_type = cat_metrics[0]["jump_type"] if cat_metrics else None
-        reps_all = collect_reps_all(parsed_files, jump_type) if jump_type else []
-        n_reps = len(reps_all)
+                for lo, hi, band_label, band_color in BANDS:
+                    lo_c, hi_c = max(lo, 0), min(hi, 100)
+                    if lo_c >= hi_c:
+                        continue
+                    fig.add_vrect(
+                        x0=lo_c, x1=hi_c, fillcolor=band_color, opacity=0.3, line_width=0,
+                        annotation_text=band_label, annotation_position="top",
+                        annotation_font=dict(size=9, color="#484343"),
+                        annotation_textangle=0,
+                    )
 
-        if n_reps == 0:
-            st.info("Nessuna ripetizione disponibile per questa categoria.")
+                fig.add_trace(go.Bar(
+                    x=[t - 50 for t in tvals], y=labels, base=50, orientation="h",
+                    marker_color=colors, customdata=tvals,
+                    text=[f"{t:.0f}" for t in tvals], textposition="outside",
+                    textfont=dict(color="#484343", size=12),
+                    hovertemplate="%{y}: T-score %{customdata:.0f}<extra></extra>",
+                ))
+                fig.add_vline(
+                    x=50, line_dash="dash", line_color="gray",
+                    annotation_text="media", annotation_position="bottom",
+                    annotation_font=dict(size=9, color="#484343"),
+                )
+                fig.update_layout(
+                    xaxis_title="T-score", xaxis_range=[0, 100],
+                    xaxis_showgrid=False, xaxis_ticks="", yaxis_showgrid=False,
+                    height=max(320, 70 * len(scored_sorted) + 80),
+                    margin=dict(t=40, b=20), showlegend=False,
+                    plot_bgcolor="white",
+                )
+                st.plotly_chart(fig, use_container_width=True)
+
+            # --- Salti individuali: inclusione e valori per colonna ---
+            cat_metrics = [m for m in METRICS if m["category"] == cat and m.get("jump_type")]
+            jump_type = cat_metrics[0]["jump_type"] if cat_metrics else None
+            reps_all = collect_reps_all(parsed_files, jump_type) if jump_type else []
+            n_reps = len(reps_all)
+
+            if n_reps == 0:
+                st.info("Nessuna ripetizione disponibile per questa categoria.")
+                st.markdown("---")
+                continue
+
+            st.markdown("**Ripetizioni incluse nel calcolo**")
+            st.caption("Deseleziona un salto per escluderlo da media, dev.std e T-score di questa categoria.")
+            chk_cols = st.columns(n_reps)
+            incl_mask = []
+            for i in range(n_reps):
+                key = f"incl_{jump_type}_{i}"
+                checked = chk_cols[i].checkbox(f"Prova {i + 1}", value=st.session_state.get(key, True), key=key)
+                incl_mask.append(checked)
+
+            rows, best_per_row, worst_per_row = [], [], []
+            jump_cols = [f"Prova {i + 1}" for i in range(n_reps)]
+            for m in cat_metrics:
+                r = next((x for x in results if x["key"] == m["key"]), None)
+                values = per_rep_metric_values(parsed_files, m)
+                best_i, worst_i = best_worst_indices(values, incl_mask, m["lower_is_better"])
+                best_per_row.append(best_i)
+                worst_per_row.append(worst_i)
+                row = {"Metrica": m["label"], "Unità": m["unit"]}
+                for i, v in enumerate(values):
+                    row[jump_cols[i]] = round(v, 3) if isinstance(v, (int, float)) else None
+                row["Media"] = round(r["mean"], 3) if r and r["mean"] is not None else None
+                row["Dev.Std"] = round(r["sd"], 3) if r and r["sd"] else None
+                row["T-score"] = round(r["t"], 1) if r and r["t"] is not None else "—"
+                row["Valutazione"] = (r["banda"] if r and r["banda"] else "—")
+                rows.append(row)
+
+            df = pd.DataFrame(rows).reset_index(drop=True)
+
+            def _highlight(row):
+                styles = [""] * len(row)
+                ridx = row.name
+                best_i, worst_i = best_per_row[ridx], worst_per_row[ridx]
+                for i, col in enumerate(jump_cols):
+                    pos = df.columns.get_loc(col)
+                    if not incl_mask[i]:
+                        styles[pos] = "color:#adb5bd; text-decoration: line-through;"
+                    elif i == best_i:
+                        styles[pos] = "background-color:#3b8f3d; font-weight:600;"
+                    elif i == worst_i:
+                        styles[pos] = "background-color:#d13242; font-weight:600;"
+                return styles
+
+            styled = df.style.apply(_highlight, axis=1)
+            st.dataframe(styled, use_container_width=True, hide_index=True)
+
+            # --- Grafico RSQ (Reactive Strength Quadrant) per le categorie
+            # che includono un mRSI: mette in relazione altezza del salto
+            # (asse Y) e tempo di contatto/contrazione (asse X) rep per rep,
+            # con il crosshair centrato sulla media dei salti inclusi.
+            rsq_metric_keys = {
+                "COUNTERMOVEMENT JUMP TEST": ("cmj_height", "cmj_contraction_time"),
+                "COUNTERMOVEMENT JUMP REBOUND TEST": ("cmj_re_rebound_height", "cmj_re_contact_time"),
+            }
+            if cat in rsq_metric_keys:
+                h_key, t_key = rsq_metric_keys[cat]
+                h_metric = next(m for m in METRICS if m["key"] == h_key)
+                t_metric = next(m for m in METRICS if m["key"] == t_key)
+                h_vals_all = per_rep_metric_values(parsed_files, h_metric)
+                t_vals_all = per_rep_metric_values(parsed_files, t_metric)
+                h_vals = [v if inc else None for v, inc in zip(h_vals_all, incl_mask)]
+                t_vals = [v if inc else None for v, inc in zip(t_vals_all, incl_mask)]
+
+                rsq_fig = quadrant_chart(
+                    t_vals, h_vals, x_label=f"{t_metric['label']} ({t_metric['unit']})",
+                    y_label=f"{h_metric['label']} ({h_metric['unit']})",
+                    quadrant_defs=RSQ_QUADRANTS, point_color=PRIMARY,
+                )
+                if rsq_fig:
+                    st.markdown("**RSQ — Reactive Strength Quadrant**")
+                    st.caption(
+                        "Il grafico dà contesto all'mRSI mostrando non solo quanto l'atleta è reattivo, "
+                        "ma come esprime quella reattività: il crosshair è centrato sulla media dei salti inclusi."
+                    )
+                    st.plotly_chart(rsq_fig, use_container_width=True)
+
+            # I controlli a soglia riguardano esclusivamente il CMJ Rebound:
+            # vengono mostrati qui, subito dopo la tabella della COUNTERMOVEMENT JUMP REBOUND TEST.
+            if cat == "COUNTERMOVEMENT JUMP REBOUND TEST":
+                st.markdown("#### ✅ Controlli Tecnici (CMJ Rebound)")
+                st.caption("Controlli a soglia sul CMJ Rebound, per individuare asimmetrie o esecuzioni tecnicamente scorrette.")
+                for c in checks:
+                    ccol1, ccol2 = st.columns([3, 1])
+                    with ccol1:
+                        st.markdown(f"**{c['label']}**")
+                        st.caption(c["desc"])
+                    with ccol2:
+                        if c["value"] is None:
+                            st.markdown("—")
+                        else:
+                            icon = "✅" if c["passed"] else "⚠️"
+                            st.markdown(f"##### {icon} {c['value']*100:.1f}%")
+                            soglia_lbl = "min" if c["direction"] == "min" else "max"
+                            st.caption(f"soglia {soglia_lbl} {c['threshold']*100:.0f}%")
+
             st.markdown("---")
-            continue
-
-        st.markdown("**Ripetizioni incluse nel calcolo**")
-        st.caption("Deseleziona un salto per escluderlo da media, dev.std e T-score di questa categoria.")
-        chk_cols = st.columns(n_reps)
-        incl_mask = []
-        for i in range(n_reps):
-            key = f"incl_{jump_type}_{i}"
-            checked = chk_cols[i].checkbox(f"Prova {i + 1}", value=st.session_state.get(key, True), key=key)
-            incl_mask.append(checked)
-
-        rows, best_per_row, worst_per_row = [], [], []
-        jump_cols = [f"Prova {i + 1}" for i in range(n_reps)]
-        for m in cat_metrics:
-            r = next((x for x in results if x["key"] == m["key"]), None)
-            values = per_rep_metric_values(parsed_files, m)
-            best_i, worst_i = best_worst_indices(values, incl_mask, m["lower_is_better"])
-            best_per_row.append(best_i)
-            worst_per_row.append(worst_i)
-            row = {"Metrica": m["label"], "Unità": m["unit"]}
-            for i, v in enumerate(values):
-                row[jump_cols[i]] = round(v, 3) if isinstance(v, (int, float)) else None
-            row["Media"] = round(r["mean"], 3) if r and r["mean"] is not None else None
-            row["Dev.Std"] = round(r["sd"], 3) if r and r["sd"] else None
-            row["T-score"] = round(r["t"], 1) if r and r["t"] is not None else "—"
-            row["Valutazione"] = (r["banda"] if r and r["banda"] else "—")
-            rows.append(row)
-
-        df = pd.DataFrame(rows).reset_index(drop=True)
-
-        def _highlight(row):
-            styles = [""] * len(row)
-            ridx = row.name
-            best_i, worst_i = best_per_row[ridx], worst_per_row[ridx]
-            for i, col in enumerate(jump_cols):
-                pos = df.columns.get_loc(col)
-                if not incl_mask[i]:
-                    styles[pos] = "color:#adb5bd; text-decoration: line-through;"
-                elif i == best_i:
-                    styles[pos] = "background-color:#3b8f3d; font-weight:600;"
-                elif i == worst_i:
-                    styles[pos] = "background-color:#d13242; font-weight:600;"
-            return styles
-
-        styled = df.style.apply(_highlight, axis=1)
-        st.dataframe(styled, use_container_width=True, hide_index=True)
-
-        # I controlli a soglia riguardano esclusivamente il CMJ Rebound:
-        # vengono mostrati qui, subito dopo la tabella della COUNTERMOVEMENT JUMP REBOUND TEST.
-        if cat == "COUNTERMOVEMENT JUMP REBOUND TEST":
-            st.markdown("#### ✅ Controlli Tecnici (CMJ Rebound)")
-            st.caption("Controlli a soglia sul CMJ Rebound, per individuare asimmetrie o esecuzioni tecnicamente scorrette.")
-            for c in checks:
-                ccol1, ccol2 = st.columns([3, 1])
-                with ccol1:
-                    st.markdown(f"**{c['label']}**")
-                    st.caption(c["desc"])
-                with ccol2:
-                    if c["value"] is None:
-                        st.markdown("—")
-                    else:
-                        icon = "✅" if c["passed"] else "⚠️"
-                        st.markdown(f"##### {icon} {c['value']*100:.1f}%")
-                        soglia_lbl = "min" if c["direction"] == "min" else "max"
-                        st.caption(f"soglia {soglia_lbl} {c['threshold']*100:.0f}%")
-
-        st.markdown("---")
 
 with tab_profilo:
-    cats_valide = [c for c in CATEGORIES if profilo.get(c) is not None]
-    if not cats_valide:
-        st.warning("Nessuna metrica con confronto di popolazione disponibile: carica almeno un test tra IMTP, SJ, CMJ o CMJ RE.")
+    if not parsed_files:
+        st.info("Carica dei file dalla barra laterale per vedere il profilo di forza.")
     else:
-        vals = [profilo[c] for c in cats_valide]
-        vals_closed = vals + [vals[0]]
-        cats_closed = cats_valide + [cats_valide[0]]
+        cats_valide = [c for c in CATEGORIES if profilo.get(c) is not None]
+        if not cats_valide:
+            st.warning("Nessuna metrica con confronto di popolazione disponibile: carica almeno un test tra IMTP, SJ, CMJ o CMJ RE.")
+        else:
+            vals = [profilo[c] for c in cats_valide]
+            vals_closed = vals + [vals[0]]
+            cats_closed = cats_valide + [cats_valide[0]]
 
-        fig = go.Figure()
-        fig.add_trace(go.Scatterpolar(
-            r=[50] * (len(cats_valide) + 1), theta=cats_closed, mode="lines",
-            line=dict(color="rgba(150,150,150,0.6)", dash="dash"), name="Media popolazione (T=50)"
-        ))
-        fig.add_trace(go.Scatterpolar(
-            r=vals_closed, theta=cats_closed, fill="toself",
-            line=dict(color=PRIMARY, width=3), fillcolor="rgba(31,119,180,0.25)", name=nome
-        ))
-        fig.update_layout(
-            polar=dict(radialaxis=dict(range=[0, 100], showticklabels=True, ticks="")),
-            showlegend=True, height=520, margin=dict(t=40, b=40),
+            fig = go.Figure()
+            fig.add_trace(go.Scatterpolar(
+                r=[50] * (len(cats_valide) + 1), theta=cats_closed, mode="lines",
+                line=dict(color="rgba(150,150,150,0.6)", dash="dash"), name="Media popolazione (T=50)"
+            ))
+            fig.add_trace(go.Scatterpolar(
+                r=vals_closed, theta=cats_closed, fill="toself",
+                line=dict(color=PRIMARY, width=3), fillcolor="rgba(31,119,180,0.25)", name=nome
+            ))
+            fig.update_layout(
+                polar=dict(radialaxis=dict(range=[0, 100], showticklabels=True, ticks="", tickfont=dict(color="black"))),
+                font=dict(color="white"),                
+                showlegend=True, height=520, margin=dict(t=40, b=40),
+            )
+            st.plotly_chart(fig, use_container_width=True)
+
+            cols = st.columns(len(cats_valide))
+            for col, cat in zip(cols, cats_valide):
+                t = profilo[cat]
+                banda, colore = banda_da_tscore(t)
+                col.markdown(f"**{cat}**")
+                col.markdown(f"<span style='font-size:28px;color:{colore}'>{t:.0f}</span>", unsafe_allow_html=True)
+                col.caption(banda)
+
+        indici = [r for r in results if r["category"] == "INDICI" and r["mean"] is not None and r["key"] != "eur"]
+        if indici:
+            st.markdown("#### Indici")
+            icols = st.columns(len(indici))
+            for col, r in zip(icols, indici):
+                col.metric(r["label"], f"{r['mean']:.3f}",
+                           help=f"T-score: {r['t']:.0f} ({r['banda']})" if r["t"] else None)
+
+        # --- EUR come grafico a quadranti (altezza SJ vs altezza CMJ), invece
+        # che come singolo T-score: mostra non solo il rapporto EUR, ma anche
+        # il livello assoluto di prestazione in entrambi i test.
+        sj_h_metric = next(m for m in METRICS if m["key"] == "sj_height")
+        cmj_h_metric = next(m for m in METRICS if m["key"] == "cmj_height")
+        sj_vals_all = per_rep_metric_values(parsed_files, sj_h_metric)
+        cmj_vals_all = per_rep_metric_values(parsed_files, cmj_h_metric)
+        sj_vals = [v if is_rep_included("sj", i) else None for i, v in enumerate(sj_vals_all)]
+        cmj_vals = [v if is_rep_included("cmj", i) else None for i, v in enumerate(cmj_vals_all)]
+
+        eur_fig = quadrant_chart(
+            cmj_vals, sj_vals, x_label="CMJ Height (cm)", y_label="SJ Height (cm)",
+            quadrant_defs=EUR_QUADRANTS, point_color=PRIMARY, diagonal=True,
         )
-        st.plotly_chart(fig, use_container_width=True)
-
-        cols = st.columns(len(cats_valide))
-        for col, cat in zip(cols, cats_valide):
-            t = profilo[cat]
-            banda, colore = banda_da_tscore(t)
-            col.markdown(f"**{cat}**")
-            col.markdown(f"<span style='font-size:28px;color:{colore}'>{t:.0f}</span>", unsafe_allow_html=True)
-            col.caption(banda)
-
-    indici = [r for r in results if r["category"] == "INDICI" and r["mean"] is not None]
-    if indici:
-        st.markdown("#### Indici")
-        icols = st.columns(len(indici))
-        for col, r in zip(icols, indici):
-            col.metric(r["label"], f"{r['mean']:.3f}",
-                       help=f"T-score: {r['t']:.0f} ({r['banda']})" if r["t"] else None)
-
-
-# ============================================================================
+        if eur_fig:
+            st.markdown("#### EUR (Eccentric Utilisation Ratio)")
+            st.caption(
+                "Altezza SJ vs altezza CMJ, per ripetizione (accoppiate per ordine di esecuzione). "
+                "La linea diagonale rappresenta un EUR di 1.0; il crosshair è centrato sulla media dei salti inclusi."
+            )
+            st.plotly_chart(eur_fig, use_container_width=True)
 # PARTE 6 — REPORT SCARICABILE (Word)
 # ============================================================================
 
@@ -1037,11 +1224,14 @@ def genera_report_docx(nome, sesso, periodo, results, profilo, checks):
 
 
 with tab_report:
-    st.markdown("Genera un report Word (.docx) con profilo di forza, tabelle riassuntive e analisi testuale, in stile analogo al foglio REPORT originale.")
-    if st.button("📄 Genera report Word", type="primary"):
-        docx_bytes = genera_report_docx(nome, sesso, periodo, results, profilo, checks)
-        st.download_button(
-            "⬇️ Scarica report (.docx)", data=docx_bytes,
-            file_name=f"Report_{nome.replace(' ', '_')}_{dt.date.today().isoformat()}.docx",
-            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        )
+    if not parsed_files:
+        st.info("Carica dei file dalla barra laterale per generare il report.")
+    else:
+        st.markdown("Genera un report Word (.docx) con profilo di forza, tabelle riassuntive e analisi testuale, in stile analogo al foglio REPORT originale.")
+        if st.button("📄 Genera report Word", type="primary"):
+            docx_bytes = genera_report_docx(nome, sesso, periodo, results, profilo, checks)
+            st.download_button(
+                "⬇️ Scarica report (.docx)", data=docx_bytes,
+                file_name=f"Report_{nome.replace(' ', '_')}_{dt.date.today().isoformat()}.docx",
+                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            )
