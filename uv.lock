@@ -63,10 +63,10 @@ requires-dist = [
     { name = "constants", specifier = ">=0.6.0" },
     { name = "docx", specifier = ">=0.2.4" },
     { name = "future", specifier = ">=1.0.0" },
-    { name = "openpyxl", specifier = ">=3.1.5" },
-    { name = "plotly", specifier = ">=6.9.0" },
-    { name = "python-docx", specifier = ">=1.2.0" },
-    { name = "streamlit", specifier = ">=1.60.0" },
+    { name = "openpyxl", specifier = ">=3.1" },
+    { name = "plotly", specifier = ">=6.0" },
+    { name = "python-docx", specifier = ">=1.1" },
+    { name = "streamlit", specifier = ">=1.35" },
 ]
 
 [[package]]

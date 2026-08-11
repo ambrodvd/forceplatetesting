@@ -8,10 +8,10 @@ dependencies = [
     "constants>=0.6.0",
     "docx>=0.2.4",
     "future>=1.0.0",
-    "openpyxl>=3.1.5",
-    "plotly>=6.9.0",
-    "python-docx>=1.2.0",
-    "streamlit>=1.60.0",
+    "openpyxl>=3.1",
+    "plotly>=6.0",
+    "python-docx>=1.1",
+    "streamlit>=1.35",
 ]
 
 [tool.uv]
