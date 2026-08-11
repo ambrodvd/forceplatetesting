@@ -10,6 +10,7 @@ dependencies = [
     "future>=1.0.0",
     "openpyxl>=3.1.5",
     "plotly>=6.9.0",
+    "python-docx>=1.2.0",
     "streamlit>=1.60.0",
 ]
 
