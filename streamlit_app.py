@@ -36,7 +36,7 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 # Equivalente ai fogli "DATI POP" (norme di popolazione) e "DATI TEST"
 # (definizione delle metriche) del Google Sheet originale.
 
-CATEGORIES = ["FORZA MAX", "POTENZA", "ESPLOSIVITA'", "REATTIVITA'"]
+CATEGORIES = ["ISOMETRIC PULL TEST", "SQUAT JUMP TEST", "COUNTERMOVEMENT JUMP TEST", "COUNTERMOVEMENT JUMP REBOUND TEST"]
 
 # Bande di valutazione basate sul T-score (media 50, deviazione standard 10)
 BANDS = [
@@ -90,17 +90,17 @@ DEFAULT_POP = {
 # Le etichette ricalcano quelle del file "DATO" fornito dall'utente, in
 # modo che un file con quella struttura venga riconosciuto automaticamente.
 CONST_LABELS = {
-    "imtp_peak_force":        ("IMTP abs", "N", "FORZA MAX"),
-    "imtp_rel_peak_force":    ("IMTP rel", "N/kg", "FORZA MAX"),
-    "sj_mean_power":          ("SJ mean power", "W", "POTENZA"),
-    "sj_height":               ("SJ height", "cm", "POTENZA"),
-    "sj_contraction_time":     ("SJ contraction time", "s", "POTENZA"),
-    "cmj_height":              ("CMJ height", "cm", "ESPLOSIVITA'"),
-    "mrsi_cmj":                ("Mrsi-CMJ", "m/s", "ESPLOSIVITA'"),
-    "cmj_re_rebound_height":   ("CMJ RE Rebound Jump height", "cm", "REATTIVITA'"),
-    "cmj_re_contact_time":     ("CMJ RE Contact Time", "s", "REATTIVITA'"),
-    "cmj_re_rebound_impulse":  ("CMJ RE propulsive impulse", "N\u00b7s", "REATTIVITA'"),
-    "mrsi_cmj_re":             ("mRSI-CMJ RE", "m/s", "REATTIVITA'"),
+    "imtp_peak_force":        ("IMTP abs", "N", "ISOMETRIC PULL TEST"),
+    "imtp_rel_peak_force":    ("IMTP rel", "N/kg", "ISOMETRIC PULL TEST"),
+    "sj_mean_power":          ("SJ mean power", "W", "SQUAT JUMP TEST"),
+    "sj_height":               ("SJ height", "cm", "SQUAT JUMP TEST"),
+    "sj_contraction_time":     ("SJ contraction time", "s", "SQUAT JUMP TEST"),
+    "cmj_height":              ("CMJ height", "cm", "COUNTERMOVEMENT JUMP TEST"),
+    "mrsi_cmj":                ("Mrsi-CMJ", "m/s", "COUNTERMOVEMENT JUMP TEST"),
+    "cmj_re_rebound_height":   ("CMJ RE Rebound Jump height", "cm", "COUNTERMOVEMENT JUMP REBOUND TEST"),
+    "cmj_re_contact_time":     ("CMJ RE Contact Time", "s", "COUNTERMOVEMENT JUMP REBOUND TEST"),
+    "cmj_re_rebound_impulse":  ("CMJ RE propulsive impulse", "N\u00b7s", "COUNTERMOVEMENT JUMP REBOUND TEST"),
+    "mrsi_cmj_re":             ("mRSI-CMJ RE", "m/s", "COUNTERMOVEMENT JUMP REBOUND TEST"),
     "dsi":                     ("DSI", "", "INDICI"),
     "eur":                     ("EUR", "", "INDICI"),
 }
@@ -205,75 +205,75 @@ def _safe_div(a, b):
 #         (T-score da singolo valore aggregato, es. DSI/EUR), "info"
 #         (valore mostrato ma senza T-score)
 METRICS = [
-    dict(key="imtp_peak_force", label="IMTP Peak Force", category="FORZA MAX",
+    dict(key="imtp_peak_force", label="IMTP Peak Force", category="ISOMETRIC PULL TEST",
          jump_type="imtp", raw_var="peak force", unit="N",
          pop_key="imtp_peak_force", lower_is_better=False, kind="score"),
-    dict(key="imtp_rel_peak_force", label="IMTP Rel Peak Force", category="FORZA MAX",
+    dict(key="imtp_rel_peak_force", label="IMTP Rel Peak Force", category="ISOMETRIC PULL TEST",
          jump_type="imtp", raw_var=None,
          derive=lambda rep: _safe_div(rep.get("peak force"), rep.get("body mass")),
          unit="N/kg", pop_key="imtp_rel_peak_force", lower_is_better=False, kind="score"),
 
-    dict(key="sj_mean_power", label="SJ Mean Power", category="POTENZA",
+    dict(key="sj_mean_power", label="SJ Mean Power", category="SQUAT JUMP TEST",
          jump_type="sj", raw_var="avg. propulsive power", unit="W",
          pop_key="sj_mean_power", lower_is_better=False, kind="score"),
-    dict(key="sj_height", label="SJ Height", category="POTENZA",
+    dict(key="sj_height", label="SJ Height", category="SQUAT JUMP TEST",
          jump_type="sj", raw_var="jump height ft", unit="cm",
          pop_key="sj_height", lower_is_better=False, kind="score"),
-    dict(key="sj_contraction_time", label="SJ Contraction Time", category="POTENZA",
+    dict(key="sj_contraction_time", label="SJ Contraction Time", category="SQUAT JUMP TEST",
          jump_type="sj", raw_var="time to takeoff", unit="s",
          pop_key="sj_contraction_time", lower_is_better=True, kind="score"),
-    dict(key="sj_net_impulse", label="SJ Net Impulse", category="POTENZA",
+    dict(key="sj_net_impulse", label="SJ Net Impulse", category="SQUAT JUMP TEST",
          jump_type="sj", raw_var="net impulse", unit="N\u00b7s",
          pop_key=None, lower_is_better=False, kind="info"),
-    dict(key="sj_net_rel_impulse", label="SJ Net Rel Impulse", category="POTENZA",
+    dict(key="sj_net_rel_impulse", label="SJ Net Rel Impulse", category="SQUAT JUMP TEST",
          jump_type="sj", raw_var=None,
          derive=lambda rep: _safe_div(rep.get("net impulse"), rep.get("body mass")),
          unit="N\u00b7s/kg", pop_key=None, lower_is_better=False, kind="info"),
 
-    dict(key="cmj_net_impulse", label="CMJ Net Impulse", category="ESPLOSIVITA'",
+    dict(key="cmj_net_impulse", label="CMJ Net Impulse", category="COUNTERMOVEMENT JUMP TEST",
          jump_type="cmj", raw_var="net impulse", unit="N\u00b7s",
          pop_key=None, lower_is_better=False, kind="info"),
-    dict(key="cmj_net_rel_impulse", label="CMJ Net Rel Impulse", category="ESPLOSIVITA'",
+    dict(key="cmj_net_rel_impulse", label="CMJ Net Rel Impulse", category="COUNTERMOVEMENT JUMP TEST",
          jump_type="cmj", raw_var=None,
          derive=lambda rep: _safe_div(rep.get("net impulse"), rep.get("body mass")),
          unit="N\u00b7s/kg", pop_key=None, lower_is_better=False, kind="info"),
-    dict(key="cmj_contraction_time", label="CMJ Contraction Time", category="ESPLOSIVITA'",
+    dict(key="cmj_contraction_time", label="CMJ Contraction Time", category="COUNTERMOVEMENT JUMP TEST",
          jump_type="cmj", raw_var="time to takeoff", unit="s",
          pop_key=None, lower_is_better=True, kind="info"),
-    dict(key="cmj_height", label="CMJ Height", category="ESPLOSIVITA'",
+    dict(key="cmj_height", label="CMJ Height", category="COUNTERMOVEMENT JUMP TEST",
          jump_type="cmj", raw_var="jump height ft", unit="cm",
          pop_key="cmj_height", lower_is_better=False, kind="score"),
-    dict(key="mrsi_cmj", label="mRSI-CMJ", category="ESPLOSIVITA'",
+    dict(key="mrsi_cmj", label="mRSI-CMJ", category="COUNTERMOVEMENT JUMP TEST",
          jump_type="cmj", raw_var="rsi modified", unit="m/s",
          pop_key="mrsi_cmj", lower_is_better=False, kind="score"),
-    dict(key="cmj_peak_force", label="CMJ Peak Force", category="ESPLOSIVITA'",
+    dict(key="cmj_peak_force", label="CMJ Peak Force", category="COUNTERMOVEMENT JUMP TEST",
          jump_type="cmj", raw_var="peak propulsive force", unit="N",
          pop_key=None, lower_is_better=False, kind="info"),
 
-    dict(key="cmj_re_initial_height", label="CMJ RE Jump Height (iniziale)", category="REATTIVITA'",
+    dict(key="cmj_re_initial_height", label="CMJ RE Jump Height (iniziale)", category="COUNTERMOVEMENT JUMP REBOUND TEST",
          jump_type="cmrj", raw_var="jump height ft", unit="cm",
          pop_key=None, lower_is_better=False, kind="info"),
-    dict(key="cmj_re_rebound_height", label="CMJ RE Rebound Jump Height", category="REATTIVITA'",
+    dict(key="cmj_re_rebound_height", label="CMJ RE Rebound Jump Height", category="COUNTERMOVEMENT JUMP REBOUND TEST",
          jump_type="cmrj", raw_var="rebound jump height ft", unit="cm",
          pop_key="cmj_re_rebound_height", lower_is_better=False, kind="score"),
-    dict(key="cmj_re_contact_time", label="CMJ RE Contact Time", category="REATTIVITA'",
+    dict(key="cmj_re_contact_time", label="CMJ RE Contact Time", category="COUNTERMOVEMENT JUMP REBOUND TEST",
          jump_type="cmrj", raw_var="rebound contact time", unit="s",
          pop_key="cmj_re_contact_time", lower_is_better=True, kind="score"),
-    dict(key="cmj_re_rebound_impulse", label="CMJ RE Rebound Propulsive Impulse", category="REATTIVITA'",
+    dict(key="cmj_re_rebound_impulse", label="CMJ RE Rebound Propulsive Impulse", category="COUNTERMOVEMENT JUMP REBOUND TEST",
          jump_type="cmrj", raw_var="rebound propulsive impulse", unit="N\u00b7s",
          pop_key="cmj_re_rebound_impulse", lower_is_better=False, kind="score"),
-    dict(key="mrsi_cmj_re", label="mRSI-CMJ RE", category="REATTIVITA'",
+    dict(key="mrsi_cmj_re", label="mRSI-CMJ RE", category="COUNTERMOVEMENT JUMP REBOUND TEST",
          jump_type="cmrj", raw_var="rebound rsi modified", unit="m/s",
          pop_key="mrsi_cmj_re", lower_is_better=False, kind="score"),
-    dict(key="unbalanced_landing_raw", label="Braking Impulse Sym. Index (CMJ RE)", category="REATTIVITA'",
+    dict(key="unbalanced_landing_raw", label="Braking Impulse Sym. Index (CMJ RE)", category="COUNTERMOVEMENT JUMP REBOUND TEST",
          jump_type="cmrj", raw_var="braking impulse sym. index", unit="%",
          pop_key=None, lower_is_better=False, kind="info"),
 
     # Indici derivati da medie aggregate cross-test (non per-rep)
-    dict(key="dsi", label="DSI (Dynamic Strength Index)", category="INDICI",
+    dict(key="dsi", label="DSI (Dynamic Strength Index - Peak force CMJ/Peak force IMTP)", category="INDICI",
          jump_type=None, raw_var=None, unit="",
          pop_key="dsi", lower_is_better=False, kind="score_single"),
-    dict(key="eur", label="EUR (Eccentric Utilisation Ratio)", category="INDICI",
+    dict(key="eur", label="EUR (Eccentric Utilisation Ratio - CMJ Height / SJ Height)", category="INDICI",
          jump_type=None, raw_var=None, unit="",
          pop_key="eur", lower_is_better=False, kind="score_single"),
 ]
@@ -281,7 +281,7 @@ METRICS = [
 # Controlli a soglia (equivalenti a "Jump to rebound Ratio", "CMJ to CMJ RE
 # check", "Unbalanced landing check" del foglio originale). Riguardano
 # esclusivamente il CMJ Rebound, quindi vengono mostrati insieme alla
-# categoria REATTIVITA' nel Dettaglio Test.
+# categoria COUNTERMOVEMENT JUMP REBOUND TEST nel Dettaglio Test.
 CHECKS = [
     dict(key="jump_to_rebound_ratio", label="Jump to Rebound Ratio",
          desc="Rapporto tra altezza del rimbalzo e altezza del salto iniziale nel CMJ RE.",
@@ -349,6 +349,13 @@ def parse_forcemate_workbook(file_like, filename: str) -> ParsedFile:
     wb = openpyxl.load_workbook(file_like, data_only=True, read_only=False)
     ws = wb.worksheets[0]
     rows = list(ws.iter_rows(values_only=True))
+    if not rows:
+        return ParsedFile(filename=filename, metadata={}, reps=[])
+
+    if _is_imtp_trial_layout(rows):
+        return _parse_imtp_trial_rows(rows, filename)
+
+    max_col = max(len(r) for r in rows)
     if not rows:
         return ParsedFile(filename=filename, metadata={}, reps=[])
 
@@ -433,6 +440,76 @@ def guess_type_from_filename(filename: str):
             return t.lower()
     return None
 
+def _is_imtp_trial_layout(rows) -> bool:
+    """Rileva il layout Unit/Trial N (IMTP senza intestazione ForceMate
+    standard): riga 1, colonna A = 'Unit', e almeno una colonna successiva
+    che inizia con 'Trial'."""
+    if not rows or not rows[0]:
+        return False
+    header = rows[0]
+    if not header or str(header[6]).strip().lower() != "unit":
+        return False
+    return any(v and str(v).strip().lower().startswith("trial") for v in header[6:])
+
+
+def _to_num(v):
+    if isinstance(v, (int, float)):
+        return float(v)
+    if isinstance(v, str):
+        try:
+            return float(v.strip().replace(",", "."))
+        except ValueError:
+            return None
+    return None
+
+
+def _parse_imtp_trial_rows(rows, filename: str) -> ParsedFile:
+    max_col = max(len(r) for r in rows)
+
+    def cell(r_idx, c_idx):
+        row = rows[r_idx - 1] if 0 < r_idx <= len(rows) else ()
+        return row[c_idx - 1] if 0 < c_idx <= len(row) else None
+
+    # Ogni blocco "Trial N" occupa 3 colonne: variabile, valore, spacer.
+    # La colonna A contiene sempre l'unità di misura della riga.
+    block_starts = [c for c in range(2, max_col + 1)
+                     if cell(1, c) and str(cell(1, c)).strip().lower().startswith("trial")]
+
+    reps = []
+    for bs in block_starts:
+        var_col, val_col = bs, bs + 1
+        variables, units = {}, {}
+        for r in range(2, len(rows) + 1):
+            var_name = cell(r, var_col)
+            if not var_name:
+                continue
+            var_name = str(var_name).strip().lower()
+            val = cell(r, val_col)
+            unit = cell(r, 1)
+            num = _to_num(val)
+            variables[var_name] = num if num is not None else val
+            if unit:
+                units[var_name] = str(unit).strip()
+
+        # Non c'è un campo "body mass" in kg: c'è "system weight" (N),
+        # cioè il peso corporeo come forza. Lo convertiamo per poter
+        # calcolare IMTP Rel Peak Force. ASSUNZIONE DA VERIFICARE: g=9.80665.
+        sw = variables.get("system weight")
+        if "body mass" not in variables and isinstance(sw, (int, float)):
+            variables["body mass"] = sw / 9.80665
+
+        # Nessun tag "jump type" nel file: resta None e viene assegnato
+        # dal selettore in sidebar (apply_type_override), come richiesto.
+        reps.append({"jump_type": None, "vars": variables, "units": units})
+
+    # Questo layout non contiene nome/sesso/peso/data: verranno ereditati
+    # dagli altri file caricati insieme (vedi sesso_da_file()).
+    metadata = {
+        "nome": None, "sesso": None, "altezza_cm": None, "peso_kg_input": None,
+        "data_test": None, "device": None, "team": None,
+        "test_period": None, "test_type": None,
+    }
+    return ParsedFile(filename=filename, metadata=metadata, reps=reps)
 
 parsed_files = []
 st.sidebar.markdown("---")
@@ -771,11 +848,11 @@ with tab_dettaglio:
         incl_mask = []
         for i in range(n_reps):
             key = f"incl_{jump_type}_{i}"
-            checked = chk_cols[i].checkbox(f"Salto {i + 1}", value=st.session_state.get(key, True), key=key)
+            checked = chk_cols[i].checkbox(f"Prova {i + 1}", value=st.session_state.get(key, True), key=key)
             incl_mask.append(checked)
 
         rows, best_per_row, worst_per_row = [], [], []
-        jump_cols = [f"Salto {i + 1}" for i in range(n_reps)]
+        jump_cols = [f"Prova {i + 1}" for i in range(n_reps)]
         for m in cat_metrics:
             r = next((x for x in results if x["key"] == m["key"]), None)
             values = per_rep_metric_values(parsed_files, m)
@@ -811,8 +888,8 @@ with tab_dettaglio:
         st.dataframe(styled, use_container_width=True, hide_index=True)
 
         # I controlli a soglia riguardano esclusivamente il CMJ Rebound:
-        # vengono mostrati qui, subito dopo la tabella della REATTIVITA'.
-        if cat == "REATTIVITA'":
+        # vengono mostrati qui, subito dopo la tabella della COUNTERMOVEMENT JUMP REBOUND TEST.
+        if cat == "COUNTERMOVEMENT JUMP REBOUND TEST":
             st.markdown("#### ✅ Controlli Tecnici (CMJ Rebound)")
             st.caption("Controlli a soglia sul CMJ Rebound, per individuare asimmetrie o esecuzioni tecnicamente scorrette.")
             for c in checks:
