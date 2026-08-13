@@ -1,0 +1,17 @@
+# Tema Streamlit — palette brand DU Coaching (Destination Unknown).
+# Questo file va posizionato in una cartella ".streamlit/" accanto a
+# force_plate_report.py (stessa struttura anche su Streamlit Community Cloud):
+#
+#   force_plate_report.py
+#   .streamlit/
+#       config.toml   <- questo file
+#
+# primaryColor colora automaticamente pulsanti, checkbox, tab attive, slider
+# e altri controlli interattivi di Streamlit con il blu del brand.
+
+[theme]
+primaryColor = "#065678"
+backgroundColor = "#ffffff"
+secondaryBackgroundColor = "#e94a26"
+textColor = "#065678"
+font = "sans serif"

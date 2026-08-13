@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import io
 import math
+import re
 import datetime as dt
 from dataclasses import dataclass, field
 
@@ -28,6 +29,9 @@ import plotly.graph_objects as go
 import openpyxl
 from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.shared import RGBColor
+from docx.oxml.ns import qn
+from docx.oxml import OxmlElement
 
 
 # ============================================================================
@@ -302,12 +306,50 @@ JUMP_TYPE_LABELS = {"imtp": "IMTP", "sj": "Squat Jump", "cmj": "CMJ", "cmrj": "C
 # ============================================================================
 
 st.set_page_config(page_title="Force Plate Test Report", page_icon="🏋️", layout="wide")
-PRIMARY = "#1f77b4"
+
+# Palette brand DU Coaching (Destination Unknown): blu confermato dal logo;
+# arancio stimato visivamente dal logo (sole) — da verificare/correggere se
+# non è il valore esatto del brand kit (un solo punto da modificare).
+PRIMARY = "#065678"  # blu — dati dell'atleta (linee/punti nei grafici)
+ACCENT = "#E8542A"   # arancio — riferimenti di popolazione/benchmark
+
+# Applica la palette brand ai widget nativi di Streamlit (tab attive,
+# pulsanti, download button, checkbox) iniettando CSS direttamente nel file,
+# così il branding funziona subito senza dover distribuire/ricordare anche
+# un file .streamlit/config.toml separato. Nota: usa selettori CSS interni
+# di Streamlit che potrebbero cambiare in futuri aggiornamenti della libreria.
+st.markdown(f"""
+<style>
+    .stTabs [data-baseweb="tab-highlight"] {{ background-color: {PRIMARY} !important; }}
+    .stTabs [aria-selected="true"] {{ color: {PRIMARY} !important; }}
+    .stButton > button, .stDownloadButton > button {{
+        border-color: {PRIMARY} !important;
+        color: {PRIMARY} !important;
+    }}
+    .stButton > button:hover, .stDownloadButton > button:hover,
+    .stButton > button:active, .stDownloadButton > button:active {{
+        border-color: {ACCENT} !important;
+        color: {ACCENT} !important;
+    }}
+    input[type="checkbox"] {{ accent-color: {PRIMARY} !important; }}
+</style>
+""", unsafe_allow_html=True)
 
 st.sidebar.title("📂 Import dati")
+
 uploaded = st.sidebar.file_uploader(
     "Carica i file XLSX esportati da ForceMate", type=["xlsx"], accept_multiple_files=True
 )
+
+st.sidebar.markdown("---")
+
+csv_reload = st.sidebar.file_uploader(
+    "🔁 Ricarica CSV esportato (Dettaglio Test)", type=["csv"],
+    help="Carica un CSV precedentemente esportato dalla scheda 'Dettaglio Test' per rivedere "
+         "grafici e tabelle senza dover ricaricare i file XLSX originali. Se presente, ha "
+         "precedenza sui file XLSX caricati sotto.",
+)
+
 
 # Le costanti di popolazione (scheda "⚙️ Costanti") non dipendono dai file
 # caricati: inizializziamo subito lo stato in modo che quella scheda sia
@@ -512,8 +554,91 @@ def _parse_imtp_trial_rows(rows, filename: str) -> ParsedFile:
     }
     return ParsedFile(filename=filename, metadata=metadata, reps=reps)
 
+
+def parse_dettaglio_csv(file_like) -> ParsedFile:
+    """Ricostruisce un ParsedFile sintetico a partire da un CSV esportato dalla
+    scheda Dettaglio Test (colonne Categoria/Metrica/Prova N/...), per poter
+    rivedere grafici e tabelle senza i file XLSX originali. I valori "Rel"
+    (dipendenti dal peso corporeo, non presente nel CSV) vengono ricostruiti
+    retro-calcolando un peso corporeo equivalente dal valore assoluto e dal
+    rapporto già esportato."""
+    df = pd.read_csv(file_like, encoding="utf-8-sig")
+    if not {"Categoria", "Metrica"}.issubset(df.columns):
+        raise ValueError("Il file non sembra un export di un precedente test (colonne mancanti).")
+
+    prova_cols = sorted(
+        (c for c in df.columns if re.fullmatch(r"Prova \d+", str(c))),
+        key=lambda c: int(c.split(" ")[1]),
+    )
+
+    nome = str(df["Nome"].iloc[0]) if "Nome" in df.columns and len(df) else None
+    sesso = str(df["Sesso"].iloc[0]) if "Sesso" in df.columns and len(df) else None
+    periodo = str(df["Data test"].iloc[0]) if "Data test" in df.columns and len(df) else None
+
+    reps = []
+    for cat in CATEGORIES:
+        cat_df = df[df["Categoria"] == cat]
+        if cat_df.empty:
+            continue
+        cat_metrics = [m for m in METRICS if m["category"] == cat and m.get("jump_type")]
+        if not cat_metrics:
+            continue
+        jump_type = cat_metrics[0]["jump_type"]
+        label_to_metric = {m["label"]: m for m in cat_metrics}
+
+        n_reps_cat = 0
+        for _, row in cat_df.iterrows():
+            cnt = sum(pd.notna(row.get(pc)) for pc in prova_cols)
+            n_reps_cat = max(n_reps_cat, cnt)
+
+        for i in range(n_reps_cat):
+            pc = f"Prova {i + 1}"
+            rep_vars, derive_targets = {}, {}
+            for _, row in cat_df.iterrows():
+                m = label_to_metric.get(row.get("Metrica"))
+                if m is None:
+                    continue
+                val = row.get(pc)
+                if pd.isna(val):
+                    continue
+                val = float(val)
+                if m.get("raw_var"):
+                    rep_vars[m["raw_var"]] = val
+                elif m.get("derive"):
+                    derive_targets[m["key"]] = val
+
+            # Le metriche "Rel" (per kg) derivano da raw_var / body_mass: non
+            # avendo il peso corporeo nel CSV, lo ricaviamo a ritroso dal
+            # valore assoluto già noto e dal rapporto già esportato.
+            for key, target in derive_targets.items():
+                base = None
+                if key == "imtp_rel_peak_force":
+                    base = rep_vars.get("peak force")
+                elif key in ("sj_net_rel_impulse", "cmj_net_rel_impulse"):
+                    base = rep_vars.get("net impulse")
+                if base is not None and target:
+                    rep_vars["body mass"] = base / target
+
+            reps.append({"jump_type": jump_type, "vars": rep_vars, "units": {}})
+
+    metadata = {
+        "nome": nome, "sesso": sesso, "altezza_cm": None, "peso_kg_input": None,
+        "data_test": None, "device": None, "team": None,
+        "test_period": None, "test_type": None, "periodo_override": periodo,
+    }
+    return ParsedFile(filename="(da CSV)", metadata=metadata, reps=reps)
+
+
 parsed_files = []
-if uploaded:
+if csv_reload is not None:
+    try:
+        parsed_files = [parse_dettaglio_csv(io.BytesIO(csv_reload.getvalue()))]
+        st.sidebar.success(f"Dati ricaricati da '{csv_reload.name}'.")
+        if uploaded:
+            st.sidebar.caption("File XLSX caricati sotto ignorati: è attivo il CSV ricaricato sopra.")
+    except Exception as e:
+        st.sidebar.error(f"Impossibile leggere il CSV: {e}")
+elif uploaded:
     st.sidebar.markdown("---")
     st.sidebar.subheader("Tipo di esercizio per file")
     st.sidebar.caption("Verificare soprattutto l'IMTP: spesso non viene taggato automaticamente dal software.")
@@ -718,26 +843,38 @@ def profilo_forza(results):
 # PARTE 4bis — GRAFICI A QUADRANTI (RSQ / EUR quadrant plot)
 # ============================================================================
 # Incrociano due metriche (es. altezza salto e tempo di contatto, oppure
-# altezza SJ e altezza CMJ) mettendo in relazione ogni ripetizione rispetto
-# al proprio valore medio, così da leggere non solo "quanto" ma "come"
+# altezza SJ e altezza CMJ) mettendo in relazione la media del test rispetto
+# alla media di popolazione, così da leggere non solo "quanto" ma "come"
 # l'atleta esprime la prestazione. Il crosshair è sempre centrato sulla
-# media (x, y) dei punti mostrati nel grafico.
+# media di popolazione (x, y); il punto mostrato è la media del test con
+# barre d'errore pari alla deviazione standard delle ripetizioni incluse.
 
-def quadrant_chart(x_vals, y_vals, x_label, y_label, quadrant_defs,
-                    point_labels=None, point_color=PRIMARY, diagonal=False, height=430):
+def quadrant_chart(x_mean, y_mean, x_sd, y_sd, x_label, y_label, quadrant_defs,
+                    pop_x=None, pop_y=None, point_color=PRIMARY, diagonal=False, height=430):
     """quadrant_defs: dict con chiavi 'tl','tr','bl','br' -> (etichetta, colore).
-    Ritorna una go.Figure oppure None se non ci sono abbastanza dati."""
-    pairs = [(x, y, i) for i, (x, y) in enumerate(zip(x_vals, y_vals))
-             if isinstance(x, (int, float)) and isinstance(y, (int, float))]
-    if len(pairs) < 2:
+    Il crosshair (linee tratteggiate e confini dei quadranti) è centrato sulla
+    media di popolazione (pop_x, pop_y); se non disponibile per una metrica si
+    usa la media del test come fallback. Il punto mostrato è la media del test
+    con barre d'errore pari alla deviazione standard delle ripetizioni incluse.
+    Ritorna una go.Figure oppure None se manca la media del test su uno dei due assi."""
+    if x_mean is None or y_mean is None:
         return None
-    xs, ys, idxs = zip(*pairs)
-    cx, cy = sum(xs) / len(xs), sum(ys) / len(ys)
-    x_min, x_max, y_min, y_max = min(xs), max(xs), min(ys), max(ys)
-    x_pad = (x_max - x_min) * 0.2 or abs(cx) * 0.1 or 1
-    y_pad = (y_max - y_min) * 0.2 or abs(cy) * 0.1 or 1
-    x0, x1 = min(x_min - x_pad, cx - x_pad), max(x_max + x_pad, cx + x_pad)
-    y0, y1 = min(y_min - y_pad, cy - y_pad), max(y_max + y_pad, cy + y_pad)
+    x_sd = x_sd or 0
+    y_sd = y_sd or 0
+    cx = pop_x if pop_x is not None else x_mean
+    cy = pop_y if pop_y is not None else y_mean
+
+    # Raggio simmetrico intorno al crosshair (cx, cy): copre la distanza
+    # massima tra il crosshair e gli estremi del punto (media ± dev.std),
+    # più un margine di respiro. Essendo simmetrico, il crosshair cade
+    # sempre esattamente al centro del grafico e i quattro quadranti
+    # risultano sempre della stessa dimensione.
+    x_extent = abs(x_mean - cx) + x_sd
+    y_extent = abs(y_mean - cy) + y_sd
+    x_r = x_extent * 1.3 if x_extent > 0 else (abs(cx) * 0.15 or 1)
+    y_r = y_extent * 1.3 if y_extent > 0 else (abs(cy) * 0.15 or 1)
+    x0, x1 = cx - x_r, cx + x_r
+    y0, y1 = cy - y_r, cy + y_r
 
     tl_label, tl_color = quadrant_defs["tl"]
     tr_label, tr_color = quadrant_defs["tr"]
@@ -762,24 +899,19 @@ def quadrant_chart(x_vals, y_vals, x_label, y_label, quadrant_defs,
     if diagonal:
         d0, d1 = min(x0, y0), max(x1, y1)
         fig.add_shape(type="line", x0=d0, y0=d0, x1=d1, y1=d1,
-                       line=dict(color="#FB8C00", dash="dash", width=2))
+                       line=dict(color=ACCENT, dash="dash", width=2))
 
-    fig.add_vline(x=cx, line_dash="dash", line_color="gray")
-    fig.add_hline(y=cy, line_dash="dash", line_color="gray")
+    fig.add_vline(x=cx, line_dash="dash", line_color=ACCENT)
+    fig.add_hline(y=cy, line_dash="dash", line_color=ACCENT)
 
-    labels = point_labels or [f"Prova {i + 1}" for i in idxs]
     fig.add_trace(go.Scatter(
-        x=xs, y=ys, mode="markers",
-        marker=dict(size=10, color=point_color, line=dict(width=1, color="white")),
-        text=labels,
-        hovertemplate="%{text}<br>" + x_label + ": %{x:.2f}<br>" + y_label + ": %{y:.2f}<extra></extra>",
-        name="Ripetizioni",
-    ))
-    fig.add_trace(go.Scatter(
-        x=[cx], y=[cy], mode="markers",
-        marker=dict(size=15, color="black", symbol="x"),
-        name="Media",
-        hovertemplate=f"Media<br>{x_label}: %{{x:.2f}}<br>{y_label}: %{{y:.2f}}<extra></extra>",
+        x=[x_mean], y=[y_mean], mode="markers",
+        marker=dict(size=12, color=point_color, line=dict(width=1.5, color="white")),
+        error_x=dict(type="data", array=[x_sd], visible=True, color=point_color, thickness=1.5, width=6),
+        error_y=dict(type="data", array=[y_sd], visible=True, color=point_color, thickness=1.5, width=6),
+        name="Media test \u00b1 Dev.Std",
+        hovertemplate=(f"Media test<br>{x_label}: %{{x:.2f}} \u00b1 {x_sd:.2f}"
+                        f"<br>{y_label}: %{{y:.2f}} \u00b1 {y_sd:.2f}<extra></extra>"),
     ))
 
     fig.update_layout(
@@ -811,10 +943,13 @@ if parsed_files:
     meta0 = parsed_files[0].metadata
     nome = meta0.get("nome") or "Atleta"
     sesso = sesso_da_file(parsed_files) or "-"
-    date_tests = [pf.metadata.get("data_test") for pf in parsed_files if pf.metadata.get("data_test")]
-    data_min = min(date_tests).strftime("%d/%m/%Y") if date_tests else "-"
-    data_max = max(date_tests).strftime("%d/%m/%Y") if date_tests else "-"
-    periodo = data_min if data_min == data_max else f"{data_min} → {data_max}"
+    if meta0.get("periodo_override"):
+        periodo = meta0["periodo_override"]
+    else:
+        date_tests = [pf.metadata.get("data_test") for pf in parsed_files if pf.metadata.get("data_test")]
+        data_min = min(date_tests).strftime("%d/%m/%Y") if date_tests else "-"
+        data_max = max(date_tests).strftime("%d/%m/%Y") if date_tests else "-"
+        periodo = data_min if data_min == data_max else f"{data_min} → {data_max}"
 else:
     nome, sesso, periodo = "Atleta", "-", "-"
 
@@ -914,6 +1049,7 @@ with tab_dettaglio:
     if not parsed_files:
         st.info("Carica dei file dalla barra laterale per vedere il dettaglio dei test.")
     else:
+        export_rows = []
         for cat in CATEGORIES:
             cat_results = [r for r in results if r["category"] == cat and r["mean"] is not None]
             if not cat_results:
@@ -922,10 +1058,11 @@ with tab_dettaglio:
 
             scored = [r for r in cat_results if r["t"] is not None]
             if scored:
-                # Grafico a barre divergenti, ancorato alla media di popolazione
-                # (T-score = 50): la barra si estende verso destra se l'atleta è
-                # sopra media, verso sinistra se è sotto. Le bande di valutazione
-                # sono mostrate come contesto sullo sfondo (vedi BANDS).
+                # Grafico a barre orizzontali che partono da sinistra (0):
+                # la lunghezza della barra è il T-score assoluto. Le bande di
+                # valutazione sono mostrate come contesto sullo sfondo (vedi
+                # BANDS) e la media di popolazione (T-score = 50) resta
+                # segnata da una linea tratteggiata di riferimento.
                 scored_sorted = sorted(scored, key=lambda r: r["t"])
                 labels = [r["label"] for r in scored_sorted]
                 tvals = [r["t"] for r in scored_sorted]
@@ -945,14 +1082,14 @@ with tab_dettaglio:
                     )
 
                 fig.add_trace(go.Bar(
-                    x=[t - 50 for t in tvals], y=labels, base=50, orientation="h",
+                    x=tvals, y=labels, base=0, orientation="h",
                     marker_color=colors, customdata=tvals,
                     text=[f"{t:.0f}" for t in tvals], textposition="outside",
                     textfont=dict(color="#484343", size=12),
                     hovertemplate="%{y}: T-score %{customdata:.0f}<extra></extra>",
                 ))
                 fig.add_vline(
-                    x=50, line_dash="dash", line_color="gray",
+                    x=50, line_dash="dash", line_color=ACCENT,
                     annotation_text="media", annotation_position="bottom",
                     annotation_font=dict(size=9, color="#484343"),
                 )
@@ -986,6 +1123,7 @@ with tab_dettaglio:
                 incl_mask.append(checked)
 
             rows, best_per_row, worst_per_row = [], [], []
+            cv_warnings = []
             jump_cols = [f"Prova {i + 1}" for i in range(n_reps)]
             for m in cat_metrics:
                 r = next((x for x in results if x["key"] == m["key"]), None)
@@ -998,9 +1136,20 @@ with tab_dettaglio:
                     row[jump_cols[i]] = round(v, 3) if isinstance(v, (int, float)) else None
                 row["Media"] = round(r["mean"], 3) if r and r["mean"] is not None else None
                 row["Dev.Std"] = round(r["sd"], 3) if r and r["sd"] else None
+                # CV% = coefficiente di variazione (dev.std / media * 100): misura
+                # la variabilità relativa tra le ripetizioni incluse.
+                cv = None
+                if r and r["mean"] not in (None, 0) and r["sd"] is not None:
+                    cv = abs(r["sd"] / r["mean"]) * 100
+                row["CV%"] = round(cv, 1) if cv is not None else None
+                if cv is not None and cv > 10:
+                    cv_warnings.append(m["label"])
                 row["T-score"] = round(r["t"], 1) if r and r["t"] is not None else "—"
                 row["Valutazione"] = (r["banda"] if r and r["banda"] else "—")
                 rows.append(row)
+
+            for row in rows:
+                export_rows.append({"Nome": nome, "Sesso": sesso, "Data test": periodo, "Categoria": cat, **row})
 
             df = pd.DataFrame(rows).reset_index(drop=True)
 
@@ -1016,15 +1165,23 @@ with tab_dettaglio:
                         styles[pos] = "background-color:#3b8f3d; font-weight:600;"
                     elif i == worst_i:
                         styles[pos] = "background-color:#d13242; font-weight:600;"
+                cv_val = row.get("CV%")
+                if isinstance(cv_val, (int, float)) and cv_val > 10:
+                    styles[df.columns.get_loc("CV%")] = "background-color:#E4572E; color:white; font-weight:600;"
                 return styles
 
             styled = df.style.apply(_highlight, axis=1)
             st.dataframe(styled, use_container_width=True, hide_index=True)
+            if cv_warnings:
+                st.warning(
+                    "⚠️ Coefficiente di variazione (CV%) superiore al 10% per: " + ", ".join(cv_warnings) +
+                    ". Indica un'elevata variabilità tra le ripetizioni incluse: valutarne l'affidabilità."
+                )
 
             # --- Grafico RSQ (Reactive Strength Quadrant) per le categorie
-            # che includono un mRSI: mette in relazione altezza del salto
-            # (asse Y) e tempo di contatto/contrazione (asse X) rep per rep,
-            # con il crosshair centrato sulla media dei salti inclusi.
+            # che includono un mRSI: mette in relazione la media di altezza
+            # del salto (asse Y) e la media del tempo di contatto/contrazione
+            # (asse X), con il crosshair centrato sulla media di popolazione.
             rsq_metric_keys = {
                 "COUNTERMOVEMENT JUMP TEST": ("cmj_height", "cmj_contraction_time"),
                 "COUNTERMOVEMENT JUMP REBOUND TEST": ("cmj_re_rebound_height", "cmj_re_contact_time"),
@@ -1033,22 +1190,29 @@ with tab_dettaglio:
                 h_key, t_key = rsq_metric_keys[cat]
                 h_metric = next(m for m in METRICS if m["key"] == h_key)
                 t_metric = next(m for m in METRICS if m["key"] == t_key)
-                h_vals_all = per_rep_metric_values(parsed_files, h_metric)
-                t_vals_all = per_rep_metric_values(parsed_files, t_metric)
-                h_vals = [v if inc else None for v, inc in zip(h_vals_all, incl_mask)]
-                t_vals = [v if inc else None for v, inc in zip(t_vals_all, incl_mask)]
+                r_h = next(r for r in results if r["key"] == h_key)
+                r_t = next(r for r in results if r["key"] == t_key)
 
                 rsq_fig = quadrant_chart(
-                    t_vals, h_vals, x_label=f"{t_metric['label']} ({t_metric['unit']})",
+                    x_mean=r_t["mean"], y_mean=r_h["mean"], x_sd=r_t["sd"], y_sd=r_h["sd"],
+                    x_label=f"{t_metric['label']} ({t_metric['unit']})",
                     y_label=f"{h_metric['label']} ({h_metric['unit']})",
-                    quadrant_defs=RSQ_QUADRANTS, point_color=PRIMARY,
+                    quadrant_defs=RSQ_QUADRANTS, pop_x=r_t["pop_mean"], pop_y=r_h["pop_mean"],
+                    point_color=PRIMARY,
                 )
                 if rsq_fig:
                     st.markdown("**RSQ — Reactive Strength Quadrant**")
-                    st.caption(
+                    caption = (
                         "Il grafico dà contesto all'mRSI mostrando non solo quanto l'atleta è reattivo, "
-                        "ma come esprime quella reattività: il crosshair è centrato sulla media dei salti inclusi."
+                        "ma come esprime quella reattività: le linee tratteggiate sono centrate sulla media "
+                        "di popolazione, il punto è la media del test con barre d'errore (± dev.std)."
                     )
+                    if r_t["pop_mean"] is None:
+                        caption += (
+                            " Nota: per il tempo di contatto/contrazione non è disponibile un dato di "
+                            "popolazione, quindi la linea verticale usa la media del test."
+                        )
+                    st.caption(caption)
                     st.plotly_chart(rsq_fig, use_container_width=True)
 
             # I controlli a soglia riguardano esclusivamente il CMJ Rebound:
@@ -1072,6 +1236,24 @@ with tab_dettaglio:
 
             st.markdown("---")
 
+        # --- Esportazione CSV di tutti i dati mostrati nelle tabelle di
+        # dettaglio (per ripetizione, media, dev.std, CV%, T-score),
+        # pensata per raccogliere i dati grezzi da più atleti/test e
+        # ricavarne in seguito medie e deviazioni standard di popolazione.
+        if export_rows:
+            st.markdown("### 📤 Esporta dati del test")
+            st.caption(
+                "Esporta in CSV tutti i dati delle tabelle sopra (valori per ripetizione, media, dev.std, "
+                "CV% e T-score), utile per la successiva determinazione dei dati di popolazione."
+            )
+            df_export = pd.DataFrame(export_rows)
+            csv_bytes = df_export.to_csv(index=False).encode("utf-8-sig")
+            st.download_button(
+                "⬇️ Scarica dati test (.csv)", data=csv_bytes,
+                file_name=f"forceplate_test_{nome.replace(' ', '_')}_{dt.date.today().isoformat()}.csv",
+                mime="text/csv",
+            )
+
 with tab_profilo:
     if not parsed_files:
         st.info("Carica dei file dalla barra laterale per vedere il profilo di forza.")
@@ -1087,11 +1269,11 @@ with tab_profilo:
             fig = go.Figure()
             fig.add_trace(go.Scatterpolar(
                 r=[50] * (len(cats_valide) + 1), theta=cats_closed, mode="lines",
-                line=dict(color="rgba(150,150,150,0.6)", dash="dash"), name="Media popolazione (T=50)"
+                line=dict(color="rgba(232,84,42,0.6)", dash="dash"), name="Media popolazione (T=50)"
             ))
             fig.add_trace(go.Scatterpolar(
                 r=vals_closed, theta=cats_closed, fill="toself",
-                line=dict(color=PRIMARY, width=3), fillcolor="rgba(31,119,180,0.25)", name=nome
+                line=dict(color=PRIMARY, width=3), fillcolor="rgba(6,86,120,0.25)", name=nome
             ))
             fig.update_layout(
                 polar=dict(radialaxis=dict(range=[0, 100], showticklabels=True, ticks="", tickfont=dict(color="black"))),
@@ -1119,38 +1301,80 @@ with tab_profilo:
         # --- EUR come grafico a quadranti (altezza SJ vs altezza CMJ), invece
         # che come singolo T-score: mostra non solo il rapporto EUR, ma anche
         # il livello assoluto di prestazione in entrambi i test.
-        sj_h_metric = next(m for m in METRICS if m["key"] == "sj_height")
-        cmj_h_metric = next(m for m in METRICS if m["key"] == "cmj_height")
-        sj_vals_all = per_rep_metric_values(parsed_files, sj_h_metric)
-        cmj_vals_all = per_rep_metric_values(parsed_files, cmj_h_metric)
-        sj_vals = [v if is_rep_included("sj", i) else None for i, v in enumerate(sj_vals_all)]
-        cmj_vals = [v if is_rep_included("cmj", i) else None for i, v in enumerate(cmj_vals_all)]
+        r_sj_h = next(r for r in results if r["key"] == "sj_height")
+        r_cmj_h = next(r for r in results if r["key"] == "cmj_height")
 
         eur_fig = quadrant_chart(
-            cmj_vals, sj_vals, x_label="CMJ Height (cm)", y_label="SJ Height (cm)",
-            quadrant_defs=EUR_QUADRANTS, point_color=PRIMARY, diagonal=True,
+            x_mean=r_cmj_h["mean"], y_mean=r_sj_h["mean"], x_sd=r_cmj_h["sd"], y_sd=r_sj_h["sd"],
+            x_label="CMJ Height (cm)", y_label="SJ Height (cm)",
+            quadrant_defs=EUR_QUADRANTS, pop_x=r_cmj_h["pop_mean"], pop_y=r_sj_h["pop_mean"],
+            point_color=PRIMARY, diagonal=True,
         )
         if eur_fig:
             st.markdown("#### EUR (Eccentric Utilisation Ratio)")
             st.caption(
-                "Altezza SJ vs altezza CMJ, per ripetizione (accoppiate per ordine di esecuzione). "
-                "La linea diagonale rappresenta un EUR di 1.0; il crosshair è centrato sulla media dei salti inclusi."
+                "Altezza SJ vs altezza CMJ: le linee tratteggiate sono centrate sulla media di popolazione, "
+                "il punto è la media del test con barre d'errore (± dev.std). La linea diagonale rappresenta "
+                "un EUR di 1.0."
             )
             st.plotly_chart(eur_fig, use_container_width=True)
 # PARTE 6 — REPORT SCARICABILE (Word)
 # ============================================================================
 
+# Palette brand DU Coaching applicata al report Word (stessi hex usati nei
+# grafici Plotly: PRIMARY/ACCENT sopra sono stringhe "#RRGGBB" per Plotly,
+# qui servono gli equivalenti RGBColor per python-docx).
+_DOCX_BLUE = RGBColor(0x06, 0x56, 0x78)
+_DOCX_ORANGE = RGBColor(0xE8, 0x54, 0x2A)
+_DOCX_WHITE = RGBColor(0xFF, 0xFF, 0xFF)
+
+
+def _heading(doc, text, level, color=_DOCX_BLUE):
+    """doc.add_heading() con il colore del brand invece del blu di default di Word."""
+    h = doc.add_heading(text, level=level)
+    for run in h.runs:
+        run.font.color.rgb = color
+    return h
+
+
+def _add_label(paragraph, text, color=_DOCX_BLUE):
+    """Aggiunge un'etichetta in grassetto colorata (es. 'Atleta: ') a un paragrafo."""
+    run = paragraph.add_run(text)
+    run.bold = True
+    run.font.color.rgb = color
+    return run
+
+
+def _shade_cell(cell, hex_fill):
+    """Colora lo sfondo di una cella di tabella Word (hex senza '#')."""
+    shd = OxmlElement("w:shd")
+    shd.set(qn("w:val"), "clear")
+    shd.set(qn("w:color"), "auto")
+    shd.set(qn("w:fill"), hex_fill)
+    cell._tc.get_or_add_tcPr().append(shd)
+
+
+def _style_header_row(row, hex_fill="065678"):
+    """Applica lo stile brand (sfondo blu, testo bianco in grassetto) alla riga di intestazione di una tabella."""
+    for cell in row.cells:
+        _shade_cell(cell, hex_fill)
+        for p in cell.paragraphs:
+            for run in p.runs:
+                run.font.color.rgb = _DOCX_WHITE
+                run.font.bold = True
+
+
 def genera_report_docx(nome, sesso, periodo, results, profilo, checks):
     doc = Document()
-    title = doc.add_heading("FORCE PLATE TEST REPORT", level=0)
+    title = _heading(doc, "FORCE PLATE TEST REPORT", 0)
     title.alignment = WD_ALIGN_PARAGRAPH.CENTER
 
     p = doc.add_paragraph()
-    p.add_run("Atleta: ").bold = True
+    _add_label(p, "Atleta: ")
     p.add_run(f"{nome}    ")
-    p.add_run("Sesso: ").bold = True
+    _add_label(p, "Sesso: ")
     p.add_run(f"{sesso}    ")
-    p.add_run("Data test: ").bold = True
+    _add_label(p, "Data test: ")
     p.add_run(f"{periodo}")
 
     doc.add_paragraph(
@@ -1160,11 +1384,12 @@ def genera_report_docx(nome, sesso, periodo, results, profilo, checks):
         "alla media, mentre punteggi tra 50 e 100 indicano valori superiori alla media."
     )
 
-    doc.add_heading("Profilo di Forza", level=1)
+    _heading(doc, "Profilo di Forza", 1)
     tbl = doc.add_table(rows=1, cols=2)
     tbl.style = "Light Grid Accent 1"
     hdr = tbl.rows[0].cells
     hdr[0].text, hdr[1].text = "Categoria", "T-score"
+    _style_header_row(tbl.rows[0])
     for cat in CATEGORIES:
         t = profilo.get(cat)
         row = tbl.add_row().cells
@@ -1175,12 +1400,13 @@ def genera_report_docx(nome, sesso, periodo, results, profilo, checks):
         cat_results = [r for r in results if r["category"] == cat and r["mean"] is not None]
         if not cat_results:
             continue
-        doc.add_heading(cat, level=2)
+        _heading(doc, cat, 2)
         tbl = doc.add_table(rows=1, cols=5)
         tbl.style = "Light List Accent 1"
         hdr = tbl.rows[0].cells
         for i, h in enumerate(["Metrica", "Unità", "Media", "N", "T-score / Valutazione"]):
             hdr[i].text = h
+        _style_header_row(tbl.rows[0])
         for r in cat_results:
             row = tbl.add_row().cells
             row[0].text = r["label"]
@@ -1192,7 +1418,7 @@ def genera_report_docx(nome, sesso, periodo, results, profilo, checks):
 
     indici = [r for r in results if r["category"] == "INDICI" and r["mean"] is not None]
     if indici:
-        doc.add_heading("Indici", level=1)
+        _heading(doc, "Indici", 1)
         for r in indici:
             doc.add_paragraph(
                 f"{r['label']}: {r['mean']:.3f}"
@@ -1200,7 +1426,7 @@ def genera_report_docx(nome, sesso, periodo, results, profilo, checks):
                 style="List Bullet",
             )
 
-    doc.add_heading("Controlli Tecnici", level=1)
+    _heading(doc, "Controlli Tecnici", 1)
     for c in checks:
         if c["value"] is None:
             continue
@@ -1211,7 +1437,7 @@ def genera_report_docx(nome, sesso, periodo, results, profilo, checks):
             style="List Bullet",
         )
 
-    doc.add_heading("Analisi", level=1)
+    _heading(doc, "Analisi", 1)
     doc.add_paragraph(
         "Spazio riservato al commento tecnico del preparatore, con osservazioni su punti di forza, "
         "aree di miglioramento e indicazioni di lavoro in palestra sulla base del profilo emerso."
