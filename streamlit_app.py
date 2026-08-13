@@ -4,7 +4,7 @@ Force Plate Test Report — app Streamlit (versione a file singolo)
 
 Carica gli export XLSX di ForceMate/ForceDecks (IMTP, SJ, CMJ, CMJ RE),
 calcola automaticamente medie, T-score rispetto alla popolazione di
-riferimento e produce un profilo di forza con grafici Plotly e report Word.
+riferimento e produce un profilo di forza con grafici Plotly e report HTML interattivo.
 
 Struttura del file:
   PARTE 1 — Costanti e dati di popolazione
@@ -12,7 +12,7 @@ Struttura del file:
   PARTE 3 — Lettura/parsing dei file XLSX
   PARTE 4 — Analisi dati e confronto con la popolazione
   PARTE 5 — Report live (UI a schede)
-  PARTE 6 — Report scaricabile (Word)
+  PARTE 6 — Report scaricabile (HTML interattivo)
 """
 
 from __future__ import annotations
@@ -27,11 +27,6 @@ import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
 import openpyxl
-from docx import Document
-from docx.enum.text import WD_ALIGN_PARAGRAPH
-from docx.shared import RGBColor
-from docx.oxml.ns import qn
-from docx.oxml import OxmlElement
 
 
 # ============================================================================
@@ -283,19 +278,26 @@ METRICS = [
 ]
 
 # Controlli a soglia (equivalenti a "Jump to rebound Ratio", "CMJ to CMJ RE
-# check", "Unbalanced landing check" del foglio originale). Riguardano
-# esclusivamente il CMJ Rebound, quindi vengono mostrati insieme alla
-# categoria COUNTERMOVEMENT JUMP REBOUND TEST nel Dettaglio Test.
+# check", "Unbalanced landing check" del foglio originale, più il controllo
+# sul tempo di contatto). Riguardano esclusivamente il CMJ Rebound, quindi
+# vengono mostrati insieme alla categoria COUNTERMOVEMENT JUMP REBOUND TEST
+# nel Dettaglio Test.
+# scale/decimals/suffix controllano solo la formattazione a schermo: il
+# "value" resta sempre nell'unità nativa del calcolo (rapporto puro per i
+# primi tre, secondi per il tempo di contatto).
 CHECKS = [
     dict(key="jump_to_rebound_ratio", label="Jump to Rebound Ratio",
          desc="Rapporto tra altezza del rimbalzo e altezza del salto iniziale nel CMJ RE.",
-         threshold=0.60, direction="min"),
+         threshold=0.60, direction="min", scale=100, decimals=1, suffix="%"),
     dict(key="cmj_to_cmjre_check", label="CMJ to CMJ RE Check",
          desc="Rapporto tra l'altezza del salto iniziale nel CMJ RE e l'altezza del CMJ standard.",
-         threshold=0.85, direction="min"),
+         threshold=0.85, direction="min", scale=100, decimals=1, suffix="%"),
     dict(key="unbalanced_landing_check", label="Unbalanced Landing Check",
          desc="Indice di simmetria dell'impulso frenante in atterraggio (CMJ RE). Valori assoluti alti indicano un atterraggio sbilanciato.",
-         threshold=0.50, direction="max"),
+         threshold=0.50, direction="max", scale=100, decimals=1, suffix="%"),
+    dict(key="cmj_re_contact_time_check", label="CMJ RE Contact Time Check",
+         desc="Tempo di contatto nel rimbalzo del CMJ RE: un tempo di contatto troppo lungo indica un rimbalzo poco reattivo.",
+         threshold=0.250, direction="max", scale=1000, decimals=0, suffix=" ms"),
 ]
 
 JUMP_TYPE_LABELS = {"imtp": "IMTP", "sj": "Squat Jump", "cmj": "CMJ", "cmrj": "CMJ Rebound"}
@@ -307,11 +309,16 @@ JUMP_TYPE_LABELS = {"imtp": "IMTP", "sj": "Squat Jump", "cmj": "CMJ", "cmrj": "C
 
 st.set_page_config(page_title="Force Plate Test Report", page_icon="🏋️", layout="wide")
 
-# Palette brand DU Coaching (Destination Unknown): blu confermato dal logo;
-# arancio stimato visivamente dal logo (sole) — da verificare/correggere se
-# non è il valore esatto del brand kit (un solo punto da modificare).
-PRIMARY = "#065678"  # blu — dati dell'atleta (linee/punti nei grafici)
-ACCENT = "#E8542A"   # arancio — riferimenti di popolazione/benchmark
+# Palette brand DU Coaching (Destination Unknown), allineata al tema
+# Streamlit fornito dall'utente:
+#   primaryColor           #e94a26  -> ACCENT (riferimenti di popolazione/benchmark)
+#   secondaryBackgroundColor #0bb6ff -> PRIMARY (dati dell'atleta: linee/punti nei grafici)
+#   textColor               #065678 -> TEXT_COLOR (testi, titoli, chrome UI)
+#   backgroundColor          #ffffff -> BG_COLOR (sfondo grafici/report)
+PRIMARY = "#0bb6ff"     # azzurro — dati dell'atleta (linee/punti nei grafici)
+ACCENT = "#e94a26"      # arancio — riferimenti di popolazione/benchmark
+TEXT_COLOR = "#065678"  # blu scuro — testi, titoli, chrome dei widget
+BG_COLOR = "#ffffff"    # sfondo
 
 # Applica la palette brand ai widget nativi di Streamlit (tab attive,
 # pulsanti, download button, checkbox) iniettando CSS direttamente nel file,
@@ -320,18 +327,18 @@ ACCENT = "#E8542A"   # arancio — riferimenti di popolazione/benchmark
 # di Streamlit che potrebbero cambiare in futuri aggiornamenti della libreria.
 st.markdown(f"""
 <style>
-    .stTabs [data-baseweb="tab-highlight"] {{ background-color: {PRIMARY} !important; }}
-    .stTabs [aria-selected="true"] {{ color: {PRIMARY} !important; }}
+    .stTabs [data-baseweb="tab-highlight"] {{ background-color: {TEXT_COLOR} !important; }}
+    .stTabs [aria-selected="true"] {{ color: {TEXT_COLOR} !important; }}
     .stButton > button, .stDownloadButton > button {{
-        border-color: {PRIMARY} !important;
-        color: {PRIMARY} !important;
+        border-color: {TEXT_COLOR} !important;
+        color: {TEXT_COLOR} !important;
     }}
     .stButton > button:hover, .stDownloadButton > button:hover,
     .stButton > button:active, .stDownloadButton > button:active {{
         border-color: {ACCENT} !important;
         color: {ACCENT} !important;
     }}
-    input[type="checkbox"] {{ accent-color: {PRIMARY} !important; }}
+    input[type="checkbox"] {{ accent-color: {TEXT_COLOR} !important; }}
 </style>
 """, unsafe_allow_html=True)
 
@@ -821,11 +828,13 @@ def build_results(files, pop_dict):
     rebound_h = support.get("cmj_re_rebound_height", {}).get("mean")
     landing_sym = support.get("unbalanced_landing_raw", {}).get("mean")
     cmj_h_standalone = support.get("cmj_height", {}).get("mean")
+    cmj_re_contact_time = support.get("cmj_re_contact_time", {}).get("mean")
 
     checks_out = [
         make_check(CHECKS[0], (rebound_h / initial_h) if (initial_h and rebound_h) else None),
         make_check(CHECKS[1], (initial_h / cmj_h_standalone) if (initial_h and cmj_h_standalone) else None),
         make_check(CHECKS[2], (landing_sym / 100.0) if landing_sym is not None else None),
+        make_check(CHECKS[3], cmj_re_contact_time if cmj_re_contact_time is not None else None),
     ]
 
     return dict(results=results, support=support, checks=checks_out, sesso=sesso_raw)
@@ -937,6 +946,124 @@ EUR_QUADRANTS = dict(
     bl=("Bassa prestazione in SJ e CMJ", "#E57373"),
     br=("Alta prestaz. CMJ, bassa SJ (EUR > 1.0)", "#FFF176"),
 )
+
+# Metriche (altezza, tempo) usate per il grafico RSQ di ciascuna categoria
+# che include un mRSI. Definito a livello di modulo per essere condiviso
+# tra la scheda Dettaglio Test e il report HTML.
+RSQ_METRIC_KEYS = {
+    "COUNTERMOVEMENT JUMP TEST": ("cmj_height", "cmj_contraction_time"),
+    "COUNTERMOVEMENT JUMP REBOUND TEST": ("cmj_re_rebound_height", "cmj_re_contact_time"),
+}
+
+
+def build_rsq_chart(cat, results):
+    """Grafico RSQ per una categoria, se applicabile. Ritorna None altrimenti."""
+    if cat not in RSQ_METRIC_KEYS:
+        return None
+    h_key, t_key = RSQ_METRIC_KEYS[cat]
+    h_metric = next(m for m in METRICS if m["key"] == h_key)
+    t_metric = next(m for m in METRICS if m["key"] == t_key)
+    r_h = next(r for r in results if r["key"] == h_key)
+    r_t = next(r for r in results if r["key"] == t_key)
+    return quadrant_chart(
+        x_mean=r_t["mean"], y_mean=r_h["mean"], x_sd=r_t["sd"], y_sd=r_h["sd"],
+        x_label=f"{t_metric['label']} ({t_metric['unit']})",
+        y_label=f"{h_metric['label']} ({h_metric['unit']})",
+        quadrant_defs=RSQ_QUADRANTS, pop_x=r_t["pop_mean"], pop_y=r_h["pop_mean"],
+        point_color=PRIMARY,
+    )
+
+
+def build_eur_chart(results):
+    """Grafico EUR (altezza SJ vs altezza CMJ), se entrambe le medie sono
+    disponibili. Ritorna None altrimenti."""
+    r_sj_h = next((r for r in results if r["key"] == "sj_height"), None)
+    r_cmj_h = next((r for r in results if r["key"] == "cmj_height"), None)
+    if r_sj_h is None or r_cmj_h is None:
+        return None
+    return quadrant_chart(
+        x_mean=r_cmj_h["mean"], y_mean=r_sj_h["mean"], x_sd=r_cmj_h["sd"], y_sd=r_sj_h["sd"],
+        x_label="CMJ Height (cm)", y_label="SJ Height (cm)",
+        quadrant_defs=EUR_QUADRANTS, pop_x=r_cmj_h["pop_mean"], pop_y=r_sj_h["pop_mean"],
+        point_color=PRIMARY, diagonal=True,
+    )
+
+
+def build_tscore_bar_chart(cat_results):
+    """Grafico a barre orizzontali del T-score per una categoria (usato sia
+    nella scheda Dettaglio Test sia nel report HTML). Ritorna None se nessuna
+    metrica della categoria ha un T-score calcolabile."""
+    scored = [r for r in cat_results if r["t"] is not None]
+    if not scored:
+        return None
+
+    scored_sorted = sorted(scored, key=lambda r: r["t"])
+    labels = [r["label"] for r in scored_sorted]
+    tvals = [r["t"] for r in scored_sorted]
+    colors = [r["colore"] for r in scored_sorted]
+
+    fig = go.Figure()
+
+    for lo, hi, band_label, band_color in BANDS:
+        lo_c, hi_c = max(lo, 0), min(hi, 100)
+        if lo_c >= hi_c:
+            continue
+        fig.add_vrect(
+            x0=lo_c, x1=hi_c, fillcolor=band_color, opacity=0.3, line_width=0,
+            annotation_text=band_label, annotation_position="top",
+            annotation_font=dict(size=9, color="#484343"),
+            annotation_textangle=0,
+        )
+
+    fig.add_trace(go.Bar(
+        x=tvals, y=labels, base=0, orientation="h",
+        marker_color=colors, customdata=tvals,
+        text=[f"{t:.0f}" for t in tvals], textposition="outside",
+        textfont=dict(color="#484343", size=12),
+        hovertemplate="%{y}: T-score %{customdata:.0f}<extra></extra>",
+    ))
+    fig.add_vline(
+        x=50, line_dash="dash", line_color=ACCENT,
+        annotation_text="media", annotation_position="bottom",
+        annotation_font=dict(size=9, color="#484343"),
+    )
+    fig.update_layout(
+        xaxis_title="T-score", xaxis_range=[0, 100],
+        xaxis_showgrid=False, xaxis_ticks="", yaxis_showgrid=False,
+        height=max(320, 70 * len(scored_sorted) + 80),
+        margin=dict(t=40, b=20), showlegend=False,
+        plot_bgcolor=BG_COLOR, paper_bgcolor=BG_COLOR,
+        font=dict(color=TEXT_COLOR),
+    )
+    return fig
+
+
+def build_radar_chart(cats_valide, profilo, nome):
+    """Radar (Scatterpolar) del profilo di forza (usato sia nella scheda
+    Profilo di Forza sia nel report HTML). Ritorna None se non ci sono
+    categorie valide."""
+    if not cats_valide:
+        return None
+    vals = [profilo[c] for c in cats_valide]
+    vals_closed = vals + [vals[0]]
+    cats_closed = cats_valide + [cats_valide[0]]
+
+    fig = go.Figure()
+    fig.add_trace(go.Scatterpolar(
+        r=[50] * (len(cats_valide) + 1), theta=cats_closed, mode="lines",
+        line=dict(color="rgba(233,74,38,0.6)", dash="dash"), name="Media popolazione (T=50)"
+    ))
+    fig.add_trace(go.Scatterpolar(
+        r=vals_closed, theta=cats_closed, fill="toself",
+        line=dict(color=PRIMARY, width=3), fillcolor="rgba(11,182,255,0.25)", name=nome
+    ))
+    fig.update_layout(
+        polar=dict(radialaxis=dict(range=[0, 100], showticklabels=True, ticks="", tickfont=dict(color=TEXT_COLOR))),
+        font=dict(color=TEXT_COLOR),
+        paper_bgcolor=BG_COLOR,
+        showlegend=True, height=520, margin=dict(t=40, b=40),
+    )
+    return fig
 
 
 if parsed_files:
@@ -1056,51 +1183,14 @@ with tab_dettaglio:
                 continue
             st.markdown(f"### {cat}")
 
-            scored = [r for r in cat_results if r["t"] is not None]
-            if scored:
-                # Grafico a barre orizzontali che partono da sinistra (0):
-                # la lunghezza della barra è il T-score assoluto. Le bande di
-                # valutazione sono mostrate come contesto sullo sfondo (vedi
-                # BANDS) e la media di popolazione (T-score = 50) resta
-                # segnata da una linea tratteggiata di riferimento.
-                scored_sorted = sorted(scored, key=lambda r: r["t"])
-                labels = [r["label"] for r in scored_sorted]
-                tvals = [r["t"] for r in scored_sorted]
-                colors = [r["colore"] for r in scored_sorted]
-
-                fig = go.Figure()
-
-                for lo, hi, band_label, band_color in BANDS:
-                    lo_c, hi_c = max(lo, 0), min(hi, 100)
-                    if lo_c >= hi_c:
-                        continue
-                    fig.add_vrect(
-                        x0=lo_c, x1=hi_c, fillcolor=band_color, opacity=0.3, line_width=0,
-                        annotation_text=band_label, annotation_position="top",
-                        annotation_font=dict(size=9, color="#484343"),
-                        annotation_textangle=0,
-                    )
-
-                fig.add_trace(go.Bar(
-                    x=tvals, y=labels, base=0, orientation="h",
-                    marker_color=colors, customdata=tvals,
-                    text=[f"{t:.0f}" for t in tvals], textposition="outside",
-                    textfont=dict(color="#484343", size=12),
-                    hovertemplate="%{y}: T-score %{customdata:.0f}<extra></extra>",
-                ))
-                fig.add_vline(
-                    x=50, line_dash="dash", line_color=ACCENT,
-                    annotation_text="media", annotation_position="bottom",
-                    annotation_font=dict(size=9, color="#484343"),
-                )
-                fig.update_layout(
-                    xaxis_title="T-score", xaxis_range=[0, 100],
-                    xaxis_showgrid=False, xaxis_ticks="", yaxis_showgrid=False,
-                    height=max(320, 70 * len(scored_sorted) + 80),
-                    margin=dict(t=40, b=20), showlegend=False,
-                    plot_bgcolor="white",
-                )
-                st.plotly_chart(fig, use_container_width=True)
+            # Grafico a barre orizzontali che partono da sinistra (0): la
+            # lunghezza della barra è il T-score assoluto. Le bande di
+            # valutazione sono mostrate come contesto sullo sfondo (vedi
+            # BANDS) e la media di popolazione (T-score = 50) resta segnata
+            # da una linea tratteggiata di riferimento.
+            tscore_fig = build_tscore_bar_chart(cat_results)
+            if tscore_fig:
+                st.plotly_chart(tscore_fig, use_container_width=True)
 
             # --- Salti individuali: inclusione e valori per colonna ---
             cat_metrics = [m for m in METRICS if m["category"] == cat and m.get("jump_type")]
@@ -1182,24 +1272,10 @@ with tab_dettaglio:
             # che includono un mRSI: mette in relazione la media di altezza
             # del salto (asse Y) e la media del tempo di contatto/contrazione
             # (asse X), con il crosshair centrato sulla media di popolazione.
-            rsq_metric_keys = {
-                "COUNTERMOVEMENT JUMP TEST": ("cmj_height", "cmj_contraction_time"),
-                "COUNTERMOVEMENT JUMP REBOUND TEST": ("cmj_re_rebound_height", "cmj_re_contact_time"),
-            }
-            if cat in rsq_metric_keys:
-                h_key, t_key = rsq_metric_keys[cat]
-                h_metric = next(m for m in METRICS if m["key"] == h_key)
-                t_metric = next(m for m in METRICS if m["key"] == t_key)
-                r_h = next(r for r in results if r["key"] == h_key)
+            if cat in RSQ_METRIC_KEYS:
+                rsq_fig = build_rsq_chart(cat, results)
+                h_key, t_key = RSQ_METRIC_KEYS[cat]
                 r_t = next(r for r in results if r["key"] == t_key)
-
-                rsq_fig = quadrant_chart(
-                    x_mean=r_t["mean"], y_mean=r_h["mean"], x_sd=r_t["sd"], y_sd=r_h["sd"],
-                    x_label=f"{t_metric['label']} ({t_metric['unit']})",
-                    y_label=f"{h_metric['label']} ({h_metric['unit']})",
-                    quadrant_defs=RSQ_QUADRANTS, pop_x=r_t["pop_mean"], pop_y=r_h["pop_mean"],
-                    point_color=PRIMARY,
-                )
                 if rsq_fig:
                     st.markdown("**RSQ — Reactive Strength Quadrant**")
                     caption = (
@@ -1230,9 +1306,11 @@ with tab_dettaglio:
                             st.markdown("—")
                         else:
                             icon = "✅" if c["passed"] else "⚠️"
-                            st.markdown(f"##### {icon} {c['value']*100:.1f}%")
+                            val_disp = c["value"] * c["scale"]
+                            th_disp = c["threshold"] * c["scale"]
+                            st.markdown(f"##### {icon} {val_disp:.{c['decimals']}f}{c['suffix']}")
                             soglia_lbl = "min" if c["direction"] == "min" else "max"
-                            st.caption(f"soglia {soglia_lbl} {c['threshold']*100:.0f}%")
+                            st.caption(f"soglia {soglia_lbl} {th_disp:.{c['decimals']}f}{c['suffix']}")
 
             st.markdown("---")
 
@@ -1262,25 +1340,8 @@ with tab_profilo:
         if not cats_valide:
             st.warning("Nessuna metrica con confronto di popolazione disponibile: carica almeno un test tra IMTP, SJ, CMJ o CMJ RE.")
         else:
-            vals = [profilo[c] for c in cats_valide]
-            vals_closed = vals + [vals[0]]
-            cats_closed = cats_valide + [cats_valide[0]]
-
-            fig = go.Figure()
-            fig.add_trace(go.Scatterpolar(
-                r=[50] * (len(cats_valide) + 1), theta=cats_closed, mode="lines",
-                line=dict(color="rgba(232,84,42,0.6)", dash="dash"), name="Media popolazione (T=50)"
-            ))
-            fig.add_trace(go.Scatterpolar(
-                r=vals_closed, theta=cats_closed, fill="toself",
-                line=dict(color=PRIMARY, width=3), fillcolor="rgba(6,86,120,0.25)", name=nome
-            ))
-            fig.update_layout(
-                polar=dict(radialaxis=dict(range=[0, 100], showticklabels=True, ticks="", tickfont=dict(color="black"))),
-                font=dict(color="white"),                
-                showlegend=True, height=520, margin=dict(t=40, b=40),
-            )
-            st.plotly_chart(fig, use_container_width=True)
+            radar_fig = build_radar_chart(cats_valide, profilo, nome)
+            st.plotly_chart(radar_fig, use_container_width=True)
 
             cols = st.columns(len(cats_valide))
             for col, cat in zip(cols, cats_valide):
@@ -1301,15 +1362,7 @@ with tab_profilo:
         # --- EUR come grafico a quadranti (altezza SJ vs altezza CMJ), invece
         # che come singolo T-score: mostra non solo il rapporto EUR, ma anche
         # il livello assoluto di prestazione in entrambi i test.
-        r_sj_h = next(r for r in results if r["key"] == "sj_height")
-        r_cmj_h = next(r for r in results if r["key"] == "cmj_height")
-
-        eur_fig = quadrant_chart(
-            x_mean=r_cmj_h["mean"], y_mean=r_sj_h["mean"], x_sd=r_cmj_h["sd"], y_sd=r_sj_h["sd"],
-            x_label="CMJ Height (cm)", y_label="SJ Height (cm)",
-            quadrant_defs=EUR_QUADRANTS, pop_x=r_cmj_h["pop_mean"], pop_y=r_sj_h["pop_mean"],
-            point_color=PRIMARY, diagonal=True,
-        )
+        eur_fig = build_eur_chart(results)
         if eur_fig:
             st.markdown("#### EUR (Eccentric Utilisation Ratio)")
             st.caption(
@@ -1318,146 +1371,212 @@ with tab_profilo:
                 "un EUR di 1.0."
             )
             st.plotly_chart(eur_fig, use_container_width=True)
-# PARTE 6 — REPORT SCARICABILE (Word)
+# PARTE 6 — REPORT SCARICABILE (HTML interattivo)
 # ============================================================================
+# Il report è un unico file HTML autosufficiente: i grafici Plotly restano
+# interattivi (hover, zoom) invece di essere "appiattiti" in immagini
+# statiche come richiederebbe un PDF. plotly.js viene caricato una sola
+# volta via CDN nell'<head>; ogni grafico è poi un semplice <div> generato
+# dalle stesse funzioni build_*_chart usate nella UI live (nessuna
+# duplicazione della logica di analisi/plotting). Chi riceve il file può
+# aprirlo in qualunque browser e, se serve una copia statica, stampare /
+# "Salva come PDF" direttamente da lì.
 
-# Palette brand DU Coaching applicata al report Word (stessi hex usati nei
-# grafici Plotly: PRIMARY/ACCENT sopra sono stringhe "#RRGGBB" per Plotly,
-# qui servono gli equivalenti RGBColor per python-docx).
-_DOCX_BLUE = RGBColor(0x06, 0x56, 0x78)
-_DOCX_ORANGE = RGBColor(0xE8, 0x54, 0x2A)
-_DOCX_WHITE = RGBColor(0xFF, 0xFF, 0xFF)
-
-
-def _heading(doc, text, level, color=_DOCX_BLUE):
-    """doc.add_heading() con il colore del brand invece del blu di default di Word."""
-    h = doc.add_heading(text, level=level)
-    for run in h.runs:
-        run.font.color.rgb = color
-    return h
-
-
-def _add_label(paragraph, text, color=_DOCX_BLUE):
-    """Aggiunge un'etichetta in grassetto colorata (es. 'Atleta: ') a un paragrafo."""
-    run = paragraph.add_run(text)
-    run.bold = True
-    run.font.color.rgb = color
-    return run
+def _fig_div(fig, div_id):
+    """Converte una figura Plotly in un <div> HTML incorporabile nel report,
+    senza reincludere plotly.js (già caricato una volta nell'head)."""
+    if fig is None:
+        return ""
+    return fig.to_html(full_html=False, include_plotlyjs=False, div_id=div_id,
+                        config={"displaylogo": False, "responsive": True})
 
 
-def _shade_cell(cell, hex_fill):
-    """Colora lo sfondo di una cella di tabella Word (hex senza '#')."""
-    shd = OxmlElement("w:shd")
-    shd.set(qn("w:val"), "clear")
-    shd.set(qn("w:color"), "auto")
-    shd.set(qn("w:fill"), hex_fill)
-    cell._tc.get_or_add_tcPr().append(shd)
+def _banda_badge(banda, colore):
+    if not banda:
+        return "—"
+    return f'<span class="badge" style="background:{colore}">{banda}</span>'
 
 
-def _style_header_row(row, hex_fill="065678"):
-    """Applica lo stile brand (sfondo blu, testo bianco in grassetto) alla riga di intestazione di una tabella."""
-    for cell in row.cells:
-        _shade_cell(cell, hex_fill)
-        for p in cell.paragraphs:
-            for run in p.runs:
-                run.font.color.rgb = _DOCX_WHITE
-                run.font.bold = True
+def _metric_table_html(cat_results):
+    rows_html = []
+    for r in cat_results:
+        media = f"{r['mean']:.3f}" if r["mean"] is not None else "N/D"
+        tscore = f"{r['t']:.0f}" if r["t"] is not None else "—"
+        rows_html.append(f"""<tr>
+            <td>{r['label']}</td><td>{r['unit'] or ''}</td><td>{media}</td>
+            <td>{r['n']}</td><td>{tscore}</td><td>{_banda_badge(r['banda'], r['colore'])}</td>
+        </tr>""")
+    return f"""<table class="report-table">
+        <thead><tr><th>Metrica</th><th>Unità</th><th>Media</th><th>N</th><th>T-score</th><th>Valutazione</th></tr></thead>
+        <tbody>{''.join(rows_html)}</tbody>
+    </table>"""
 
 
-def genera_report_docx(nome, sesso, periodo, results, profilo, checks):
-    doc = Document()
-    title = _heading(doc, "FORCE PLATE TEST REPORT", 0)
-    title.alignment = WD_ALIGN_PARAGRAPH.CENTER
+def genera_report_html(nome, sesso, periodo, results, profilo, checks):
+    div_counter = {"n": 0}
 
-    p = doc.add_paragraph()
-    _add_label(p, "Atleta: ")
-    p.add_run(f"{nome}    ")
-    _add_label(p, "Sesso: ")
-    p.add_run(f"{sesso}    ")
-    _add_label(p, "Data test: ")
-    p.add_run(f"{periodo}")
+    def next_id(prefix):
+        div_counter["n"] += 1
+        return f"{prefix}_{div_counter['n']}"
 
-    doc.add_paragraph(
-        "Per valutare i risultati del test è stato utilizzato il T-Score, un indice standardizzato "
-        "che confronta la prestazione dell'atleta rispetto a un gruppo di riferimento, esprimendo la "
-        "distanza dalla media in deviazioni standard. Punteggi tra 0 e 50 indicano valori inferiori "
-        "alla media, mentre punteggi tra 50 e 100 indicano valori superiori alla media."
+    sections = []
+
+    # --- Profilo di Forza ---
+    cats_valide = [c for c in CATEGORIES if profilo.get(c) is not None]
+    radar_fig = build_radar_chart(cats_valide, profilo, nome)
+    profilo_cards = "".join(
+        f"""<div class="profile-card">
+                <div class="profile-card-cat">{cat}</div>
+                <div class="profile-card-t" style="color:{banda_da_tscore(profilo[cat])[1]}">{profilo[cat]:.0f}</div>
+                <div class="profile-card-banda">{banda_da_tscore(profilo[cat])[0]}</div>
+            </div>"""
+        for cat in cats_valide
     )
+    sections.append(f"""<section>
+        <h2>Profilo di Forza</h2>
+        {_fig_div(radar_fig, next_id('radar')) if radar_fig else '<p class="muted">Nessuna metrica con confronto di popolazione disponibile.</p>'}
+        <div class="profile-cards">{profilo_cards}</div>
+    </section>""")
 
-    _heading(doc, "Profilo di Forza", 1)
-    tbl = doc.add_table(rows=1, cols=2)
-    tbl.style = "Light Grid Accent 1"
-    hdr = tbl.rows[0].cells
-    hdr[0].text, hdr[1].text = "Categoria", "T-score"
-    _style_header_row(tbl.rows[0])
-    for cat in CATEGORIES:
-        t = profilo.get(cat)
-        row = tbl.add_row().cells
-        row[0].text = cat
-        row[1].text = f"{t:.0f}" if t is not None else "N/D"
-
+    # --- Categorie di test ---
     for cat in CATEGORIES:
         cat_results = [r for r in results if r["category"] == cat and r["mean"] is not None]
         if not cat_results:
             continue
-        _heading(doc, cat, 2)
-        tbl = doc.add_table(rows=1, cols=5)
-        tbl.style = "Light List Accent 1"
-        hdr = tbl.rows[0].cells
-        for i, h in enumerate(["Metrica", "Unità", "Media", "N", "T-score / Valutazione"]):
-            hdr[i].text = h
-        _style_header_row(tbl.rows[0])
-        for r in cat_results:
-            row = tbl.add_row().cells
-            row[0].text = r["label"]
-            row[1].text = r["unit"] or ""
-            row[2].text = f"{r['mean']:.3f}" if r["mean"] is not None else "N/D"
-            row[3].text = str(r["n"])
-            row[4].text = f"{r['t']:.0f} ({r['banda']})" if r["t"] is not None else "—"
-        doc.add_paragraph()
+        tscore_fig = build_tscore_bar_chart(cat_results)
+        rsq_fig = build_rsq_chart(cat, results)
 
+        checks_html = ""
+        if cat == "COUNTERMOVEMENT JUMP REBOUND TEST":
+            check_rows = []
+            for c in checks:
+                if c["value"] is None:
+                    continue
+                stato = "OK" if c["passed"] else "DA VERIFICARE"
+                stato_color = "#2E7D32" if c["passed"] else "#B00020"
+                soglia_lbl = "min" if c["direction"] == "min" else "max"
+                val_disp = c["value"] * c["scale"]
+                th_disp = c["threshold"] * c["scale"]
+                check_rows.append(f"""<tr>
+                    <td>{c['label']}<br><span class="muted">{c['desc']}</span></td>
+                    <td>{val_disp:.{c['decimals']}f}{c['suffix']}</td><td>{soglia_lbl} {th_disp:.{c['decimals']}f}{c['suffix']}</td>
+                    <td style="color:{stato_color};font-weight:600;">{stato}</td>
+                </tr>""")
+            if check_rows:
+                checks_html = f"""<h3>Controlli Tecnici (CMJ Rebound)</h3>
+                    <table class="report-table">
+                        <thead><tr><th>Controllo</th><th>Valore</th><th>Soglia</th><th>Esito</th></tr></thead>
+                        <tbody>{''.join(check_rows)}</tbody>
+                    </table>"""
+
+        sections.append(f"""<section>
+            <h2>{cat}</h2>
+            {_fig_div(tscore_fig, next_id('tscore'))}
+            {_metric_table_html(cat_results)}
+            {f'<h3>RSQ — Reactive Strength Quadrant</h3>{_fig_div(rsq_fig, next_id("rsq"))}' if rsq_fig else ''}
+            {checks_html}
+        </section>""")
+
+    # --- Indici (DSI, EUR) ---
     indici = [r for r in results if r["category"] == "INDICI" and r["mean"] is not None]
-    if indici:
-        _heading(doc, "Indici", 1)
-        for r in indici:
-            doc.add_paragraph(
-                f"{r['label']}: {r['mean']:.3f}"
-                + (f"  —  T-score {r['t']:.0f} ({r['banda']})" if r["t"] is not None else ""),
-                style="List Bullet",
-            )
+    eur_fig = build_eur_chart(results)
+    if indici or eur_fig:
+        indici_rows = "".join(f"""<tr>
+            <td>{r['label']}</td><td>{r['mean']:.3f}</td>
+            <td>{f"{r['t']:.0f} ({r['banda']})" if r['t'] is not None else '—'}</td>
+        </tr>""" for r in indici)
+        sections.append(f"""<section>
+            <h2>Indici</h2>
+            <table class="report-table">
+                <thead><tr><th>Indice</th><th>Valore</th><th>T-score</th></tr></thead>
+                <tbody>{indici_rows}</tbody>
+            </table>
+            {f'<h3>EUR (Eccentric Utilisation Ratio)</h3>{_fig_div(eur_fig, next_id("eur"))}' if eur_fig else ''}
+        </section>""")
 
-    _heading(doc, "Controlli Tecnici", 1)
-    for c in checks:
-        if c["value"] is None:
-            continue
-        stato = "OK" if c["passed"] else "DA VERIFICARE"
-        doc.add_paragraph(
-            f"{c['label']}: {c['value']*100:.1f}% (soglia {'min' if c['direction']=='min' else 'max'} "
-            f"{c['threshold']*100:.0f}%) — {stato}",
-            style="List Bullet",
-        )
+    # --- Analisi: editabile direttamente nel browser prima di stampare/salvare ---
+    sections.append("""<section>
+        <h2>Analisi</h2>
+        <div class="analysis-box" contenteditable="true">Spazio riservato al commento tecnico del
+            preparatore, con osservazioni su punti di forza, aree di miglioramento e indicazioni di
+            lavoro in palestra sulla base del profilo emerso.</div>
+        <p class="muted no-print">Testo modificabile direttamente qui nel browser: usa "Stampa" /
+            "Salva come PDF" del browser per ottenere una copia statica con le modifiche incluse.</p>
+    </section>""")
 
-    _heading(doc, "Analisi", 1)
-    doc.add_paragraph(
-        "Spazio riservato al commento tecnico del preparatore, con osservazioni su punti di forza, "
-        "aree di miglioramento e indicazioni di lavoro in palestra sulla base del profilo emerso."
-    )
-
-    buf = io.BytesIO()
-    doc.save(buf)
-    buf.seek(0)
-    return buf.getvalue()
+    html = f"""<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<title>Force Plate Test Report — {nome}</title>
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<style>
+    :root {{ --primary: {PRIMARY}; --accent: {ACCENT}; --text: {TEXT_COLOR}; --bg: {BG_COLOR}; }}
+    * {{ box-sizing: border-box; }}
+    body {{
+        font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        background: var(--bg); color: var(--text); margin: 0; padding: 0 0 60px 0;
+    }}
+    .report {{ max-width: 960px; margin: 0 auto; padding: 0 24px; }}
+    header.report-header {{ background: var(--text); color: #fff; padding: 32px 24px; margin-bottom: 24px; }}
+    header.report-header h1 {{ margin: 0 0 12px 0; font-size: 26px; letter-spacing: 0.5px; }}
+    .meta-row span {{ margin-right: 24px; font-size: 15px; }}
+    .meta-row b {{ color: var(--primary); }}
+    section {{ margin-bottom: 36px; padding-bottom: 24px; border-bottom: 1px solid #e0e0e0; }}
+    h2 {{ color: var(--text); border-left: 5px solid var(--accent); padding-left: 10px; font-size: 20px; }}
+    h3 {{ color: var(--text); font-size: 16px; margin-top: 24px; }}
+    .intro-text {{ line-height: 1.5; }}
+    table.report-table {{ width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 14px; }}
+    table.report-table th {{ background: var(--text); color: #fff; text-align: left; padding: 8px 10px; font-weight: 600; }}
+    table.report-table td {{ padding: 8px 10px; border-bottom: 1px solid #eee; }}
+    table.report-table tr:nth-child(even) td {{ background: #f7fbfd; }}
+    .badge {{ color: #fff; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; display: inline-block; }}
+    .profile-cards {{ display: flex; flex-wrap: wrap; gap: 16px; margin-top: 16px; }}
+    .profile-card {{ flex: 1 1 200px; background: #f7fbfd; border-radius: 8px; padding: 14px 16px; border: 1px solid #e0e0e0; }}
+    .profile-card-cat {{ font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text); opacity: 0.7; }}
+    .profile-card-t {{ font-size: 30px; font-weight: 700; }}
+    .profile-card-banda {{ font-size: 13px; }}
+    .muted {{ color: #667; font-size: 13px; }}
+    .analysis-box {{ min-height: 100px; border: 1px dashed var(--primary); border-radius: 6px; padding: 14px; line-height: 1.5; background: #f7fbfd; }}
+    @media print {{ .no-print {{ display: none; }} section {{ break-inside: avoid; }} }}
+</style>
+</head>
+<body>
+    <div class="report">
+        <header class="report-header">
+            <h1>🏋️ FORCE PLATE TEST REPORT</h1>
+            <div class="meta-row">
+                <span><b>Atleta:</b> {nome}</span>
+                <span><b>Sesso:</b> {sesso}</span>
+                <span><b>Data test:</b> {periodo}</span>
+            </div>
+        </header>
+        <p class="intro-text">
+            Per valutare i risultati del test è stato utilizzato il T-Score, un indice standardizzato
+            che confronta la prestazione dell'atleta rispetto a un gruppo di riferimento, esprimendo la
+            distanza dalla media in deviazioni standard. Punteggi tra 0 e 50 indicano valori inferiori
+            alla media, mentre punteggi tra 50 e 100 indicano valori superiori alla media.
+        </p>
+        {''.join(sections)}
+    </div>
+</body>
+</html>"""
+    return html.encode("utf-8")
 
 
 with tab_report:
     if not parsed_files:
         st.info("Carica dei file dalla barra laterale per generare il report.")
     else:
-        st.markdown("Genera un report Word (.docx) con profilo di forza, tabelle riassuntive e analisi testuale, in stile analogo al foglio REPORT originale.")
-        if st.button("📄 Genera report Word", type="primary"):
-            docx_bytes = genera_report_docx(nome, sesso, periodo, results, profilo, checks)
+        st.markdown(
+            "Genera un report HTML autosufficiente (grafici interattivi inclusi) con profilo di forza, "
+            "tabelle riassuntive e uno spazio per l'analisi testuale. Si apre in qualunque browser; se serve "
+            "una copia statica, si può stampare/salvare come PDF direttamente da lì."
+        )
+        if st.button("📄 Genera report HTML", type="primary"):
+            html_bytes = genera_report_html(nome, sesso, periodo, results, profilo, checks)
             st.download_button(
-                "⬇️ Scarica report (.docx)", data=docx_bytes,
-                file_name=f"Report_{nome.replace(' ', '_')}_{dt.date.today().isoformat()}.docx",
-                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                "⬇️ Scarica report (.html)", data=html_bytes,
+                file_name=f"Report_{nome.replace(' ', '_')}_{dt.date.today().isoformat()}.html",
+                mime="text/html",
             )

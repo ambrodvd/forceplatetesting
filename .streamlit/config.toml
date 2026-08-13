@@ -10,8 +10,8 @@
 # e altri controlli interattivi di Streamlit con il blu del brand.
 
 [theme]
-primaryColor = "#065678"
+primaryColor = "#e94a26"
 backgroundColor = "#ffffff"
-secondaryBackgroundColor = "#e94a26"
+secondaryBackgroundColor = "#0bb6ff"
 textColor = "#065678"
 font = "sans serif"
