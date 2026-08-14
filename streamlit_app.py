@@ -20,6 +20,7 @@ from __future__ import annotations
 import io
 import math
 import re
+import html as _html
 import datetime as dt
 from dataclasses import dataclass, field
 
@@ -927,8 +928,10 @@ def quadrant_chart(x_mean, y_mean, x_sd, y_sd, x_label, y_label, quadrant_defs,
         xaxis_title=x_label, yaxis_title=y_label,
         xaxis_range=[x0, x1], yaxis_range=[y0, y1],
         xaxis_showgrid=False, yaxis_showgrid=False,
-        height=height, margin=dict(t=30, b=20), showlegend=False,
-        plot_bgcolor="white",
+        xaxis=dict(automargin=True, title=dict(standoff=12)),
+        yaxis=dict(automargin=True, title=dict(standoff=12)),
+        height=height, margin=dict(t=30, b=50, l=70, r=20), showlegend=False,
+        plot_bgcolor=BG_COLOR, paper_bgcolor=BG_COLOR, font=dict(color=TEXT_COLOR),
     )
     return fig
 
@@ -1008,11 +1011,15 @@ def build_tscore_bar_chart(cat_results):
         lo_c, hi_c = max(lo, 0), min(hi, 100)
         if lo_c >= hi_c:
             continue
-        fig.add_vrect(
-            x0=lo_c, x1=hi_c, fillcolor=band_color, opacity=0.3, line_width=0,
-            annotation_text=band_label, annotation_position="top",
-            annotation_font=dict(size=9, color="#484343"),
-            annotation_textangle=0,
+        # Il rettangolo di sfondo (banda) resta ancorato ai dati (asse x),
+        # ma l'etichetta viene disegnata separatamente appena sopra l'area
+        # di plot (yref="paper", y>1) invece che dentro di essa: così non
+        # si sovrappone mai alla barra più in alto, indipendentemente dal
+        # numero di metriche mostrate.
+        fig.add_vrect(x0=lo_c, x1=hi_c, fillcolor=band_color, opacity=0.3, line_width=0)
+        fig.add_annotation(
+            x=(lo_c + hi_c) / 2, y=1.02, xref="x", yref="paper", yanchor="bottom",
+            text=band_label, showarrow=False, font=dict(size=9, color="#484343"),
         )
 
     fig.add_trace(go.Bar(
@@ -1022,16 +1029,13 @@ def build_tscore_bar_chart(cat_results):
         textfont=dict(color="#484343", size=12),
         hovertemplate="%{y}: T-score %{customdata:.0f}<extra></extra>",
     ))
-    fig.add_vline(
-        x=50, line_dash="dash", line_color=ACCENT,
-        annotation_text="media", annotation_position="bottom",
-        annotation_font=dict(size=9, color="#484343"),
-    )
+    fig.add_vline(x=50, line_dash="dash", line_color=ACCENT)
     fig.update_layout(
         xaxis_title="T-score", xaxis_range=[0, 100],
-        xaxis_showgrid=False, xaxis_ticks="", yaxis_showgrid=False,
-        height=max(320, 70 * len(scored_sorted) + 80),
-        margin=dict(t=40, b=20), showlegend=False,
+        xaxis=dict(showgrid=False, ticks="", automargin=True, title=dict(standoff=18)),
+        yaxis_showgrid=False,
+        height=max(360, 70 * len(scored_sorted) + 150),
+        margin=dict(t=70, b=60, l=20, r=20), showlegend=False,
         plot_bgcolor=BG_COLOR, paper_bgcolor=BG_COLOR,
         font=dict(color=TEXT_COLOR),
     )
@@ -1225,6 +1229,7 @@ with tab_dettaglio:
                 for i, v in enumerate(values):
                     row[jump_cols[i]] = round(v, 3) if isinstance(v, (int, float)) else None
                 row["Media"] = round(r["mean"], 3) if r and r["mean"] is not None else None
+                row["Media Pop."] = round(r["pop_mean"], 3) if r and r["pop_mean"] is not None else "—"
                 row["Dev.Std"] = round(r["sd"], 3) if r and r["sd"] else None
                 # CV% = coefficiente di variazione (dev.std / media * 100): misura
                 # la variabilità relativa tra le ripetizioni incluse.
@@ -1356,8 +1361,12 @@ with tab_profilo:
             st.markdown("#### Indici")
             icols = st.columns(len(indici))
             for col, r in zip(icols, indici):
-                col.metric(r["label"], f"{r['mean']:.3f}",
-                           help=f"T-score: {r['t']:.0f} ({r['banda']})" if r["t"] else None)
+                help_parts = []
+                if r["t"] is not None:
+                    help_parts.append(f"T-score: {r['t']:.0f} ({r['banda']})")
+                if r["pop_mean"] is not None:
+                    help_parts.append(f"Media popolazione: {r['pop_mean']:.3f}")
+                col.metric(r["label"], f"{r['mean']:.3f}", help=" — ".join(help_parts) or None)
 
         # --- EUR come grafico a quadranti (altezza SJ vs altezza CMJ), invece
         # che come singolo T-score: mostra non solo il rapporto EUR, ma anche
@@ -1401,18 +1410,19 @@ def _metric_table_html(cat_results):
     rows_html = []
     for r in cat_results:
         media = f"{r['mean']:.3f}" if r["mean"] is not None else "N/D"
+        media_pop = f"{r['pop_mean']:.3f}" if r["pop_mean"] is not None else "—"
         tscore = f"{r['t']:.0f}" if r["t"] is not None else "—"
         rows_html.append(f"""<tr>
-            <td>{r['label']}</td><td>{r['unit'] or ''}</td><td>{media}</td>
+            <td>{r['label']}</td><td>{r['unit'] or ''}</td><td>{media}</td><td>{media_pop}</td>
             <td>{r['n']}</td><td>{tscore}</td><td>{_banda_badge(r['banda'], r['colore'])}</td>
         </tr>""")
     return f"""<table class="report-table">
-        <thead><tr><th>Metrica</th><th>Unità</th><th>Media</th><th>N</th><th>T-score</th><th>Valutazione</th></tr></thead>
+        <thead><tr><th>Metrica</th><th>Unità</th><th>Media</th><th>Media Pop.</th><th>N</th><th>T-score</th><th>Valutazione</th></tr></thead>
         <tbody>{''.join(rows_html)}</tbody>
     </table>"""
 
 
-def genera_report_html(nome, sesso, periodo, results, profilo, checks):
+def genera_report_html(nome, sesso, periodo, results, profilo, commento):
     div_counter = {"n": 0}
 
     def next_id(prefix):
@@ -1439,6 +1449,8 @@ def genera_report_html(nome, sesso, periodo, results, profilo, checks):
     </section>""")
 
     # --- Categorie di test ---
+    # I controlli tecnici a soglia (CMJ Rebound) restano solo nella scheda
+    # live "Dettaglio Test": non vengono replicati nel report scaricabile.
     for cat in CATEGORIES:
         cat_results = [r for r in results if r["category"] == cat and r["mean"] is not None]
         if not cat_results:
@@ -1446,35 +1458,11 @@ def genera_report_html(nome, sesso, periodo, results, profilo, checks):
         tscore_fig = build_tscore_bar_chart(cat_results)
         rsq_fig = build_rsq_chart(cat, results)
 
-        checks_html = ""
-        if cat == "COUNTERMOVEMENT JUMP REBOUND TEST":
-            check_rows = []
-            for c in checks:
-                if c["value"] is None:
-                    continue
-                stato = "OK" if c["passed"] else "DA VERIFICARE"
-                stato_color = "#2E7D32" if c["passed"] else "#B00020"
-                soglia_lbl = "min" if c["direction"] == "min" else "max"
-                val_disp = c["value"] * c["scale"]
-                th_disp = c["threshold"] * c["scale"]
-                check_rows.append(f"""<tr>
-                    <td>{c['label']}<br><span class="muted">{c['desc']}</span></td>
-                    <td>{val_disp:.{c['decimals']}f}{c['suffix']}</td><td>{soglia_lbl} {th_disp:.{c['decimals']}f}{c['suffix']}</td>
-                    <td style="color:{stato_color};font-weight:600;">{stato}</td>
-                </tr>""")
-            if check_rows:
-                checks_html = f"""<h3>Controlli Tecnici (CMJ Rebound)</h3>
-                    <table class="report-table">
-                        <thead><tr><th>Controllo</th><th>Valore</th><th>Soglia</th><th>Esito</th></tr></thead>
-                        <tbody>{''.join(check_rows)}</tbody>
-                    </table>"""
-
         sections.append(f"""<section>
             <h2>{cat}</h2>
             {_fig_div(tscore_fig, next_id('tscore'))}
             {_metric_table_html(cat_results)}
             {f'<h3>RSQ — Reactive Strength Quadrant</h3>{_fig_div(rsq_fig, next_id("rsq"))}' if rsq_fig else ''}
-            {checks_html}
         </section>""")
 
     # --- Indici (DSI, EUR) ---
@@ -1483,25 +1471,26 @@ def genera_report_html(nome, sesso, periodo, results, profilo, checks):
     if indici or eur_fig:
         indici_rows = "".join(f"""<tr>
             <td>{r['label']}</td><td>{r['mean']:.3f}</td>
+            <td>{f"{r['pop_mean']:.3f}" if r['pop_mean'] is not None else '—'}</td>
             <td>{f"{r['t']:.0f} ({r['banda']})" if r['t'] is not None else '—'}</td>
         </tr>""" for r in indici)
         sections.append(f"""<section>
             <h2>Indici</h2>
             <table class="report-table">
-                <thead><tr><th>Indice</th><th>Valore</th><th>T-score</th></tr></thead>
+                <thead><tr><th>Indice</th><th>Valore</th><th>Media Pop.</th><th>T-score</th></tr></thead>
                 <tbody>{indici_rows}</tbody>
             </table>
             {f'<h3>EUR (Eccentric Utilisation Ratio)</h3>{_fig_div(eur_fig, next_id("eur"))}' if eur_fig else ''}
         </section>""")
 
-    # --- Analisi: editabile direttamente nel browser prima di stampare/salvare ---
-    sections.append("""<section>
+    # --- Analisi: testo scritto dal preparatore nella scheda Report
+    # dell'app, incluso qui come testo statico (non modificabile nel report).
+    commento_html = _html.escape(commento).replace("\n", "<br>") if commento and commento.strip() else (
+        "Nessuna analisi inserita."
+    )
+    sections.append(f"""<section>
         <h2>Analisi</h2>
-        <div class="analysis-box" contenteditable="true">Spazio riservato al commento tecnico del
-            preparatore, con osservazioni su punti di forza, aree di miglioramento e indicazioni di
-            lavoro in palestra sulla base del profilo emerso.</div>
-        <p class="muted no-print">Testo modificabile direttamente qui nel browser: usa "Stampa" /
-            "Salva come PDF" del browser per ottenere una copia statica con le modifiche incluse.</p>
+        <div class="analysis-box">{commento_html}</div>
     </section>""")
 
     html = f"""<!DOCTYPE html>
@@ -1537,8 +1526,8 @@ def genera_report_html(nome, sesso, periodo, results, profilo, checks):
     .profile-card-t {{ font-size: 30px; font-weight: 700; }}
     .profile-card-banda {{ font-size: 13px; }}
     .muted {{ color: #667; font-size: 13px; }}
-    .analysis-box {{ min-height: 100px; border: 1px dashed var(--primary); border-radius: 6px; padding: 14px; line-height: 1.5; background: #f7fbfd; }}
-    @media print {{ .no-print {{ display: none; }} section {{ break-inside: avoid; }} }}
+    .analysis-box {{ min-height: 60px; border: 1px solid #e0e0e0; border-left: 4px solid var(--primary); border-radius: 6px; padding: 14px; line-height: 1.6; background: #f7fbfd; }}
+    @media print {{ section {{ break-inside: avoid; }} }}
 </style>
 </head>
 <body>
@@ -1569,12 +1558,23 @@ with tab_report:
         st.info("Carica dei file dalla barra laterale per generare il report.")
     else:
         st.markdown(
-            "Genera un report HTML autosufficiente (grafici interattivi inclusi) con profilo di forza, "
-            "tabelle riassuntive e uno spazio per l'analisi testuale. Si apre in qualunque browser; se serve "
-            "una copia statica, si può stampare/salvare come PDF direttamente da lì."
+            "Genera un report HTML autosufficiente (grafici interattivi inclusi) con profilo di forza "
+            "e tabelle riassuntive. Si apre in qualunque browser; se serve una copia statica, si può "
+            "stampare/salvare come PDF direttamente da lì."
+        )
+        st.markdown("**Analisi del preparatore**")
+        st.caption(
+            "Scrivi qui il commento tecnico da includere nel report: punti di forza, aree di "
+            "miglioramento e indicazioni di lavoro. Nel report scaricato il testo sarà statico "
+            "(non modificabile da chi lo riceve)."
+        )
+        commento = st.text_area(
+            "Analisi del preparatore", key="coach_comment", height=160, label_visibility="collapsed",
+            placeholder="Es. Buoni valori di forza isometrica, mRSI sopra media. Da lavorare sulla "
+                        "reattività nel CMJ Rebound...",
         )
         if st.button("📄 Genera report HTML", type="primary"):
-            html_bytes = genera_report_html(nome, sesso, periodo, results, profilo, checks)
+            html_bytes = genera_report_html(nome, sesso, periodo, results, profilo, commento)
             st.download_button(
                 "⬇️ Scarica report (.html)", data=html_bytes,
                 file_name=f"Report_{nome.replace(' ', '_')}_{dt.date.today().isoformat()}.html",
