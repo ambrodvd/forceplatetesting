@@ -1033,9 +1033,9 @@ def build_tscore_bar_chart(cat_results):
     fig.update_layout(
         xaxis_title="T-score", xaxis_range=[0, 100],
         xaxis=dict(showgrid=False, ticks="", automargin=True, title=dict(standoff=18)),
-        yaxis_showgrid=False,
+        yaxis=dict(showgrid=False, automargin=True),
         height=max(360, 70 * len(scored_sorted) + 150),
-        margin=dict(t=70, b=60, l=20, r=20), showlegend=False,
+        margin=dict(t=70, b=60, l=10, r=20), showlegend=False,
         plot_bgcolor=BG_COLOR, paper_bgcolor=BG_COLOR,
         font=dict(color=TEXT_COLOR),
     )
