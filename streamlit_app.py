@@ -2324,6 +2324,7 @@ class _ReportPDF(FPDF):
 
     def section_title(self, text):
         self.ensure_space(14)
+        self.set_x(self.l_margin)
         self.set_font("Helvetica", "B", 14)
         self.set_text_color(*_hex_to_rgb(TEXT_COLOR))
         self.cell(0, 10, _pdf_safe(text), new_x="LMARGIN", new_y="NEXT")
@@ -2334,11 +2335,13 @@ class _ReportPDF(FPDF):
 
     def subsection_title(self, text):
         self.ensure_space(10)
+        self.set_x(self.l_margin)
         self.set_font("Helvetica", "B", 11)
         self.set_text_color(*_hex_to_rgb(TEXT_COLOR))
         self.cell(0, 8, _pdf_safe(text), new_x="LMARGIN", new_y="NEXT")
 
     def body_text(self, text, size=10):
+        self.set_x(self.l_margin)
         self.set_font("Helvetica", "", size)
         self.set_text_color(60, 60, 70)
         self.multi_cell(0, 5.5, _pdf_safe(text))
@@ -2352,11 +2355,13 @@ class _ReportPDF(FPDF):
         self.ensure_space(h_mm + 4)
         x = self.l_margin + (self.epw - content_width_mm) / 2
         self.image(img_io, x=x, w=content_width_mm)
+        self.set_x(self.l_margin)
         self.ln(4)
 
     def metric_table(self, cat_results):
         headers = ["Metrica", "Unita", "Media", "Media Pop.", "N", "T-score", "Valutazione"]
         widths = [52, 14, 18, 18, 10, 16, 35]  # mm assoluti, sommano ~163mm su 180mm utili
+        self.set_x(self.l_margin)
         self.set_font("Helvetica", "", 8.5)
         self.set_draw_color(200, 200, 200)  # i bordi/il fill della tabella non devono
         self.set_line_width(0.2)            # ereditare accent/testo/fill lasciati da altri
@@ -2382,16 +2387,23 @@ class _ReportPDF(FPDF):
                 if r.get("colore"):
                     style = FontFace(fill_color=_hex_to_rgb(r["colore"]))
                 row.cell(_pdf_safe(r["banda"] or "-"), style=style)
+        # fpdf2 può lasciare il cursore x dopo l'ultima cella dell'ultima riga
+        # invece di riportarlo al margine sinistro: senza questo reset, un
+        # multi_cell(0, ...) subito dopo la tabella può ricevere una
+        # larghezza quasi nulla e sollevare FPDFException.
+        self.set_x(self.l_margin)
 
     def descriptions_block(self, items):
         pairs = [(it["label"], it["desc"]) for it in items if it and it.get("desc")]
         if not pairs:
             return
         self.ensure_space(8)
+        self.set_x(self.l_margin)
         self.set_font("Helvetica", "I", 8.5)
         self.set_text_color(90, 90, 100)
         for label, desc in pairs:
             self.ensure_space(6)
+            self.set_x(self.l_margin)
             self.multi_cell(0, 4.5, _pdf_safe(f"- {label}: {desc}"))
         self.ln(1)
 
@@ -2493,14 +2505,8 @@ with tab_report:
         st.info("Carica dei file dalla barra laterale per generare il report.")
     else:
         st.markdown(
-            "Genera il report in due formati: **HTML interattivo** (grafici zoomabili, pensato per "
-            "desktop/laptop) oppure **PDF statico** (un file che si apre nativamente ovunque, "
-            "consigliato su iPhone/iPad dove i file HTML scaricati spesso non si aprono correttamente)."
-        )
-        st.caption(
-            "📱 Su iPhone/iPad: il file HTML scaricato spesso mostra solo testo grezzo, perché Quick Look "
-            "non esegue le pagine web (serve \"Condividi → Apri in Safari\" per vederlo come pagina "
-            "interattiva). Il PDF invece si apre correttamente subito, ma i grafici non sono interattivi."
+            "Scegli in che formato generare il report: **HTML interattivo** (grafici zoomabili, pensato per "
+            "desktop/laptop) oppure **PDF statico** (più facilmente visualizzabile da qualsiasi dispositivo)."
         )
         st.markdown("**Analisi del preparatore**")
         st.caption(
