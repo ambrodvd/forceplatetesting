@@ -8,6 +8,7 @@ dependencies = [
     "constants>=0.6.0",
     "docx>=0.2.4",
     "fpdf>=1.7.2",
+    "fpdf2>=2.8.8",
     "future>=1.0.0",
     "openpyxl>=3.1",
     "plotly>=6.0",

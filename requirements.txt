@@ -2,4 +2,4 @@ streamlit>=1.35
 plotly>=6.0
 openpyxl>=3.1
 python-docx>=1.1
-fpdf
+fpdf2
