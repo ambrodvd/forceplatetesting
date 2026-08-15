@@ -20,6 +20,7 @@ from __future__ import annotations
 import io
 import math
 import re
+import textwrap
 import html as _html
 import datetime as dt
 from dataclasses import dataclass, field
@@ -302,6 +303,205 @@ CHECKS = [
 ]
 
 JUMP_TYPE_LABELS = {"imtp": "IMTP", "sj": "Squat Jump", "cmj": "CMJ", "cmrj": "CMJ Rebound"}
+
+
+# ============================================================================
+# PARTE 1bis — CATALOGO METRICHE EXTRA (ricerca libera, senza dato di
+# popolazione/T-score)
+# ============================================================================
+# L'app mostra di default solo un set curato di metriche (vedi METRICS
+# sopra), ciascuna con confronto di popolazione. Questi elenchi coprono
+# TUTTE le variabili che ForceMate/ForceDecks può esportare per ciascun
+# tipo di test, così l'utente può cercare e aggiungere qualsiasi altra
+# metrica dalla scheda Dettaglio Test — senza T-score (nessun dato di
+# popolazione disponibile per queste), solo media/dev.std/CV% per
+# ripetizione, con le stesse esclusioni already impostate sui salti.
+# Nomi già lowercase per combaciare con le chiavi salvate in rep["vars"]
+# (il parsing normalizza sempre con .strip().lower()).
+_BASE_JUMP_METRICS_CATALOG = [
+    'avg braking force sym. index', 'avg braking power sym. index', 'avg eccentric force',
+    'avg eccentric force sym. index', 'avg eccentric power', 'avg eccentric power sym. index',
+    'avg eccentric velocity', 'avg landing rfd', 'avg landing rfd sym. index',
+    'avg propulsive force sym. index', 'avg propulsive power sym. index', 'avg. braking force',
+    'avg. braking power', 'avg. braking velocity', 'avg. propulsive force',
+    'avg. propulsive power', 'avg. propulsive velocity', 'avg. rfd', 'avg. rfd sym. index',
+    'body mass', 'body weight', 'body weight sd', 'braking duration', 'braking end time',
+    'braking impulse', 'braking impulse sym. index', 'braking rfd', 'braking rfd sym. index',
+    'braking work', 'braking work sym. index', 'contact time', 'decel rfd', 'decel rfd sym. index',
+    'displacement depth', 'eccentric impulse', 'eccentric impulse sym. index', 'eccentric rfd',
+    'eccentric rfd sym. index', 'eccentric work', 'eccentric work sym. index', 'flight threshold',
+    'flight time', 'force at min displacement', 'force peak power', 'initiation threshold',
+    'jump height ft', 'jump height ni', 'jump momentum', 'jump start time', 'jump threshold time',
+    'landing peak force time', 'landing rfd 0-20ms', 'landing rfd 0-20ms sym. index',
+    'landing rfd 0-40ms', 'landing rfd 0-40ms sym. index', 'landing rfd 0-60ms',
+    'landing rfd 0-60ms sym. index', 'landing rfd 0-80ms', 'landing rfd 0-80ms sym. index',
+    'landing time', 'left avg braking force', 'left avg braking power', 'left avg eccentric force',
+    'left avg eccentric power', 'left avg landing rfd', 'left avg propulsive force',
+    'left avg propulsive power', 'left avg rfd', 'left braking impulse', 'left braking rfd',
+    'left braking work', 'left decel rfd', 'left eccentric impulse', 'left eccentric rfd',
+    'left eccentric work', 'left landing rfd 0-20ms', 'left landing rfd 0-40ms',
+    'left landing rfd 0-60ms', 'left landing rfd 0-80ms', 'left net impulse', 'left p1 impulse',
+    'left p2 impulse', 'left peak braking force', 'left peak braking power',
+    'left peak eccentric force', 'left peak eccentric power', 'left peak force',
+    'left peak landing force', 'left peak propulsive force', 'left peak propulsive power',
+    'left propulsive impulse', 'left propulsive rfd', 'left propulsive work',
+    'left time to peak braking force', 'left time to peak braking power',
+    'left time to peak eccentric force', 'left time to peak eccentric power',
+    'left time to peak force', 'left time to peak landing force', 'left time to peak power',
+    'left time to peak propulsive force', 'left time to peak propulsive power',
+    'min braking velocity', 'min eccentric velocity', 'min unweight force', 'net impulse',
+    'net impulse sym. index', 'p1 avg force', 'p1 avg power', 'p1 avg velocity', 'p1 duration',
+    'p1 impulse', 'p1 impulse sym. index', 'p1 p2 duration ratio', 'p1 p2 force ratio',
+    'p1 p2 power ratio', 'p1 p2 velocity ratio', 'p1 peak force', 'p1 peak power',
+    'p1 peak velocity', 'p2 avg force', 'p2 avg power', 'p2 avg velocity', 'p2 duration',
+    'p2 impulse', 'p2 impulse sym. index', 'p2 peak force', 'p2 peak power', 'p2 peak velocity',
+    'peak braking force', 'peak braking force sym. index', 'peak braking power',
+    'peak braking power sym. index', 'peak eccentric force', 'peak eccentric force sym. index',
+    'peak eccentric power', 'peak eccentric power sym. index', 'peak force',
+    'peak force sym. index', 'peak force time', 'peak landing force',
+    'peak landing force sym. index', 'peak power', 'peak propulsive force',
+    'peak propulsive force sym. index', 'peak propulsive power',
+    'peak propulsive power sym. index', 'peak propulsive velocity', 'peak velocity',
+    'propulsive duration', 'propulsive impulse', 'propulsive impulse sym. index', 'propulsive rfd',
+    'propulsive rfd sym. index', 'propulsive start time', 'propulsive work',
+    'propulsive work sym. index', 'rel. avg. propulsive force', 'rel. min unweight force',
+    'rel. propulsive impulse', 'relative force at min displacement', 'relative peak force',
+    'relative peak landing force', 'relative peak power', 'right avg braking force',
+    'right avg braking power', 'right avg eccentric force', 'right avg eccentric power',
+    'right avg landing rfd', 'right avg propulsive force', 'right avg propulsive power',
+    'right avg rfd', 'right braking impulse', 'right braking rfd', 'right braking work',
+    'right decel rfd', 'right eccentric impulse', 'right eccentric rfd', 'right eccentric work',
+    'right landing rfd 0-20ms', 'right landing rfd 0-40ms', 'right landing rfd 0-60ms',
+    'right landing rfd 0-80ms', 'right net impulse', 'right p1 impulse', 'right p2 impulse',
+    'right peak braking force', 'right peak braking power', 'right peak eccentric force',
+    'right peak eccentric power', 'right peak force', 'right peak landing force',
+    'right peak propulsive force', 'right peak propulsive power', 'right propulsive impulse',
+    'right propulsive rfd', 'right propulsive work', 'right time to peak braking force',
+    'right time to peak braking power', 'right time to peak eccentric force',
+    'right time to peak eccentric power', 'right time to peak force',
+    'right time to peak landing force', 'right time to peak power',
+    'right time to peak propulsive force', 'right time to peak propulsive power', 'rsi',
+    'rsi exponential', 'rsi modified', 'takeoff time', 'takeoff velocity',
+    'time to peak braking force', 'time to peak braking force sym. index',
+    'time to peak braking power', 'time to peak braking power sym. index',
+    'time to peak eccentric force', 'time to peak eccentric force sym. index',
+    'time to peak eccentric power', 'time to peak eccentric power sym. index',
+    'time to peak force', 'time to peak landing force', 'time to peak landing force sym. index',
+    'time to peak power', 'time to peak power sym. index', 'time to peak propulsive force',
+    'time to peak propulsive force sym. index', 'time to peak propulsive power',
+    'time to peak propulsive power sym. index', 'time to peak si', 'time to takeoff',
+    'unweighted duration', 'velocity peak power',
+]
+
+_CMRJ_EXTRA_METRICS_CATALOG = [
+    'left rebound avg braking force', 'left rebound avg braking power',
+    'left rebound avg propulsive force', 'left rebound avg propulsive power',
+    'left rebound braking impulse', 'left rebound braking rfd', 'left rebound braking work',
+    'left rebound p1 impulse', 'left rebound p2 impulse', 'left rebound peak braking force',
+    'left rebound peak braking power', 'left rebound peak propulsive force',
+    'left rebound peak propulsive power', 'left rebound propulsive impulse',
+    'left rebound propulsive rfd', 'left rebound propulsive work',
+    'left rebound time to peak braking force', 'left rebound time to peak braking power',
+    'left rebound time to peak propulsive force', 'left rebound time to peak propulsive power',
+    'rebound avg braking force', 'rebound avg braking force symmetry index',
+    'rebound avg braking power', 'rebound avg braking power symmetry index',
+    'rebound avg braking velocity', 'rebound avg propulsive force',
+    'rebound avg propulsive force symmetry index', 'rebound avg propulsive power',
+    'rebound avg propulsive power symmetry index', 'rebound avg propulsive velocity',
+    'rebound braking impulse', 'rebound braking impulse symmetry index', 'rebound braking rfd',
+    'rebound braking rfd symmetry index', 'rebound braking work',
+    'rebound braking work symmetry index', 'rebound contact time', 'rebound flight time',
+    'rebound force at min displacement', 'rebound jump height ft', 'rebound jump momentum',
+    'rebound min braking velocity', 'rebound p1 avg force', 'rebound p1 avg power',
+    'rebound p1 avg velocity', 'rebound p1 duration', 'rebound p1 impulse',
+    'rebound p1 impulse symmetry index', 'rebound p1 p2 duration ratio',
+    'rebound p1 p2 force ratio', 'rebound p1 p2 power ratio', 'rebound p1 p2 velocity ratio',
+    'rebound p1 peak force', 'rebound p1 peak power', 'rebound p1 peak velocity',
+    'rebound p2 avg force', 'rebound p2 avg power', 'rebound p2 avg velocity',
+    'rebound p2 duration', 'rebound p2 impulse', 'rebound p2 impulse symmetry index',
+    'rebound p2 peak force', 'rebound p2 peak power', 'rebound p2 peak velocity',
+    'rebound peak braking force', 'rebound peak braking force symmetry index',
+    'rebound peak braking power', 'rebound peak braking power symmetry index',
+    'rebound peak propulsive force', 'rebound peak propulsive force symmetry index',
+    'rebound peak propulsive power', 'rebound peak propulsive power symmetry index',
+    'rebound peak propulsive velocity', 'rebound propulsive impulse',
+    'rebound propulsive impulse symmetry index', 'rebound propulsive rfd',
+    'rebound propulsive rfd symmetry index', 'rebound propulsive work',
+    'rebound propulsive work symmetry index', 'rebound relative force at min displacement',
+    'rebound rsi', 'rebound rsi modified', 'rebound time to peak braking force',
+    'rebound time to peak braking force symmetry index', 'rebound time to peak braking power',
+    'rebound time to peak braking power symmetry index', 'rebound time to peak propulsive force',
+    'rebound time to peak propulsive force symmetry index',
+    'rebound time to peak propulsive power',
+    'rebound time to peak propulsive power symmetry index', 'rebound time to takeoff',
+    'right rebound avg braking force', 'right rebound avg braking power',
+    'right rebound avg propulsive force', 'right rebound avg propulsive power',
+    'right rebound braking impulse', 'right rebound braking rfd', 'right rebound braking work',
+    'right rebound p1 impulse', 'right rebound p2 impulse', 'right rebound peak braking force',
+    'right rebound peak braking power', 'right rebound peak propulsive force',
+    'right rebound peak propulsive power', 'right rebound propulsive impulse',
+    'right rebound propulsive rfd', 'right rebound propulsive work',
+    'right rebound time to peak braking force', 'right rebound time to peak braking power',
+    'right rebound time to peak propulsive force', 'right rebound time to peak propulsive power',
+    'with armswing',
+]
+
+_IMTP_METRICS_CATALOG = [
+    'end of rise force', 'end of rise force net', 'end of rise force relative',
+    'end of rise force relative net', 'end of rise torque', 'force 100ms', 'force 100ms left',
+    'force 100ms left net', 'force 100ms left relative', 'force 100ms left relative net',
+    'force 100ms net', 'force 100ms relative', 'force 100ms relative net', 'force 100ms right',
+    'force 100ms right net', 'force 100ms right relative', 'force 100ms right relative net',
+    'force 100ms si', 'force 150ms', 'force 150ms left', 'force 150ms left net',
+    'force 150ms left relative', 'force 150ms left relative net', 'force 150ms net',
+    'force 150ms relative', 'force 150ms relative net', 'force 150ms right',
+    'force 150ms right net', 'force 150ms right relative', 'force 150ms right relative net',
+    'force 150ms si', 'force 200ms', 'force 200ms left', 'force 200ms left net',
+    'force 200ms left relative', 'force 200ms left relative net', 'force 200ms net',
+    'force 200ms relative', 'force 200ms relative net', 'force 200ms right',
+    'force 200ms right net', 'force 200ms right relative', 'force 200ms right relative net',
+    'force 200ms si', 'force 250ms', 'force 250ms left', 'force 250ms left net',
+    'force 250ms left relative', 'force 250ms left relative net', 'force 250ms net',
+    'force 250ms relative', 'force 250ms relative net', 'force 250ms right',
+    'force 250ms right net', 'force 250ms right relative', 'force 250ms right relative net',
+    'force 250ms si', 'force 50ms', 'force 50ms left', 'force 50ms left net',
+    'force 50ms left relative', 'force 50ms left relative net', 'force 50ms net',
+    'force 50ms relative', 'force 50ms relative net', 'force 50ms right', 'force 50ms right net',
+    'force 50ms right relative', 'force 50ms right relative net', 'force 50ms si',
+    'force at max rfd', 'force at max rfd left', 'force at max rfd left net',
+    'force at max rfd left relative', 'force at max rfd left relative net', 'force at max rfd net',
+    'force at max rfd relative', 'force at max rfd relative net', 'force at max rfd right',
+    'force at max rfd right net', 'force at max rfd right relative',
+    'force at max rfd right relative net', 'force at max rfd si', 'impulse 100ms', 'impulse 150ms',
+    'impulse 200ms', 'impulse 250ms', 'impulse 50ms', 'impulse at max rfd', 'max rfd',
+    'onset force', 'onset force net', 'onset force relative', 'onset force relative net',
+    'onset time', 'onset torque', 'peak force', 'peak force left', 'peak force left net',
+    'peak force left relative', 'peak force left relative net', 'peak force net',
+    'peak force relative', 'peak force relative net', 'peak force right', 'peak force right net',
+    'peak force right relative', 'peak force right relative net', 'peak force si', 'peak torque',
+    'peak torque left', 'peak torque right', 'rfd 100ms', 'rfd 150ms', 'rfd 200ms', 'rfd 250ms',
+    'rfd 50ms', 'rfd impulse', 'steadiness rsme force', 'steadiness rsme rfd', 'system weight',
+    'time to force end of rise', 'time to peak force', 'time to peak rfd', 'torque 100ms',
+    'torque 100ms left', 'torque 100ms right', 'torque 150ms', 'torque 150ms left',
+    'torque 150ms right', 'torque 200ms', 'torque 200ms left', 'torque 200ms right',
+    'torque 250ms', 'torque 250ms left', 'torque 250ms right', 'torque 50ms', 'torque 50ms left',
+    'torque 50ms right', 'torque at max rfd', 'torque at max rfd left', 'torque at max rfd right',
+]
+
+# Elenco per jump_type usato dal multiselect di ricerca. sj/cmj condividono
+# lo stesso set base; cmrj lo estende con le variabili "rebound ...".
+EXTRA_METRICS_CATALOG = {
+    "sj": sorted(_BASE_JUMP_METRICS_CATALOG),
+    "cmj": sorted(_BASE_JUMP_METRICS_CATALOG),
+    "cmrj": sorted(set(_BASE_JUMP_METRICS_CATALOG) | set(_CMRJ_EXTRA_METRICS_CATALOG)),
+    "imtp": sorted(_IMTP_METRICS_CATALOG),
+}
+
+
+def extra_metric_label(raw_var):
+    """Etichetta leggibile per una metrica extra scelta dall'utente (solo
+    la prima lettera maiuscola, il resto è già in minuscolo)."""
+    return raw_var[:1].upper() + raw_var[1:]
 
 
 # ============================================================================
@@ -860,12 +1060,16 @@ def profilo_forza(results):
 # barre d'errore pari alla deviazione standard delle ripetizioni incluse.
 
 def quadrant_chart(x_mean, y_mean, x_sd, y_sd, x_label, y_label, quadrant_defs,
-                    pop_x=None, pop_y=None, point_color=PRIMARY, diagonal=False, height=430):
+                    pop_x=None, pop_y=None, point_color=PRIMARY, diagonal=False,
+                    diagonal_ratio=1.0, height=430):
     """quadrant_defs: dict con chiavi 'tl','tr','bl','br' -> (etichetta, colore).
     Il crosshair (linee tratteggiate e confini dei quadranti) è centrato sulla
     media di popolazione (pop_x, pop_y); se non disponibile per una metrica si
     usa la media del test come fallback. Il punto mostrato è la media del test
     con barre d'errore pari alla deviazione standard delle ripetizioni incluse.
+    Se diagonal=True, la linea tratteggiata diagonale rappresenta i punti con
+    rapporto x/y == diagonal_ratio (es. il valore medio di popolazione
+    dell'indice, non necessariamente 1.0).
     Ritorna una go.Figure oppure None se manca la media del test su uno dei due assi."""
     if x_mean is None or y_mean is None:
         return None
@@ -907,8 +1111,12 @@ def quadrant_chart(x_mean, y_mean, x_sd, y_sd, x_label, y_label, quadrant_defs,
                             font=dict(size=10, color="#666"), yanchor=anchor)
 
     if diagonal:
-        d0, d1 = min(x0, y0), max(x1, y1)
-        fig.add_shape(type="line", x0=d0, y0=d0, x1=d1, y1=d1,
+        ratio = diagonal_ratio if diagonal_ratio else 1.0
+        # Linea dei punti con x/y == ratio (es. rapporto medio di
+        # popolazione), tracciata sull'intera larghezza del grafico:
+        # y = x / ratio. Plotly ritaglia automaticamente la parte che
+        # eccede il range visibile degli assi.
+        fig.add_shape(type="line", x0=x0, y0=x0 / ratio, x1=x1, y1=x1 / ratio,
                        line=dict(color=ACCENT, dash="dash", width=2))
 
     fig.add_vline(x=cx, line_dash="dash", line_color=ACCENT)
@@ -944,10 +1152,17 @@ RSQ_QUADRANTS = dict(
 )
 
 EUR_QUADRANTS = dict(
-    tl=("Alta prestaz. SJ, bassa CMJ (EUR < 1.0)", "#FFB74D"),
-    tr=("Alta prestazione in SJ e CMJ (EUR ~ 1.0)", "#81C784"),
-    bl=("Bassa prestazione in SJ e CMJ", "#E57373"),
-    br=("Alta prestaz. CMJ, bassa SJ (EUR > 1.0)", "#FFF176"),
+    tl=("Atleta potente ma poco esplosivo (EUR < 1.0)", "#FFB74D"),
+    tr=("Atleta potente ed esplosivo (EUR ~ 1.0)", "#81C784"),
+    bl=("Atleta poco potente e poco esplosivo", "#E57373"),
+    br=("Atleta esplosivo ma poco potente (EUR > 1.0)", "#FFF176"),
+)
+
+DSI_QUADRANTS = dict(
+    tl=("Alta prestaz. IMTP, bassa CMJ (DSI < 1.0)", "#FFB74D"),
+    tr=("Alta prestazione in CMJ e IMTP (DSI ~ 1.0)", "#81C784"),
+    bl=("Bassa prestazione in CMJ e IMTP", "#E57373"),
+    br=("Alta prestaz. CMJ, bassa IMTP (DSI > 1.0)", "#FFF176"),
 )
 
 # Metriche (altezza, tempo) usate per il grafico RSQ di ciascuna categoria
@@ -979,16 +1194,36 @@ def build_rsq_chart(cat, results):
 
 def build_eur_chart(results):
     """Grafico EUR (altezza SJ vs altezza CMJ), se entrambe le medie sono
-    disponibili. Ritorna None altrimenti."""
+    disponibili. La diagonale rappresenta il valore medio di popolazione
+    dell'EUR (non un fisso 1.0). Ritorna None altrimenti."""
     r_sj_h = next((r for r in results if r["key"] == "sj_height"), None)
     r_cmj_h = next((r for r in results if r["key"] == "cmj_height"), None)
+    r_eur = next((r for r in results if r["key"] == "eur"), None)
     if r_sj_h is None or r_cmj_h is None:
         return None
+    eur_pop = r_eur["pop_mean"] if r_eur and r_eur["pop_mean"] else 1.0
     return quadrant_chart(
         x_mean=r_cmj_h["mean"], y_mean=r_sj_h["mean"], x_sd=r_cmj_h["sd"], y_sd=r_sj_h["sd"],
         x_label="CMJ Height (cm)", y_label="SJ Height (cm)",
         quadrant_defs=EUR_QUADRANTS, pop_x=r_cmj_h["pop_mean"], pop_y=r_sj_h["pop_mean"],
-        point_color=PRIMARY, diagonal=True,
+        point_color=PRIMARY, diagonal=True, diagonal_ratio=eur_pop,
+    )
+
+
+def build_dsi_chart(results):
+    """Grafico DSI (CMJ Peak Force vs IMTP Peak Force): mostra la posizione
+    dell'atleta nei quattro quadranti senza tracciare una diagonale di
+    riferimento (le due forze di picco non sono attese avere la stessa
+    scala). Ritorna None se una delle due medie non è disponibile."""
+    r_cmj_peak = next((r for r in results if r["key"] == "cmj_peak_force"), None)
+    r_imtp_peak = next((r for r in results if r["key"] == "imtp_peak_force"), None)
+    if r_cmj_peak is None or r_imtp_peak is None:
+        return None
+    return quadrant_chart(
+        x_mean=r_cmj_peak["mean"], y_mean=r_imtp_peak["mean"], x_sd=r_cmj_peak["sd"], y_sd=r_imtp_peak["sd"],
+        x_label="CMJ Peak Force (N)", y_label="IMTP Peak Force (N)",
+        quadrant_defs=DSI_QUADRANTS, pop_x=r_cmj_peak["pop_mean"], pop_y=r_imtp_peak["pop_mean"],
+        point_color=PRIMARY, diagonal=False,
     )
 
 
@@ -1042,6 +1277,13 @@ def build_tscore_bar_chart(cat_results):
     return fig
 
 
+def _wrap_label(text, width=16):
+    """Spezza un'etichetta lunga su più righe (per gli assi angolari del
+    radar), così non deborda oltre il bordo del grafico invece di essere
+    tagliata."""
+    return "<br>".join(textwrap.wrap(text, width=width, break_long_words=False))
+
+
 def build_radar_chart(cats_valide, profilo, nome):
     """Radar (Scatterpolar) del profilo di forza (usato sia nella scheda
     Profilo di Forza sia nel report HTML). Ritorna None se non ci sono
@@ -1050,7 +1292,7 @@ def build_radar_chart(cats_valide, profilo, nome):
         return None
     vals = [profilo[c] for c in cats_valide]
     vals_closed = vals + [vals[0]]
-    cats_closed = cats_valide + [cats_valide[0]]
+    cats_closed = [_wrap_label(c) for c in cats_valide] + [_wrap_label(cats_valide[0])]
 
     fig = go.Figure()
     fig.add_trace(go.Scatterpolar(
@@ -1062,10 +1304,13 @@ def build_radar_chart(cats_valide, profilo, nome):
         line=dict(color=PRIMARY, width=3), fillcolor="rgba(11,182,255,0.25)", name=nome
     ))
     fig.update_layout(
-        polar=dict(radialaxis=dict(range=[0, 100], showticklabels=True, ticks="", tickfont=dict(color=TEXT_COLOR))),
+        polar=dict(
+            domain=dict(x=[0.12, 0.88], y=[0.08, 0.92]),
+            radialaxis=dict(range=[0, 100], showticklabels=True, ticks="", tickfont=dict(color=TEXT_COLOR)),
+        ),
         font=dict(color=TEXT_COLOR),
         paper_bgcolor=BG_COLOR,
-        showlegend=True, height=520, margin=dict(t=40, b=40),
+        showlegend=True, height=560, margin=dict(t=60, b=60, l=60, r=60),
     )
     return fig
 
@@ -1207,6 +1452,26 @@ with tab_dettaglio:
                 st.markdown("---")
                 continue
 
+            # --- Metriche extra: ricerca libera su tutte le altre variabili
+            # presenti nel file ForceDecks per questo tipo di test, oltre a
+            # quelle curate sopra. Non avendo un dato di popolazione non
+            # hanno T-score, ma vengono comunque calcolate (media, dev.std,
+            # CV%) sulle stesse ripetizioni incluse/escluse qui sotto.
+            existing_raw_vars = {m["raw_var"] for m in cat_metrics if m.get("raw_var")}
+            catalog_options = [v for v in EXTRA_METRICS_CATALOG.get(jump_type, []) if v not in existing_raw_vars]
+            extra_selected = st.multiselect(
+                "🔎 Aggiungi metriche extra (cerca per nome)", options=catalog_options,
+                key=f"extra_metrics_{jump_type}",
+                help="Tutte le altre variabili disponibili nell'export ForceDecks per questo tipo di test. "
+                     "Non avendo un dato di popolazione, sono mostrate senza T-score.",
+            )
+            extra_metric_defs = [
+                dict(key=f"extra::{jump_type}::{name}", label=extra_metric_label(name), category=cat,
+                     jump_type=jump_type, raw_var=name, unit="", pop_key=None,
+                     lower_is_better=False, kind="info")
+                for name in extra_selected
+            ]
+
             st.markdown("**Ripetizioni incluse nel calcolo**")
             st.caption("Deseleziona un salto per escluderlo da media, dev.std e T-score di questa categoria.")
             chk_cols = st.columns(n_reps)
@@ -1216,11 +1481,22 @@ with tab_dettaglio:
                 checked = chk_cols[i].checkbox(f"Prova {i + 1}", value=st.session_state.get(key, True), key=key)
                 incl_mask.append(checked)
 
+            extra_results = []
+            for m in extra_metric_defs:
+                stats = pooled_stats(compute_metric_values(parsed_files, m))
+                extra_results.append(dict(
+                    key=m["key"], label=m["label"], category=cat, unit=m["unit"], kind="info",
+                    n=stats["n"], mean=stats["mean"], sd=stats["sd"], z=None, t=None, banda=None,
+                    colore=None, pop_mean=None, pop_sd=None,
+                ))
+            results_lookup = results + extra_results
+            cat_metrics = cat_metrics + extra_metric_defs
+
             rows, best_per_row, worst_per_row = [], [], []
             cv_warnings = []
             jump_cols = [f"Prova {i + 1}" for i in range(n_reps)]
             for m in cat_metrics:
-                r = next((x for x in results if x["key"] == m["key"]), None)
+                r = next((x for x in results_lookup if x["key"] == m["key"]), None)
                 values = per_rep_metric_values(parsed_files, m)
                 best_i, worst_i = best_worst_indices(values, incl_mask, m["lower_is_better"])
                 best_per_row.append(best_i)
@@ -1356,28 +1632,43 @@ with tab_profilo:
                 col.markdown(f"<span style='font-size:28px;color:{colore}'>{t:.0f}</span>", unsafe_allow_html=True)
                 col.caption(banda)
 
-        indici = [r for r in results if r["category"] == "INDICI" and r["mean"] is not None and r["key"] != "eur"]
-        if indici:
-            st.markdown("#### Indici")
-            icols = st.columns(len(indici))
-            for col, r in zip(icols, indici):
+        # --- DSI ed EUR come grafici a quadranti, invece che come solo
+        # T-score: mostrano non solo il rapporto (DSI/EUR), ma anche il
+        # livello assoluto di prestazione nei due test che lo compongono. Il
+        # valore numerico dell'indice è mostrato accanto al proprio grafico
+        # (non più in una riga "Indici" separata).
+        r_dsi = next((r for r in results if r["key"] == "dsi" and r["mean"] is not None), None)
+        dsi_fig = build_dsi_chart(results)
+        if dsi_fig:
+            st.markdown("#### DSI (Dynamic Strength Index)")
+            if r_dsi:
                 help_parts = []
-                if r["t"] is not None:
-                    help_parts.append(f"T-score: {r['t']:.0f} ({r['banda']})")
-                if r["pop_mean"] is not None:
-                    help_parts.append(f"Media popolazione: {r['pop_mean']:.3f}")
-                col.metric(r["label"], f"{r['mean']:.3f}", help=" — ".join(help_parts) or None)
+                if r_dsi["t"] is not None:
+                    help_parts.append(f"T-score: {r_dsi['t']:.0f} ({r_dsi['banda']})")
+                if r_dsi["pop_mean"] is not None:
+                    help_parts.append(f"Media popolazione: {r_dsi['pop_mean']:.3f}")
+                st.metric("DSI", f"{r_dsi['mean']:.3f}", help=" — ".join(help_parts) or None)
+            st.caption(
+                "CMJ Peak Force vs IMTP Peak Force: le linee tratteggiate sono centrate sulla media di "
+                "popolazione (dove disponibile), il punto è la media del test con barre d'errore (± dev.std)."
+            )
+            st.plotly_chart(dsi_fig, use_container_width=True)
 
-        # --- EUR come grafico a quadranti (altezza SJ vs altezza CMJ), invece
-        # che come singolo T-score: mostra non solo il rapporto EUR, ma anche
-        # il livello assoluto di prestazione in entrambi i test.
+        r_eur = next((r for r in results if r["key"] == "eur" and r["mean"] is not None), None)
         eur_fig = build_eur_chart(results)
         if eur_fig:
             st.markdown("#### EUR (Eccentric Utilisation Ratio)")
+            if r_eur:
+                help_parts = []
+                if r_eur["t"] is not None:
+                    help_parts.append(f"T-score: {r_eur['t']:.0f} ({r_eur['banda']})")
+                if r_eur["pop_mean"] is not None:
+                    help_parts.append(f"Media popolazione: {r_eur['pop_mean']:.3f}")
+                st.metric("EUR", f"{r_eur['mean']:.3f}", help=" — ".join(help_parts) or None)
             st.caption(
                 "Altezza SJ vs altezza CMJ: le linee tratteggiate sono centrate sulla media di popolazione, "
                 "il punto è la media del test con barre d'errore (± dev.std). La linea diagonale rappresenta "
-                "un EUR di 1.0."
+                "il valore medio di popolazione dell'EUR."
             )
             st.plotly_chart(eur_fig, use_container_width=True)
 # PARTE 6 — REPORT SCARICABILE (HTML interattivo)
@@ -1404,6 +1695,20 @@ def _banda_badge(banda, colore):
     if not banda:
         return "—"
     return f'<span class="badge" style="background:{colore}">{banda}</span>'
+
+
+def _index_value_html(r):
+    """Valore numerico di un indice (DSI/EUR), mostrato accanto al proprio
+    grafico invece che in una tabella riepilogativa separata."""
+    if r is None:
+        return ""
+    extra = []
+    if r["pop_mean"] is not None:
+        extra.append(f"Media pop. {r['pop_mean']:.3f}")
+    if r["t"] is not None:
+        extra.append(f"T-score {r['t']:.0f} ({r['banda']})")
+    extra_html = f' <span class="muted">— {" · ".join(extra)}</span>' if extra else ""
+    return f'<p class="index-value"><b>{r["label"]}: {r["mean"]:.3f}</b>{extra_html}</p>'
 
 
 def _metric_table_html(cat_results):
@@ -1465,22 +1770,25 @@ def genera_report_html(nome, sesso, periodo, results, profilo, commento):
             {f'<h3>RSQ — Reactive Strength Quadrant</h3>{_fig_div(rsq_fig, next_id("rsq"))}' if rsq_fig else ''}
         </section>""")
 
-    # --- Indici (DSI, EUR) ---
-    indici = [r for r in results if r["category"] == "INDICI" and r["mean"] is not None]
+    # --- Indici (DSI, EUR): il valore numerico è mostrato accanto al
+    # proprio grafico, non più in una tabella riepilogativa separata.
+    r_dsi = next((r for r in results if r["key"] == "dsi" and r["mean"] is not None), None)
+    r_eur = next((r for r in results if r["key"] == "eur" and r["mean"] is not None), None)
+    dsi_fig = build_dsi_chart(results)
     eur_fig = build_eur_chart(results)
-    if indici or eur_fig:
-        indici_rows = "".join(f"""<tr>
-            <td>{r['label']}</td><td>{r['mean']:.3f}</td>
-            <td>{f"{r['pop_mean']:.3f}" if r['pop_mean'] is not None else '—'}</td>
-            <td>{f"{r['t']:.0f} ({r['banda']})" if r['t'] is not None else '—'}</td>
-        </tr>""" for r in indici)
+    if r_dsi or r_eur or dsi_fig or eur_fig:
+        indici_html = []
+        if r_dsi or dsi_fig:
+            indici_html.append(
+                f"<h3>DSI (Dynamic Strength Index)</h3>{_index_value_html(r_dsi)}{_fig_div(dsi_fig, next_id('dsi'))}"
+            )
+        if r_eur or eur_fig:
+            indici_html.append(
+                f"<h3>EUR (Eccentric Utilisation Ratio)</h3>{_index_value_html(r_eur)}{_fig_div(eur_fig, next_id('eur'))}"
+            )
         sections.append(f"""<section>
             <h2>Indici</h2>
-            <table class="report-table">
-                <thead><tr><th>Indice</th><th>Valore</th><th>Media Pop.</th><th>T-score</th></tr></thead>
-                <tbody>{indici_rows}</tbody>
-            </table>
-            {f'<h3>EUR (Eccentric Utilisation Ratio)</h3>{_fig_div(eur_fig, next_id("eur"))}' if eur_fig else ''}
+            {''.join(indici_html)}
         </section>""")
 
     # --- Analisi: testo scritto dal preparatore nella scheda Report
@@ -1526,6 +1834,7 @@ def genera_report_html(nome, sesso, periodo, results, profilo, commento):
     .profile-card-t {{ font-size: 30px; font-weight: 700; }}
     .profile-card-banda {{ font-size: 13px; }}
     .muted {{ color: #667; font-size: 13px; }}
+    .index-value {{ font-size: 16px; margin: 6px 0 14px 0; }}
     .analysis-box {{ min-height: 60px; border: 1px solid #e0e0e0; border-left: 4px solid var(--primary); border-radius: 6px; padding: 14px; line-height: 1.6; background: #f7fbfd; }}
     @media print {{ section {{ break-inside: avoid; }} }}
 </style>
