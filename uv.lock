@@ -51,6 +51,7 @@ source = { virtual = "." }
 dependencies = [
     { name = "constants" },
     { name = "docx" },
+    { name = "fpdf" },
     { name = "future" },
     { name = "openpyxl" },
     { name = "plotly" },
@@ -62,6 +63,7 @@ dependencies = [
 requires-dist = [
     { name = "constants", specifier = ">=0.6.0" },
     { name = "docx", specifier = ">=0.2.4" },
+    { name = "fpdf", specifier = ">=1.7.2" },
     { name = "future", specifier = ">=1.0.0" },
     { name = "openpyxl", specifier = ">=3.1" },
     { name = "plotly", specifier = ">=6.0" },
@@ -173,6 +175,12 @@ sdist = { url = "https://files.pythonhosted.org/packages/d3/38/af70d7ab1ae9d4da4
 wheels = [
     { url = "https://files.pythonhosted.org/packages/c1/8b/5fe2cc11fee489817272089c4203e679c63b570a5aaeb18d852ae3cbba6a/et_xmlfile-2.0.0-py3-none-any.whl", hash = "sha256:7a91720bc756843502c3b7504c77b8fe44217c85c537d85037f0f536151b2caa", size = 18059, upload-time = "2024-10-25T17:25:39.051Z" },
 ]
+
+[[package]]
+name = "fpdf"
+version = "1.7.2"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/37/c6/608a9e6c172bf9124aa687ec8b9f0e8e5d697d59a5f4fad0e2d5ec2a7556/fpdf-1.7.2.tar.gz", hash = "sha256:125840783289e7d12552b1e86ab692c37322e7a65b96a99e0ea86cca041b6779", size = 39504, upload-time = "2015-01-21T00:07:47.493Z" }
 
 [[package]]
 name = "future"
