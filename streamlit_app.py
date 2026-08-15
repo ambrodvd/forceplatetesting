@@ -1601,7 +1601,7 @@ def ratio_wedge_chart(x_mean, y_mean, x_sd, y_sd, x_label, y_label, key,
 
     for thr in (thr_low, thr_high):
         fig.add_shape(type="line", x0=x0, y0=x0 / thr, x1=x1, y1=x1 / thr,
-                      line=dict(color="#9e9e9e", dash="dot", width=1.5))
+                      line=dict(color="#9e9e9e", dash="dot", width=3))
 
     # Le linee di popolazione compaiono solo dove il dato esiste: oggi
     # cmj_peak_force non ha una norma, quindi il DSI mostra la sola
@@ -1609,9 +1609,9 @@ def ratio_wedge_chart(x_mean, y_mean, x_sd, y_sd, x_label, y_label, key,
     # CONST_LABELS e impostando pop_key sulla metrica, la verticale
     # comparirà da sola senza altre modifiche.
     if pop_x is not None:
-        fig.add_vline(x=pop_x, line_dash="dash", line_color=ACCENT)
+        fig.add_vline(x=pop_x, line_dash="dash", line_color=ACCENT, line_width=1)
     if pop_y is not None:
-        fig.add_hline(y=pop_y, line_dash="dash", line_color=ACCENT)
+        fig.add_hline(y=pop_y, line_dash="dash", line_color=ACCENT, line_width=1)
 
     fig.add_trace(go.Scatter(
         x=[x_mean], y=[y_mean], mode="markers",
@@ -1634,7 +1634,7 @@ def ratio_wedge_chart(x_mean, y_mean, x_sd, y_sd, x_label, y_label, key,
     return fig
 
 
-def ratio_band_strip(key, value, thr_low, thr_high, label, decimals=2, height=180):
+def ratio_band_strip(key, value, thr_low, thr_high, label, decimals=2, height=120):
     """Barra orizzontale a tre bande con il valore dell'indice: la zona si
     legge a colpo d'occhio, senza dover interpretare una pendenza. Range =
     soglie ± 0.2, allargato automaticamente se il valore cade fuori."""
