@@ -61,6 +61,35 @@ def banda_da_tscore(t):
     return "OTTIMO", "#2E7D32"
 
 
+# Soglie di lettura degli indici-rapporto (DSI, EUR): delimitano le tre zone
+# di profilo mostrate nei grafici. Valori di DEFAULT, modificabili sopra il
+# grafico nella scheda "Profilo di Forza" (a runtime si usa sempre
+# st.session_state["idx_thr"]).
+#   DSI  0.60 / 0.80  — Sheppard & Chapman (2011), via Science for Sport
+#   EUR  1.00 / 1.10  — McGuigan et al. (2006), via VALD / Clubb
+# NB: le soglie EUR di letteratura cadono praticamente sulla media di
+# popolazione qui usata (1.108 U / 1.091 D): con i default un atleta "medio"
+# finisce sul confine superiore. Da ricalibrare sui propri dati.
+DEFAULT_INDEX_THRESHOLDS = {"dsi": (0.60, 0.80), "eur": (1.00, 1.10)}
+
+# Etichette descrittive (profilo dell'atleta, NON indicazione di allenamento)
+# e colori delle tre zone, in ordine basso / medio / alto.
+INDEX_ZONE_LABELS = {
+    "dsi": ("Atleta più forte che esplosivo", "Atleta bilanciato", "Atleta più esplosivo che forte"),
+    "eur": ("Poco contributo elastico", "Contributo elastico medio", "Buon contributo elastico"),
+}
+INDEX_ZONE_COLORS = ("#FFB74D", "#81C784", "#4FC3F7")
+
+
+def zona_da_indice(key, value, thr_low, thr_high):
+    """Zona di profilo (etichetta, colore) per un indice-rapporto."""
+    labels = INDEX_ZONE_LABELS.get(key)
+    if value is None or labels is None:
+        return None, None
+    i = 0 if value < thr_low else (2 if value > thr_high else 1)
+    return labels[i], INDEX_ZONE_COLORS[i]
+
+
 # sd sempre positiva: la direzione "minore è meglio" è gestita dal flag
 # lower_is_better nella metrica, non dal segno della deviazione standard.
 #
@@ -205,8 +234,8 @@ def _safe_div(a, b):
 # raw_var (nome variabile grezza ForceMate) o derive (funzione per-rep),
 # unit, pop_key (chiave in POP o None), lower_is_better, kind
 #   kind: "score" (T-score da distribuzione pooled), "score_single"
-#         (T-score da singolo valore aggregato, es. DSI/EUR), "info"
-#         (valore mostrato ma senza T-score)
+#         (indice aggregato cross-test, es. DSI/EUR — letto per zona, non
+#         per T-score), "info" (valore mostrato senza confronto)
 METRICS = [
     dict(key="imtp_peak_force", label="IMTP Peak Force", category="ISOMETRIC PULL TEST",
          jump_type="imtp", raw_var="peak force", unit="N",
@@ -317,7 +346,7 @@ JUMP_TYPE_LABELS = {"imtp": "IMTP", "sj": "Squat Jump", "cmj": "CMJ", "cmrj": "C
 # tipo di test, così l'utente può cercare e aggiungere qualsiasi altra
 # metrica dalla scheda Dettaglio Test — senza T-score (nessun dato di
 # popolazione disponibile per queste), solo media/dev.std/CV% per
-# ripetizione, con le stesse esclusioni already impostate sui salti.
+# ripetizione, con le stesse esclusioni già impostate sui salti.
 # Nomi già lowercase per combaciare con le chiavi salvate in rep["vars"]
 # (il parsing normalizza sempre con .strip().lower()).
 _SJ_METRICS_CATALOG = [
@@ -740,8 +769,8 @@ _DERIVED_METRIC_DESCRIPTIONS = {
     "imtp_rel_peak_force": "IMTP Peak Force diviso per la massa corporea (N/kg): permette di confrontare atleti di taglia diversa.",
     "sj_net_rel_impulse": "SJ Net Impulse diviso per la massa corporea (N\u00b7s/kg).",
     "cmj_net_rel_impulse": "CMJ Net Impulse diviso per la massa corporea (N\u00b7s/kg).",
-    "dsi": "Dynamic Strength Index: rapporto tra CMJ Peak Force e IMTP Peak Force. Indica quanto della forza massima isometrica viene espressa durante un gesto balistico come il CMJ.",
-    "eur": "Eccentric Utilisation Ratio: rapporto tra CMJ Height e SJ Height. Indica quanto la fase eccentrica (contromovimento) contribuisce alla prestazione rispetto a un salto puramente concentrico.",
+    "dsi": "Dynamic Strength Index: rapporto tra CMJ Peak Propulsive Force e IMTP Peak Force. Indica quanta della forza massima isometrica viene espressa durante un gesto balistico come il CMJ. Non è un indice 'più alto = meglio': entrambi gli estremi descrivono un profilo diverso, non uno migliore.",
+    "eur": "Eccentric Utilisation Ratio: rapporto tra CMJ Height e SJ Height. Indica quanto la fase eccentrica (contromovimento) contribuisce alla prestazione rispetto a un salto puramente concentrico. Da leggere sempre insieme ai valori assoluti: due atleti con lo stesso EUR possono avere prestazioni molto diverse.",
 }
 
 
@@ -863,6 +892,11 @@ csv_reload = st.sidebar.file_uploader(
 if "pop" not in st.session_state:
     st.session_state["pop"] = {k: dict(v) for k, v in DEFAULT_POP.items()}
 
+# Soglie degli indici a rapporto (DSI, EUR): modificabili direttamente sopra
+# il relativo grafico nella scheda "Profilo di Forza".
+if "idx_thr" not in st.session_state:
+    st.session_state["idx_thr"] = {k: list(v) for k, v in DEFAULT_INDEX_THRESHOLDS.items()}
+
 
 # ============================================================================
 # PARTE 3 — LETTURA / PARSING DEI FILE XLSX
@@ -903,10 +937,6 @@ def parse_forcemate_workbook(file_like, filename: str) -> ParsedFile:
 
     if _is_imtp_trial_layout(rows):
         return _parse_imtp_trial_rows(rows, filename)
-
-    max_col = max(len(r) for r in rows)
-    if not rows:
-        return ParsedFile(filename=filename, metadata={}, reps=[])
 
     max_col = max(len(r) for r in rows)
 
@@ -989,6 +1019,7 @@ def guess_type_from_filename(filename: str):
             return t.lower()
     return None
 
+
 def _is_imtp_trial_layout(rows) -> bool:
     """Rileva il layout Unit/Trial N (IMTP senza intestazione ForceMate
     standard): riga 1, colonna A = 'Unit', e almeno una colonna successiva
@@ -1022,7 +1053,7 @@ def _parse_imtp_trial_rows(rows, filename: str) -> ParsedFile:
     # Ogni blocco "Trial N" occupa 3 colonne: variabile, valore, spacer.
     # La colonna A contiene sempre l'unità di misura della riga.
     block_starts = [c for c in range(2, max_col + 1)
-                     if cell(1, c) and str(cell(1, c)).strip().lower().startswith("trial")]
+                    if cell(1, c) and str(cell(1, c)).strip().lower().startswith("trial")]
 
     reps = []
     for bs in block_starts:
@@ -1292,7 +1323,7 @@ def sesso_da_file(files):
     return "UOMO"
 
 
-def build_results(files, pop_dict):
+def build_results(files, pop_dict, thresholds):
     sesso_raw = sesso_da_file(files)
     is_female = sesso_raw and sesso_raw.upper().startswith("F")
 
@@ -1336,14 +1367,18 @@ def build_results(files, pop_dict):
     for key, val in (("dsi", dsi_val), ("eur", eur_val)):
         pop = pop_dict[key]
         pop_mean = pop["mean_f"] if is_female else pop["mean_m"]
-        pop_sd = pop["sd_f"] if is_female else pop["sd_m"]
-        z, t = z_t_score(val, pop_mean, pop_sd, False)
-        banda, colore = banda_da_tscore(t)
         metric_def = next(m for m in METRICS if m["key"] == key)
+        thr_low, thr_high = thresholds[key]
+        zona, zona_colore = zona_da_indice(key, val, thr_low, thr_high)
+        # Niente T-score per DSI/EUR: non sono metriche "più alto = meglio"
+        # ma indici diagnostici, dove entrambi gli estremi descrivono un
+        # profilo diverso, non uno migliore. Resta la media di popolazione,
+        # mostrata come riferimento nell'help e nel report.
         results.append(dict(
             key=key, label=metric_def["label"], category="INDICI", unit="",
             kind="score_single", n=(1 if val is not None else 0), mean=val, sd=None,
-            z=z, t=t, banda=banda, colore=colore, pop_mean=pop_mean, pop_sd=pop_sd,
+            z=None, t=None, banda=None, colore=None, pop_mean=pop_mean, pop_sd=None,
+            zona=zona, zona_colore=zona_colore, thr_low=thr_low, thr_high=thr_high,
             desc=metric_def.get("desc"),
         ))
 
@@ -1379,26 +1414,34 @@ def profilo_forza(results):
 
 
 # ============================================================================
-# PARTE 4bis — GRAFICI A QUADRANTI (RSQ / EUR quadrant plot)
+# PARTE 4bis — GRAFICI A QUADRANTI E A BANDE
 # ============================================================================
-# Incrociano due metriche (es. altezza salto e tempo di contatto, oppure
-# altezza SJ e altezza CMJ) mettendo in relazione la media del test rispetto
-# alla media di popolazione, così da leggere non solo "quanto" ma "come"
-# l'atleta esprime la prestazione. Il crosshair è sempre centrato sulla
-# media di popolazione (x, y); il punto mostrato è la media del test con
-# barre d'errore pari alla deviazione standard delle ripetizioni incluse.
+# Due famiglie di grafici bidimensionali:
+#
+#  - quadrant_chart (RSQ): incrocia due metriche e divide il piano nei
+#    quattro quadranti definiti dal crosshair centrato sulla media di
+#    popolazione. Legge il livello assoluto nelle due metriche.
+#
+#  - ratio_wedge_chart (DSI, EUR): per un indice che è un RAPPORTO tra le
+#    due metriche. Qui i quadranti non servono: tutti i punti con lo stesso
+#    rapporto stanno su una retta per l'origine, quindi il piano va diviso
+#    da rette diagonali (y = x / soglia), non da una croce. Il crosshair di
+#    popolazione resta come contesto sul livello assoluto.
+
+def _wrap_label(text, width=16):
+    """Spezza un'etichetta lunga su più righe (per gli assi angolari del
+    radar e per le etichette delle zone), così non deborda oltre il bordo
+    del grafico invece di essere tagliata."""
+    return "<br>".join(textwrap.wrap(text, width=width, break_long_words=False))
+
 
 def quadrant_chart(x_mean, y_mean, x_sd, y_sd, x_label, y_label, quadrant_defs,
-                    pop_x=None, pop_y=None, point_color=PRIMARY, diagonal=False,
-                    diagonal_ratio=1.0, height=430):
+                   pop_x=None, pop_y=None, point_color=PRIMARY, height=430):
     """quadrant_defs: dict con chiavi 'tl','tr','bl','br' -> (etichetta, colore).
     Il crosshair (linee tratteggiate e confini dei quadranti) è centrato sulla
     media di popolazione (pop_x, pop_y); se non disponibile per una metrica si
     usa la media del test come fallback. Il punto mostrato è la media del test
     con barre d'errore pari alla deviazione standard delle ripetizioni incluse.
-    Se diagonal=True, la linea tratteggiata diagonale rappresenta i punti con
-    rapporto x/y == diagonal_ratio (es. il valore medio di popolazione
-    dell'indice, non necessariamente 1.0).
     Ritorna una go.Figure oppure None se manca la media del test su uno dei due assi."""
     if x_mean is None or y_mean is None:
         return None
@@ -1430,23 +1473,14 @@ def quadrant_chart(x_mean, y_mean, x_sd, y_sd, x_label, y_label, quadrant_defs,
         (x0, cx, y0, cy, bl_color), (cx, x1, y0, cy, br_color),
     ):
         fig.add_shape(type="rect", x0=x_a, x1=x_b, y0=y_a, y1=y_b,
-                       fillcolor=color, opacity=0.15, line_width=0)
+                      fillcolor=color, opacity=0.15, line_width=0)
 
     for x_pos, y_pos, text, anchor in (
         ((x0 + cx) / 2, y1, tl_label, "top"), ((cx + x1) / 2, y1, tr_label, "top"),
         ((x0 + cx) / 2, y0, bl_label, "bottom"), ((cx + x1) / 2, y0, br_label, "bottom"),
     ):
         fig.add_annotation(x=x_pos, y=y_pos, text=text, showarrow=False,
-                            font=dict(size=10, color="#666"), yanchor=anchor)
-
-    if diagonal:
-        ratio = diagonal_ratio if diagonal_ratio else 1.0
-        # Linea dei punti con x/y == ratio (es. rapporto medio di
-        # popolazione), tracciata sull'intera larghezza del grafico:
-        # y = x / ratio. Plotly ritaglia automaticamente la parte che
-        # eccede il range visibile degli assi.
-        fig.add_shape(type="line", x0=x0, y0=x0 / ratio, x1=x1, y1=x1 / ratio,
-                       line=dict(color=ACCENT, dash="dash", width=2))
+                           font=dict(size=10, color="#666"), yanchor=anchor)
 
     fig.add_vline(x=cx, line_dash="dash", line_color=ACCENT)
     fig.add_hline(y=cy, line_dash="dash", line_color=ACCENT)
@@ -1458,7 +1492,7 @@ def quadrant_chart(x_mean, y_mean, x_sd, y_sd, x_label, y_label, quadrant_defs,
         error_y=dict(type="data", array=[y_sd], visible=True, color=point_color, thickness=1.5, width=6),
         name="Media test \u00b1 Dev.Std",
         hovertemplate=(f"Media test<br>{x_label}: %{{x:.2f}} \u00b1 {x_sd:.2f}"
-                        f"<br>{y_label}: %{{y:.2f}} \u00b1 {y_sd:.2f}<extra></extra>"),
+                       f"<br>{y_label}: %{{y:.2f}} \u00b1 {y_sd:.2f}<extra></extra>"),
     ))
 
     fig.update_layout(
@@ -1473,25 +1507,172 @@ def quadrant_chart(x_mean, y_mean, x_sd, y_sd, x_label, y_label, quadrant_defs,
     return fig
 
 
+def _clip_half_plane(poly, f, keep_positive):
+    """Sutherland-Hodgman: ritaglia un poligono contro il semipiano f>=0
+    (keep_positive) oppure f<=0. f(x, y) è lineare, quindi l'intersezione con
+    ogni lato si trova per interpolazione lineare dei valori di f."""
+    out = []
+    for i in range(len(poly)):
+        cur, prv = poly[i], poly[i - 1]
+        fc, fp = f(*cur), f(*prv)
+        inc = fc >= 0 if keep_positive else fc <= 0
+        inp = fp >= 0 if keep_positive else fp <= 0
+        if inc != inp and (fp - fc) != 0:
+            t = fp / (fp - fc)
+            out.append((prv[0] + t * (cur[0] - prv[0]), prv[1] + t * (cur[1] - prv[1])))
+        if inc:
+            out.append(cur)
+    return out
+
+
+def _poly_path(poly):
+    if len(poly) < 3:
+        return None
+    return "M " + " L ".join(f"{x},{y}" for x, y in poly) + " Z"
+
+
+def _poly_centroid(poly):
+    """Baricentro del poligono (per posizionare l'etichetta della zona)."""
+    n, a, cx, cy = len(poly), 0.0, 0.0, 0.0
+    for i in range(n):
+        x0, y0 = poly[i - 1]
+        x1, y1 = poly[i]
+        cr = x0 * y1 - x1 * y0
+        a += cr
+        cx += (x0 + x1) * cr
+        cy += (y0 + y1) * cr
+    if a == 0:
+        return sum(p[0] for p in poly) / n, sum(p[1] for p in poly) / n
+    return cx / (3 * a), cy / (3 * a)
+
+
+def ratio_wedge_chart(x_mean, y_mean, x_sd, y_sd, x_label, y_label, key,
+                      thr_low, thr_high, pop_x=None, pop_y=None,
+                      point_color=PRIMARY, height=470):
+    """Grafico a bande per un indice-rapporto (indice = x / y).
+
+    A differenza di quadrant_chart le zone NON sono i quattro quadranti del
+    crosshair, ma tre spicchi delimitati dalle rette y = x/soglia uscenti
+    dall'origine: essendo l'indice un rapporto, tutti i punti con lo stesso
+    indice stanno su una retta per l'origine, quindi è la posizione rispetto
+    alle diagonali a rappresentare l'indice. Le linee tratteggiate della media
+    di popolazione restano come contesto sul livello assoluto e vengono
+    disegnate SOLO se quel dato di popolazione esiste davvero.
+
+    L'origine può restare fuori dal range: gli spicchi sono ritagliati sul
+    riquadro visibile. Il range verticale viene però allargato quanto basta
+    perché entrambe le diagonali attraversino il riquadro, altrimenti un
+    atleta lontano dalle soglie vedrebbe un grafico tinto di un solo colore,
+    senza alcun confine visibile su cui orientarsi."""
+    if x_mean is None or y_mean is None or not thr_low or not thr_high:
+        return None
+    x_sd, y_sd = x_sd or 0, y_sd or 0
+    cx = pop_x if pop_x is not None else x_mean
+    cy = pop_y if pop_y is not None else y_mean
+
+    x_ext, y_ext = abs(x_mean - cx) + x_sd, abs(y_mean - cy) + y_sd
+    x_r = x_ext * 1.3 if x_ext > 0 else (abs(cx) * 0.15 or 1)
+    y_r = y_ext * 1.3 if y_ext > 0 else (abs(cy) * 0.15 or 1)
+    for thr in (thr_low, thr_high):
+        y_r = max(y_r, abs(cx / thr - cy) * 1.08)
+    x0, x1 = cx - x_r, cx + x_r
+    y0, y1 = cy - y_r, cy + y_r
+
+    box = [(x0, y0), (x1, y0), (x1, y1), (x0, y1)]
+    f_low = lambda x, y: y - x / thr_low
+    f_high = lambda x, y: y - x / thr_high
+    zones = [
+        (_clip_half_plane(box, f_low, True), 0),
+        (_clip_half_plane(_clip_half_plane(box, f_low, False), f_high, True), 1),
+        (_clip_half_plane(box, f_high, False), 2),
+    ]
+    labels = INDEX_ZONE_LABELS[key]
+
+    fig = go.Figure()
+    for poly, i in zones:
+        path = _poly_path(poly)
+        if not path:
+            continue
+        fig.add_shape(type="path", path=path, fillcolor=INDEX_ZONE_COLORS[i],
+                      opacity=0.18, line_width=0, layer="below")
+        lx, ly = _poly_centroid(poly)
+        fig.add_annotation(x=lx, y=ly, text=_wrap_label(labels[i], 20), showarrow=False,
+                           font=dict(size=10, color="#666"), align="center")
+
+    for thr in (thr_low, thr_high):
+        fig.add_shape(type="line", x0=x0, y0=x0 / thr, x1=x1, y1=x1 / thr,
+                      line=dict(color="#9e9e9e", dash="dot", width=1.5))
+
+    # Le linee di popolazione compaiono solo dove il dato esiste: oggi
+    # cmj_peak_force non ha una norma, quindi il DSI mostra la sola
+    # orizzontale (IMTP). Aggiungendo la norma mancante a DEFAULT_POP /
+    # CONST_LABELS e impostando pop_key sulla metrica, la verticale
+    # comparirà da sola senza altre modifiche.
+    if pop_x is not None:
+        fig.add_vline(x=pop_x, line_dash="dash", line_color=ACCENT)
+    if pop_y is not None:
+        fig.add_hline(y=pop_y, line_dash="dash", line_color=ACCENT)
+
+    fig.add_trace(go.Scatter(
+        x=[x_mean], y=[y_mean], mode="markers",
+        marker=dict(size=12, color=point_color, line=dict(width=1.5, color="white")),
+        error_x=dict(type="data", array=[x_sd], visible=True, color=point_color, thickness=1.5, width=6),
+        error_y=dict(type="data", array=[y_sd], visible=True, color=point_color, thickness=1.5, width=6),
+        name="Media test \u00b1 Dev.Std",
+        hovertemplate=(f"Media test<br>{x_label}: %{{x:.2f}} \u00b1 {x_sd:.2f}"
+                       f"<br>{y_label}: %{{y:.2f}} \u00b1 {y_sd:.2f}<extra></extra>"),
+    ))
+
+    fig.update_layout(
+        xaxis_title=x_label, yaxis_title=y_label,
+        xaxis_range=[x0, x1], yaxis_range=[y0, y1],
+        xaxis=dict(showgrid=False, automargin=True, title=dict(standoff=12)),
+        yaxis=dict(showgrid=False, automargin=True, title=dict(standoff=12)),
+        height=height, margin=dict(t=30, b=50, l=70, r=20), showlegend=False,
+        plot_bgcolor=BG_COLOR, paper_bgcolor=BG_COLOR, font=dict(color=TEXT_COLOR),
+    )
+    return fig
+
+
+def ratio_band_strip(key, value, thr_low, thr_high, label, decimals=2, height=180):
+    """Barra orizzontale a tre bande con il valore dell'indice: la zona si
+    legge a colpo d'occhio, senza dover interpretare una pendenza. Range =
+    soglie ± 0.2, allargato automaticamente se il valore cade fuori."""
+    if value is None or not thr_low or not thr_high:
+        return None
+    lo = min(thr_low - 0.2, value - 0.05)
+    hi = max(thr_high + 0.2, value + 0.05)
+    labels = INDEX_ZONE_LABELS[key]
+
+    fig = go.Figure()
+    for a, b, i in ((lo, thr_low, 0), (thr_low, thr_high, 1), (thr_high, hi, 2)):
+        fig.add_vrect(x0=a, x1=b, fillcolor=INDEX_ZONE_COLORS[i], opacity=0.35, line_width=0)
+        fig.add_annotation(x=(a + b) / 2, y=1.04, xref="x", yref="paper", yanchor="bottom",
+                           text=_wrap_label(labels[i], 18), showarrow=False,
+                           font=dict(size=9, color="#484343"))
+    fig.add_trace(go.Scatter(
+        x=[value], y=[0], mode="markers+text",
+        marker=dict(size=16, color=PRIMARY, symbol="diamond", line=dict(width=1.5, color="white")),
+        text=[f"{value:.{decimals}f}"], textposition="bottom center",
+        textfont=dict(color=TEXT_COLOR, size=13),
+        hovertemplate=f"{label}: %{{x:.{decimals}f}}<extra></extra>",
+    ))
+    fig.update_layout(
+        xaxis=dict(range=[lo, hi], showgrid=False, tickvals=[thr_low, thr_high],
+                   ticktext=[f"{thr_low:.2f}", f"{thr_high:.2f}"], automargin=True,
+                   title=dict(text=label, standoff=14)),
+        yaxis=dict(range=[-1, 1], showgrid=False, showticklabels=False, zeroline=False),
+        height=height, margin=dict(t=60, b=50, l=20, r=20), showlegend=False,
+        plot_bgcolor=BG_COLOR, paper_bgcolor=BG_COLOR, font=dict(color=TEXT_COLOR),
+    )
+    return fig
+
+
 RSQ_QUADRANTS = dict(
     tl=("Alta Reattività", "#4FC3F7"),
     tr=("Forza-Dominante", "#EF5350"),
     bl=("Elastico-Dominante", "#66BB6A"),
     br=("Bassa Reattività", "#FFEE58"),
-)
-
-EUR_QUADRANTS = dict(
-    tl=("Atleta potente ma poco esplosivo (EUR < 1.0)", "#FFB74D"),
-    tr=("Atleta potente ed esplosivo (EUR ~ 1.0)", "#81C784"),
-    bl=("Atleta poco potente e poco esplosivo", "#E57373"),
-    br=("Atleta esplosivo ma poco potente (EUR > 1.0)", "#FFF176"),
-)
-
-DSI_QUADRANTS = dict(
-    tl=("Alta prestaz. IMTP, bassa CMJ (DSI < 1.0)", "#FFB74D"),
-    tr=("Alta prestazione in CMJ e IMTP (DSI ~ 1.0)", "#81C784"),
-    bl=("Bassa prestazione in CMJ e IMTP", "#E57373"),
-    br=("Alta prestaz. CMJ, bassa IMTP (DSI > 1.0)", "#FFF176"),
 )
 
 # Metriche (altezza, tempo) usate per il grafico RSQ di ciascuna categoria
@@ -1521,38 +1702,37 @@ def build_rsq_chart(cat, results):
     )
 
 
-def build_eur_chart(results):
-    """Grafico EUR (altezza SJ vs altezza CMJ), se entrambe le medie sono
-    disponibili. La diagonale rappresenta il valore medio di popolazione
-    dell'EUR (non un fisso 1.0). Ritorna None altrimenti."""
-    r_sj_h = next((r for r in results if r["key"] == "sj_height"), None)
-    r_cmj_h = next((r for r in results if r["key"] == "cmj_height"), None)
-    r_eur = next((r for r in results if r["key"] == "eur"), None)
-    if r_sj_h is None or r_cmj_h is None:
-        return None
-    eur_pop = r_eur["pop_mean"] if r_eur and r_eur["pop_mean"] else 1.0
-    return quadrant_chart(
-        x_mean=r_cmj_h["mean"], y_mean=r_sj_h["mean"], x_sd=r_cmj_h["sd"], y_sd=r_sj_h["sd"],
-        x_label="CMJ Height (cm)", y_label="SJ Height (cm)",
-        quadrant_defs=EUR_QUADRANTS, pop_x=r_cmj_h["pop_mean"], pop_y=r_sj_h["pop_mean"],
-        point_color=PRIMARY, diagonal=True, diagonal_ratio=eur_pop,
-    )
-
-
-def build_dsi_chart(results):
-    """Grafico DSI (CMJ Peak Force vs IMTP Peak Force): mostra la posizione
-    dell'atleta nei quattro quadranti senza tracciare una diagonale di
-    riferimento (le due forze di picco non sono attese avere la stessa
-    scala). Ritorna None se una delle due medie non è disponibile."""
+def build_dsi_chart(results, thresholds):
+    """DSI: CMJ Peak Propulsive Force (x) vs IMTP Peak Force (y). La linea
+    verticale compare solo quando cmj_peak_force avrà un dato di popolazione
+    (oggi pop_key=None -> pop_mean None -> linea nascosta)."""
     r_cmj_peak = next((r for r in results if r["key"] == "cmj_peak_force"), None)
     r_imtp_peak = next((r for r in results if r["key"] == "imtp_peak_force"), None)
     if r_cmj_peak is None or r_imtp_peak is None:
         return None
-    return quadrant_chart(
-        x_mean=r_cmj_peak["mean"], y_mean=r_imtp_peak["mean"], x_sd=r_cmj_peak["sd"], y_sd=r_imtp_peak["sd"],
-        x_label="CMJ Peak Force (N)", y_label="IMTP Peak Force (N)",
-        quadrant_defs=DSI_QUADRANTS, pop_x=r_cmj_peak["pop_mean"], pop_y=r_imtp_peak["pop_mean"],
-        point_color=PRIMARY, diagonal=False,
+    thr_low, thr_high = thresholds["dsi"]
+    return ratio_wedge_chart(
+        x_mean=r_cmj_peak["mean"], y_mean=r_imtp_peak["mean"],
+        x_sd=r_cmj_peak["sd"], y_sd=r_imtp_peak["sd"],
+        x_label="CMJ Peak Propulsive Force (N)", y_label="IMTP Peak Force (N)",
+        key="dsi", thr_low=thr_low, thr_high=thr_high,
+        pop_x=r_cmj_peak["pop_mean"], pop_y=r_imtp_peak["pop_mean"],
+    )
+
+
+def build_eur_chart(results, thresholds):
+    """EUR: CMJ Height (x) vs SJ Height (y). Entrambe hanno un dato di
+    popolazione, quindi il crosshair è completo."""
+    r_sj_h = next((r for r in results if r["key"] == "sj_height"), None)
+    r_cmj_h = next((r for r in results if r["key"] == "cmj_height"), None)
+    if r_sj_h is None or r_cmj_h is None:
+        return None
+    thr_low, thr_high = thresholds["eur"]
+    return ratio_wedge_chart(
+        x_mean=r_cmj_h["mean"], y_mean=r_sj_h["mean"], x_sd=r_cmj_h["sd"], y_sd=r_sj_h["sd"],
+        x_label="CMJ Height (cm)", y_label="SJ Height (cm)",
+        key="eur", thr_low=thr_low, thr_high=thr_high,
+        pop_x=r_cmj_h["pop_mean"], pop_y=r_sj_h["pop_mean"],
     )
 
 
@@ -1604,13 +1784,6 @@ def build_tscore_bar_chart(cat_results):
         font=dict(color=TEXT_COLOR),
     )
     return fig
-
-
-def _wrap_label(text, width=16):
-    """Spezza un'etichetta lunga su più righe (per gli assi angolari del
-    radar), così non deborda oltre il bordo del grafico invece di essere
-    tagliata."""
-    return "<br>".join(textwrap.wrap(text, width=width, break_long_words=False))
 
 
 def build_radar_chart(cats_valide, profilo, nome):
@@ -1689,6 +1862,12 @@ with tab_costanti:
         "donne) usati per calcolare i T-score. Modificabili direttamente nella tabella; le "
         "modifiche si applicano subito alle altre schede."
     )
+    st.caption(
+        "Nota: DSI ed EUR non usano più il T-score (sono indici diagnostici, non metriche "
+        "'più alto = meglio'), ma la loro media di popolazione resta utile come riferimento e "
+        "viene mostrata accanto al valore dell'atleta. Le soglie di lettura di DSI ed EUR si "
+        "modificano direttamente sopra il relativo grafico, nella scheda '📊 Profilo di Forza'."
+    )
 
     df_pop = costanti_dataframe(st.session_state["pop"])
     edited_pop = st.data_editor(
@@ -1738,12 +1917,14 @@ with tab_costanti:
         st.markdown("**Ripristina**")
         if st.button("↺ Valori di default"):
             st.session_state["pop"] = {k: dict(v) for k, v in DEFAULT_POP.items()}
-            if "pop_editor" in st.session_state:
-                del st.session_state["pop_editor"]
+            st.session_state["idx_thr"] = {k: list(v) for k, v in DEFAULT_INDEX_THRESHOLDS.items()}
+            for _k in ("pop_editor", "thr_dsi_low", "thr_dsi_high", "thr_eur_low", "thr_eur_high"):
+                if _k in st.session_state:
+                    del st.session_state[_k]
             st.rerun()
 
 if parsed_files:
-    results_bundle = build_results(parsed_files, st.session_state["pop"])
+    results_bundle = build_results(parsed_files, st.session_state["pop"], st.session_state["idx_thr"])
     results = results_bundle["results"]
     checks = results_bundle["checks"]
     profilo = profilo_forza(results)
@@ -1995,45 +2176,56 @@ with tab_profilo:
                 col.markdown(f"<span style='font-size:28px;color:{colore}'>{t:.0f}</span>", unsafe_allow_html=True)
                 col.caption(banda)
 
-        # --- DSI ed EUR come grafici a quadranti, invece che come solo
-        # T-score: mostrano non solo il rapporto (DSI/EUR), ma anche il
-        # livello assoluto di prestazione nei due test che lo compongono. Il
-        # valore numerico dell'indice è mostrato accanto al proprio grafico
-        # (non più in una riga "Indici" separata).
-        r_dsi = next((r for r in results if r["key"] == "dsi" and r["mean"] is not None), None)
-        dsi_fig = build_dsi_chart(results)
-        if dsi_fig:
-            st.markdown("#### DSI (Dynamic Strength Index)")
-            if r_dsi:
-                help_parts = []
-                if r_dsi["t"] is not None:
-                    help_parts.append(f"T-score: {r_dsi['t']:.0f} ({r_dsi['banda']})")
-                if r_dsi["pop_mean"] is not None:
-                    help_parts.append(f"Media popolazione: {r_dsi['pop_mean']:.3f}")
-                st.metric("DSI", f"{r_dsi['mean']:.3f}", help=" — ".join(help_parts) or None)
-            st.caption(
-                "CMJ Peak Force vs IMTP Peak Force: le linee tratteggiate sono centrate sulla media di "
-                "popolazione (dove disponibile), il punto è la media del test con barre d'errore (± dev.std)."
-            )
-            st.plotly_chart(dsi_fig, use_container_width=True)
+        # --- Indici a rapporto (DSI, EUR): barra a bande + grafico a spicchi.
+        # Le soglie sono modificabili sopra ciascun grafico e si applicano
+        # subito anche ai report scaricabili. Le etichette delle zone
+        # descrivono il PROFILO dell'atleta, non l'indicazione di
+        # allenamento: quella resta una decisione del preparatore, da
+        # scrivere nel campo "Analisi" della scheda Report.
+        for idx_key, titolo, decimali, caption in (
+            ("dsi", "DSI (Dynamic Strength Index)", 3,
+             "CMJ Peak Propulsive Force vs IMTP Peak Force. Le linee tratteggiate arancioni sono la "
+             "media di popolazione e il punto è la media del test con barre d'errore"),
+            ("eur", "EUR (Eccentric Utilisation Ratio)", 3,
+             "CMJ Height vs SJ Height. Le linee tratteggiate arancioni sono la media di popolazione."),
+        ):
+            r_idx = next((r for r in results if r["key"] == idx_key and r["mean"] is not None), None)
+            fig_wedge = (build_dsi_chart if idx_key == "dsi" else build_eur_chart)(
+                results, st.session_state["idx_thr"])
+            if not fig_wedge and not r_idx:
+                continue
 
-        r_eur = next((r for r in results if r["key"] == "eur" and r["mean"] is not None), None)
-        eur_fig = build_eur_chart(results)
-        if eur_fig:
-            st.markdown("#### EUR (Eccentric Utilisation Ratio)")
-            if r_eur:
+            st.markdown(f"#### {titolo}")
+            tc1, tc2, _tc3 = st.columns([1, 1, 3])
+            thr_low = tc1.number_input(
+                "Soglia bassa", key=f"thr_{idx_key}_low", min_value=0.0, step=0.05, format="%.2f",
+                value=float(st.session_state["idx_thr"][idx_key][0]))
+            thr_high = tc2.number_input(
+                "Soglia alta", key=f"thr_{idx_key}_high", min_value=0.0, step=0.05, format="%.2f",
+                value=float(st.session_state["idx_thr"][idx_key][1]))
+            if thr_high <= thr_low:
+                st.warning("La soglia alta deve essere maggiore della soglia bassa: soglie non aggiornate.")
+            else:
+                st.session_state["idx_thr"][idx_key] = [thr_low, thr_high]
+
+            if r_idx:
                 help_parts = []
-                if r_eur["t"] is not None:
-                    help_parts.append(f"T-score: {r_eur['t']:.0f} ({r_eur['banda']})")
-                if r_eur["pop_mean"] is not None:
-                    help_parts.append(f"Media popolazione: {r_eur['pop_mean']:.3f}")
-                st.metric("EUR", f"{r_eur['mean']:.3f}", help=" — ".join(help_parts) or None)
-            st.caption(
-                "Altezza SJ vs altezza CMJ: le linee tratteggiate sono centrate sulla media di popolazione, "
-                "il punto è la media del test con barre d'errore (± dev.std). La linea diagonale rappresenta "
-                "il valore medio di popolazione dell'EUR."
-            )
-            st.plotly_chart(eur_fig, use_container_width=True)
+                if r_idx.get("zona"):
+                    help_parts.append(r_idx["zona"])
+                if r_idx["pop_mean"] is not None:
+                    help_parts.append(f"Media popolazione: {r_idx['pop_mean']:.3f}")
+                st.metric(idx_key.upper(), f"{r_idx['mean']:.{decimali}f}",
+                          help=" — ".join(help_parts) or None)
+                strip = ratio_band_strip(idx_key, r_idx["mean"], *st.session_state["idx_thr"][idx_key],
+                                         label=idx_key.upper(), decimals=decimali)
+                if strip:
+                    st.plotly_chart(strip, use_container_width=True)
+            st.caption(caption)
+            if fig_wedge:
+                st.plotly_chart(fig_wedge, use_container_width=True)
+
+
+# ============================================================================
 # PARTE 6 — REPORT SCARICABILE (HTML interattivo)
 # ============================================================================
 # Il report è un unico file HTML autosufficiente: i grafici Plotly restano
@@ -2051,7 +2243,7 @@ def _fig_div(fig, div_id):
     if fig is None:
         return ""
     return fig.to_html(full_html=False, include_plotlyjs=False, div_id=div_id,
-                        config={"displaylogo": False, "responsive": True})
+                       config={"displaylogo": False, "responsive": True})
 
 
 def _banda_badge(banda, colore):
@@ -2062,14 +2254,18 @@ def _banda_badge(banda, colore):
 
 def _index_value_html(r):
     """Valore numerico di un indice (DSI/EUR), mostrato accanto al proprio
-    grafico invece che in una tabella riepilogativa separata."""
+    grafico invece che in una tabella riepilogativa separata. Include la zona
+    di profilo, la media di popolazione e le soglie usate, così il report
+    resta leggibile anche a distanza di mesi."""
     if r is None:
         return ""
     extra = []
+    if r.get("zona"):
+        extra.append(r["zona"])
     if r["pop_mean"] is not None:
         extra.append(f"Media pop. {r['pop_mean']:.3f}")
-    if r["t"] is not None:
-        extra.append(f"T-score {r['t']:.0f} ({r['banda']})")
+    if r.get("thr_low") is not None:
+        extra.append(f"soglie {r['thr_low']:.2f} / {r['thr_high']:.2f}")
     extra_html = f' <span class="muted">— {" · ".join(extra)}</span>' if extra else ""
     return f'<p class="index-value"><b>{r["label"]}: {r["mean"]:.3f}</b>{extra_html}</p>'
 
@@ -2107,7 +2303,7 @@ def _metric_table_html(cat_results):
     </table>"""
 
 
-def genera_report_html(nome, sesso, periodo, results, profilo, commento):
+def genera_report_html(nome, sesso, periodo, results, profilo, commento, thresholds):
     div_counter = {"n": 0}
 
     def next_id(prefix):
@@ -2151,21 +2347,27 @@ def genera_report_html(nome, sesso, periodo, results, profilo, commento):
             {f'<h3>RSQ — Reactive Strength Quadrant</h3>{_fig_div(rsq_fig, next_id("rsq"))}' if rsq_fig else ''}
         </section>""")
 
-    # --- Indici (DSI, EUR): il valore numerico è mostrato accanto al
-    # proprio grafico, non più in una tabella riepilogativa separata.
+    # --- Indici (DSI, EUR): barra a bande + grafico a spicchi, con il valore
+    # numerico e le soglie usate accanto a ciascun grafico. Nessun T-score:
+    # sono indici diagnostici, non metriche "più alto = meglio".
     r_dsi = next((r for r in results if r["key"] == "dsi" and r["mean"] is not None), None)
     r_eur = next((r for r in results if r["key"] == "eur" and r["mean"] is not None), None)
-    dsi_fig = build_dsi_chart(results)
-    eur_fig = build_eur_chart(results)
+    dsi_fig = build_dsi_chart(results, thresholds)
+    eur_fig = build_eur_chart(results, thresholds)
     if r_dsi or r_eur or dsi_fig or eur_fig:
         indici_html = []
-        if r_dsi or dsi_fig:
+        for r_idx, fig_idx, titolo, idx_key in (
+            (r_dsi, dsi_fig, "DSI (Dynamic Strength Index)", "dsi"),
+            (r_eur, eur_fig, "EUR (Eccentric Utilisation Ratio)", "eur"),
+        ):
+            if not (r_idx or fig_idx):
+                continue
+            strip = ratio_band_strip(idx_key, r_idx["mean"], *thresholds[idx_key],
+                                     label=idx_key.upper(), decimals=3) if r_idx else None
             indici_html.append(
-                f"<h3>DSI (Dynamic Strength Index)</h3>{_index_value_html(r_dsi)}{_fig_div(dsi_fig, next_id('dsi'))}"
-            )
-        if r_eur or eur_fig:
-            indici_html.append(
-                f"<h3>EUR (Eccentric Utilisation Ratio)</h3>{_index_value_html(r_eur)}{_fig_div(eur_fig, next_id('eur'))}"
+                f"<h3>{titolo}</h3>{_index_value_html(r_idx)}"
+                f"{_fig_div(strip, next_id(idx_key + '_strip'))}"
+                f"{_fig_div(fig_idx, next_id(idx_key))}"
             )
         sections.append(f"""<section>
             <h2>Indici</h2>
@@ -2253,13 +2455,15 @@ def genera_report_html(nome, sesso, periodo, results, profilo, commento):
             che confronta la prestazione dell'atleta rispetto a un gruppo di riferimento, esprimendo la
             distanza dalla media in deviazioni standard. Punteggi tra 0 e 50 indicano valori inferiori
             alla media, mentre punteggi tra 50 e 100 indicano valori superiori alla media.
+            DSI ed EUR fanno eccezione: essendo rapporti tra due test, non vengono letti come
+            "più alto = meglio" ma per zona di profilo, confrontando la posizione dell'atleta con
+            le soglie di riferimento indicate accanto a ciascun grafico.
         </p>
         {''.join(sections)}
     </div>
 </body>
 </html>"""
     return html.encode("utf-8")
-
 
 
 # ============================================================================
@@ -2408,7 +2612,7 @@ class _ReportPDF(FPDF):
         self.ln(1)
 
 
-def genera_report_pdf(nome, sesso, periodo, results, profilo, commento):
+def genera_report_pdf(nome, sesso, periodo, results, profilo, commento, thresholds):
     pdf = _ReportPDF()
     pdf.add_page()
 
@@ -2428,7 +2632,9 @@ def genera_report_pdf(nome, sesso, periodo, results, profilo, commento):
         "Per valutare i risultati del test e stato utilizzato il T-Score, un indice standardizzato "
         "che confronta la prestazione dell'atleta rispetto a un gruppo di riferimento, esprimendo la "
         "distanza dalla media in deviazioni standard. Punteggi tra 0 e 50 indicano valori inferiori "
-        "alla media, mentre punteggi tra 50 e 100 indicano valori superiori alla media."
+        "alla media, mentre punteggi tra 50 e 100 indicano valori superiori alla media. DSI ed EUR "
+        "fanno eccezione: essendo rapporti tra due test, non vengono letti come 'piu alto = meglio' "
+        "ma per zona di profilo, rispetto alle soglie indicate accanto a ciascun grafico."
     )
     pdf.ln(3)
 
@@ -2471,26 +2677,30 @@ def genera_report_pdf(nome, sesso, periodo, results, profilo, commento):
     # --- Indici (DSI, EUR) ---
     r_dsi = next((r for r in results if r["key"] == "dsi" and r["mean"] is not None), None)
     r_eur = next((r for r in results if r["key"] == "eur" and r["mean"] is not None), None)
-    dsi_fig = build_dsi_chart(results)
-    eur_fig = build_eur_chart(results)
+    dsi_fig = build_dsi_chart(results, thresholds)
+    eur_fig = build_eur_chart(results, thresholds)
     if r_dsi or r_eur or dsi_fig or eur_fig:
         pdf.section_title("Indici")
-        if r_dsi or dsi_fig:
-            pdf.subsection_title("DSI (Dynamic Strength Index)")
-            if r_dsi:
-                pdf.body_text(f"DSI: {r_dsi['mean']:.3f}" + (
-                    f"  (T-score {r_dsi['t']:.0f}, {r_dsi['banda']})" if r_dsi["t"] is not None else ""))
-            if dsi_fig:
-                pdf.chart_image(dsi_fig, width_px=900, height_px=430, content_width_mm=150)
-            pdf.descriptions_block([r_dsi])
-        if r_eur or eur_fig:
-            pdf.subsection_title("EUR (Eccentric Utilisation Ratio)")
-            if r_eur:
-                pdf.body_text(f"EUR: {r_eur['mean']:.3f}" + (
-                    f"  (T-score {r_eur['t']:.0f}, {r_eur['banda']})" if r_eur["t"] is not None else ""))
-            if eur_fig:
-                pdf.chart_image(eur_fig, width_px=900, height_px=430, content_width_mm=150)
-            pdf.descriptions_block([r_eur])
+        for r_idx, fig_idx, titolo, idx_key in (
+            (r_dsi, dsi_fig, "DSI (Dynamic Strength Index)", "dsi"),
+            (r_eur, eur_fig, "EUR (Eccentric Utilisation Ratio)", "eur"),
+        ):
+            if not (r_idx or fig_idx):
+                continue
+            pdf.subsection_title(titolo)
+            if r_idx:
+                lo, hi = thresholds[idx_key]
+                zona = f"  ({r_idx['zona']})" if r_idx.get("zona") else ""
+                pop = f"   Media pop. {r_idx['pop_mean']:.3f}" if r_idx["pop_mean"] is not None else ""
+                pdf.body_text(f"{idx_key.upper()}: {r_idx['mean']:.3f}{zona}{pop}   "
+                              f"soglie {lo:.2f} / {hi:.2f}")
+                strip = ratio_band_strip(idx_key, r_idx["mean"], lo, hi,
+                                         label=idx_key.upper(), decimals=3)
+                if strip:
+                    pdf.chart_image(strip, width_px=900, height_px=180, content_width_mm=160)
+            if fig_idx:
+                pdf.chart_image(fig_idx, width_px=900, height_px=470, content_width_mm=150)
+            pdf.descriptions_block([r_idx])
 
     # --- Analisi ---
     pdf.section_title("Analisi")
@@ -2511,8 +2721,7 @@ with tab_report:
         st.markdown("**Analisi del preparatore**")
         st.caption(
             "Scrivi qui il commento tecnico da includere nel report: punti di forza, aree di "
-            "miglioramento e indicazioni di lavoro. Nel report scaricato il testo sarà statico "
-            "(non modificabile da chi lo riceve)."
+            "miglioramento e indicazioni di lavoro."
         )
         commento = st.text_area(
             "Analisi del preparatore", key="coach_comment", height=160, label_visibility="collapsed",
@@ -2522,7 +2731,8 @@ with tab_report:
         col_html, col_pdf = st.columns(2)
         with col_html:
             if st.button("📄 Genera report HTML", type="primary", use_container_width=True):
-                html_bytes = genera_report_html(nome, sesso, periodo, results, profilo, commento)
+                html_bytes = genera_report_html(nome, sesso, periodo, results, profilo, commento,
+                                                st.session_state["idx_thr"])
                 st.download_button(
                     "⬇️ Scarica report (.html)", data=html_bytes,
                     file_name=f"Report_{nome.replace(' ', '_')}_{dt.date.today().isoformat()}.html",
@@ -2531,7 +2741,8 @@ with tab_report:
         with col_pdf:
             if st.button("📕 Genera report PDF", use_container_width=True):
                 with st.spinner("Rendering grafici e impaginazione PDF..."):
-                    pdf_bytes = genera_report_pdf(nome, sesso, periodo, results, profilo, commento)
+                    pdf_bytes = genera_report_pdf(nome, sesso, periodo, results, profilo, commento,
+                                                  st.session_state["idx_thr"])
                 st.download_button(
                     "⬇️ Scarica report (.pdf)", data=pdf_bytes,
                     file_name=f"Report_{nome.replace(' ', '_')}_{dt.date.today().isoformat()}.pdf",
