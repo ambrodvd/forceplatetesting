@@ -29,6 +29,8 @@ import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
 import openpyxl
+from fpdf import FPDF
+from fpdf.fonts import FontFace
 
 
 # ============================================================================
@@ -318,79 +320,83 @@ JUMP_TYPE_LABELS = {"imtp": "IMTP", "sj": "Squat Jump", "cmj": "CMJ", "cmrj": "C
 # ripetizione, con le stesse esclusioni already impostate sui salti.
 # Nomi già lowercase per combaciare con le chiavi salvate in rep["vars"]
 # (il parsing normalizza sempre con .strip().lower()).
-_BASE_JUMP_METRICS_CATALOG = [
-    'avg braking force sym. index', 'avg braking power sym. index', 'avg eccentric force',
-    'avg eccentric force sym. index', 'avg eccentric power', 'avg eccentric power sym. index',
-    'avg eccentric velocity', 'avg landing rfd', 'avg landing rfd sym. index',
-    'avg propulsive force sym. index', 'avg propulsive power sym. index', 'avg. braking force',
-    'avg. braking power', 'avg. braking velocity', 'avg. propulsive force',
-    'avg. propulsive power', 'avg. propulsive velocity', 'avg. rfd', 'avg. rfd sym. index',
-    'body mass', 'body weight', 'body weight sd', 'braking duration', 'braking end time',
-    'braking impulse', 'braking impulse sym. index', 'braking rfd', 'braking rfd sym. index',
-    'braking work', 'braking work sym. index', 'contact time', 'decel rfd', 'decel rfd sym. index',
-    'displacement depth', 'eccentric impulse', 'eccentric impulse sym. index', 'eccentric rfd',
-    'eccentric rfd sym. index', 'eccentric work', 'eccentric work sym. index', 'flight threshold',
-    'flight time', 'force at min displacement', 'force peak power', 'initiation threshold',
-    'jump height ft', 'jump height ni', 'jump momentum', 'jump start time', 'jump threshold time',
-    'landing peak force time', 'landing rfd 0-20ms', 'landing rfd 0-20ms sym. index',
-    'landing rfd 0-40ms', 'landing rfd 0-40ms sym. index', 'landing rfd 0-60ms',
-    'landing rfd 0-60ms sym. index', 'landing rfd 0-80ms', 'landing rfd 0-80ms sym. index',
-    'landing time', 'left avg braking force', 'left avg braking power', 'left avg eccentric force',
-    'left avg eccentric power', 'left avg landing rfd', 'left avg propulsive force',
-    'left avg propulsive power', 'left avg rfd', 'left braking impulse', 'left braking rfd',
-    'left braking work', 'left decel rfd', 'left eccentric impulse', 'left eccentric rfd',
-    'left eccentric work', 'left landing rfd 0-20ms', 'left landing rfd 0-40ms',
-    'left landing rfd 0-60ms', 'left landing rfd 0-80ms', 'left net impulse', 'left p1 impulse',
-    'left p2 impulse', 'left peak braking force', 'left peak braking power',
-    'left peak eccentric force', 'left peak eccentric power', 'left peak force',
-    'left peak landing force', 'left peak propulsive force', 'left peak propulsive power',
-    'left propulsive impulse', 'left propulsive rfd', 'left propulsive work',
-    'left time to peak braking force', 'left time to peak braking power',
-    'left time to peak eccentric force', 'left time to peak eccentric power',
-    'left time to peak force', 'left time to peak landing force', 'left time to peak power',
-    'left time to peak propulsive force', 'left time to peak propulsive power',
-    'min braking velocity', 'min eccentric velocity', 'min unweight force', 'net impulse',
-    'net impulse sym. index', 'p1 avg force', 'p1 avg power', 'p1 avg velocity', 'p1 duration',
-    'p1 impulse', 'p1 impulse sym. index', 'p1 p2 duration ratio', 'p1 p2 force ratio',
-    'p1 p2 power ratio', 'p1 p2 velocity ratio', 'p1 peak force', 'p1 peak power',
-    'p1 peak velocity', 'p2 avg force', 'p2 avg power', 'p2 avg velocity', 'p2 duration',
-    'p2 impulse', 'p2 impulse sym. index', 'p2 peak force', 'p2 peak power', 'p2 peak velocity',
-    'peak braking force', 'peak braking force sym. index', 'peak braking power',
-    'peak braking power sym. index', 'peak eccentric force', 'peak eccentric force sym. index',
-    'peak eccentric power', 'peak eccentric power sym. index', 'peak force',
-    'peak force sym. index', 'peak force time', 'peak landing force',
-    'peak landing force sym. index', 'peak power', 'peak propulsive force',
+_SJ_METRICS_CATALOG = [
+    'avg landing rfd', 'avg landing rfd sym. index', 'avg propulsive force sym. index',
+    'avg propulsive power sym. index', 'avg. propulsive force', 'avg. propulsive power',
+    'avg. propulsive velocity', 'avg. rfd', 'avg. rfd sym. index', 'body mass', 'body weight',
+    'body weight sd', 'contact time', 'flight threshold', 'flight time', 'force peak power',
+    'initiation threshold', 'jump height ft', 'jump height ni', 'jump momentum', 'jump start time',
+    'jump threshold time', 'landing peak force time', 'landing rfd 0-20ms',
+    'landing rfd 0-20ms sym. index', 'landing rfd 0-40ms', 'landing rfd 0-40ms sym. index',
+    'landing rfd 0-60ms', 'landing rfd 0-60ms sym. index', 'landing rfd 0-80ms',
+    'landing rfd 0-80ms sym. index', 'landing time', 'left avg landing rfd',
+    'left avg propulsive force', 'left avg propulsive power', 'left avg rfd',
+    'left landing rfd 0-20ms', 'left landing rfd 0-40ms', 'left landing rfd 0-60ms',
+    'left landing rfd 0-80ms', 'left net impulse', 'left p1 impulse', 'left p2 impulse',
+    'left peak force', 'left peak landing force', 'left peak propulsive force',
+    'left peak propulsive power', 'left propulsive impulse', 'left propulsive rfd',
+    'left propulsive work', 'left time to peak force', 'left time to peak landing force',
+    'left time to peak power', 'left time to peak propulsive force',
+    'left time to peak propulsive power', 'net impulse', 'net impulse sym. index', 'p1 avg force',
+    'p1 avg power', 'p1 avg velocity', 'p1 duration', 'p1 impulse', 'p1 impulse sym. index',
+    'p1 p2 duration ratio', 'p1 p2 force ratio', 'p1 p2 power ratio', 'p1 p2 velocity ratio',
+    'p1 peak force', 'p1 peak power', 'p1 peak velocity', 'p2 avg force', 'p2 avg power',
+    'p2 avg velocity', 'p2 duration', 'p2 impulse', 'p2 impulse sym. index', 'p2 peak force',
+    'p2 peak power', 'p2 peak velocity', 'peak force', 'peak force sym. index', 'peak force time',
+    'peak landing force', 'peak landing force sym. index', 'peak power', 'peak propulsive force',
     'peak propulsive force sym. index', 'peak propulsive power',
     'peak propulsive power sym. index', 'peak propulsive velocity', 'peak velocity',
     'propulsive duration', 'propulsive impulse', 'propulsive impulse sym. index', 'propulsive rfd',
     'propulsive rfd sym. index', 'propulsive start time', 'propulsive work',
-    'propulsive work sym. index', 'rel. avg. propulsive force', 'rel. min unweight force',
-    'rel. propulsive impulse', 'relative force at min displacement', 'relative peak force',
-    'relative peak landing force', 'relative peak power', 'right avg braking force',
-    'right avg braking power', 'right avg eccentric force', 'right avg eccentric power',
+    'propulsive work sym. index', 'rel. avg. propulsive force', 'rel. propulsive impulse',
+    'relative peak force', 'relative peak landing force', 'relative peak power',
     'right avg landing rfd', 'right avg propulsive force', 'right avg propulsive power',
-    'right avg rfd', 'right braking impulse', 'right braking rfd', 'right braking work',
-    'right decel rfd', 'right eccentric impulse', 'right eccentric rfd', 'right eccentric work',
-    'right landing rfd 0-20ms', 'right landing rfd 0-40ms', 'right landing rfd 0-60ms',
-    'right landing rfd 0-80ms', 'right net impulse', 'right p1 impulse', 'right p2 impulse',
-    'right peak braking force', 'right peak braking power', 'right peak eccentric force',
-    'right peak eccentric power', 'right peak force', 'right peak landing force',
+    'right avg rfd', 'right landing rfd 0-20ms', 'right landing rfd 0-40ms',
+    'right landing rfd 0-60ms', 'right landing rfd 0-80ms', 'right net impulse',
+    'right p1 impulse', 'right p2 impulse', 'right peak force', 'right peak landing force',
     'right peak propulsive force', 'right peak propulsive power', 'right propulsive impulse',
-    'right propulsive rfd', 'right propulsive work', 'right time to peak braking force',
-    'right time to peak braking power', 'right time to peak eccentric force',
-    'right time to peak eccentric power', 'right time to peak force',
+    'right propulsive rfd', 'right propulsive work', 'right time to peak force',
     'right time to peak landing force', 'right time to peak power',
     'right time to peak propulsive force', 'right time to peak propulsive power', 'rsi',
-    'rsi exponential', 'rsi modified', 'takeoff time', 'takeoff velocity',
-    'time to peak braking force', 'time to peak braking force sym. index',
-    'time to peak braking power', 'time to peak braking power sym. index',
-    'time to peak eccentric force', 'time to peak eccentric force sym. index',
-    'time to peak eccentric power', 'time to peak eccentric power sym. index',
-    'time to peak force', 'time to peak landing force', 'time to peak landing force sym. index',
-    'time to peak power', 'time to peak power sym. index', 'time to peak propulsive force',
+    'rsi modified', 'takeoff time', 'takeoff velocity', 'time to peak force',
+    'time to peak landing force', 'time to peak landing force sym. index', 'time to peak power',
+    'time to peak power sym. index', 'time to peak propulsive force',
     'time to peak propulsive force sym. index', 'time to peak propulsive power',
     'time to peak propulsive power sym. index', 'time to peak si', 'time to takeoff',
-    'unweighted duration', 'velocity peak power',
+    'velocity peak power',
+]
+
+_CMJ_EXTRA_METRICS_CATALOG = [
+    'avg braking force sym. index', 'avg braking power sym. index', 'avg eccentric force',
+    'avg eccentric force sym. index', 'avg eccentric power', 'avg eccentric power sym. index',
+    'avg eccentric velocity', 'avg. braking force', 'avg. braking power', 'avg. braking velocity',
+    'braking duration', 'braking end time', 'braking impulse', 'braking impulse sym. index',
+    'braking rfd', 'braking rfd sym. index', 'braking work', 'braking work sym. index',
+    'decel rfd', 'decel rfd sym. index', 'displacement depth', 'eccentric impulse',
+    'eccentric impulse sym. index', 'eccentric rfd', 'eccentric rfd sym. index', 'eccentric work',
+    'eccentric work sym. index', 'force at min displacement', 'left avg braking force',
+    'left avg braking power', 'left avg eccentric force', 'left avg eccentric power',
+    'left braking impulse', 'left braking rfd', 'left braking work', 'left decel rfd',
+    'left eccentric impulse', 'left eccentric rfd', 'left eccentric work',
+    'left peak braking force', 'left peak braking power', 'left peak eccentric force',
+    'left peak eccentric power', 'left time to peak braking force',
+    'left time to peak braking power', 'left time to peak eccentric force',
+    'left time to peak eccentric power', 'min braking velocity', 'min eccentric velocity',
+    'min unweight force', 'peak braking force', 'peak braking force sym. index',
+    'peak braking power', 'peak braking power sym. index', 'peak eccentric force',
+    'peak eccentric force sym. index', 'peak eccentric power', 'peak eccentric power sym. index',
+    'rel. min unweight force', 'relative force at min displacement', 'right avg braking force',
+    'right avg braking power', 'right avg eccentric force', 'right avg eccentric power',
+    'right braking impulse', 'right braking rfd', 'right braking work', 'right decel rfd',
+    'right eccentric impulse', 'right eccentric rfd', 'right eccentric work',
+    'right peak braking force', 'right peak braking power', 'right peak eccentric force',
+    'right peak eccentric power', 'right time to peak braking force',
+    'right time to peak braking power', 'right time to peak eccentric force',
+    'right time to peak eccentric power', 'rsi exponential', 'time to peak braking force',
+    'time to peak braking force sym. index', 'time to peak braking power',
+    'time to peak braking power sym. index', 'time to peak eccentric force',
+    'time to peak eccentric force sym. index', 'time to peak eccentric power',
+    'time to peak eccentric power sym. index', 'unweighted duration', 'with armswing',
 ]
 
 _CMRJ_EXTRA_METRICS_CATALOG = [
@@ -443,7 +449,6 @@ _CMRJ_EXTRA_METRICS_CATALOG = [
     'right rebound propulsive rfd', 'right rebound propulsive work',
     'right rebound time to peak braking force', 'right rebound time to peak braking power',
     'right rebound time to peak propulsive force', 'right rebound time to peak propulsive power',
-    'with armswing',
 ]
 
 _IMTP_METRICS_CATALOG = [
@@ -488,12 +493,14 @@ _IMTP_METRICS_CATALOG = [
     'torque 50ms right', 'torque at max rfd', 'torque at max rfd left', 'torque at max rfd right',
 ]
 
-# Elenco per jump_type usato dal multiselect di ricerca. sj/cmj condividono
-# lo stesso set base; cmrj lo estende con le variabili "rebound ...".
+# Elenco per jump_type usato dal multiselect di ricerca. SJ non include le
+# metriche della fase eccentrica/di contromovimento (non presenti in un
+# export SJ reale); CMJ le aggiunge; CMJ RE aggiunge anche le variabili
+# "rebound ...".
 EXTRA_METRICS_CATALOG = {
-    "sj": sorted(_BASE_JUMP_METRICS_CATALOG),
-    "cmj": sorted(_BASE_JUMP_METRICS_CATALOG),
-    "cmrj": sorted(set(_BASE_JUMP_METRICS_CATALOG) | set(_CMRJ_EXTRA_METRICS_CATALOG)),
+    "sj": sorted(_SJ_METRICS_CATALOG),
+    "cmj": sorted(set(_SJ_METRICS_CATALOG) | set(_CMJ_EXTRA_METRICS_CATALOG)),
+    "cmrj": sorted(set(_SJ_METRICS_CATALOG) | set(_CMJ_EXTRA_METRICS_CATALOG) | set(_CMRJ_EXTRA_METRICS_CATALOG)),
     "imtp": sorted(_IMTP_METRICS_CATALOG),
 }
 
@@ -502,6 +509,297 @@ def extra_metric_label(raw_var):
     """Etichetta leggibile per una metrica extra scelta dall'utente (solo
     la prima lettera maiuscola, il resto è già in minuscolo)."""
     return raw_var[:1].upper() + raw_var[1:]
+
+
+# ============================================================================
+# PARTE 1ter — DESCRIZIONI DELLE METRICHE (help "?")
+# ============================================================================
+# Testi tratti da ccathletics.dk/what-we-measure/ (glossario ufficiale
+# ForceMate/ForceDecks), usati per l'help "?" mostrato accanto a ogni
+# metrica in Dettaglio Test e nel report. Se una metrica non ha una
+# descrizione nota, semplicemente non mostra alcun help (nessuna icona).
+
+# Metriche generiche di salto (SJ/CMJ/CMJ RE): stessa fase, stesso nome,
+# stessa definizione a prescindere dal tipo di test.
+_CORE_METRIC_DESCRIPTIONS = {
+    "jump height ft": "Altezza del salto calcolata dal tempo di volo (Flight Time).",
+    "jump height ni": "Altezza del salto calcolata dall'impulso netto (Net Impulse).",
+    "takeoff velocity": "Velocità al distacco da terra.",
+    "rsi": "Tempo di volo / tempo di contatto (DJ). (Time-to-Takeoff per CMJ/SJ).",
+    "rsi modified": "Altezza del salto / tempo di contatto (DJ). (Time-to-Takeoff per CMJ/SJ). Usa l'impulso netto quando disponibile.",
+    "rsi exponential": "Formula proprietaria CC Athletics per l'RSI nei Drop Jump: Tempo di volo\u00b2 / Tempo di contatto.",
+    "jump momentum": "Quantità di moto generata durante il salto, calcolata come prodotto tra massa corporea e velocità al distacco.",
+    "displacement depth": "Profondità massima raggiunta durante la fase di contromovimento, cioè quanto scende il centro di massa prima dell'inizio della fase propulsiva.",
+    "net impulse": "Impulso totale (al netto del peso corporeo) applicato durante le fasi di frenata+propulsione.",
+    "eccentric impulse": "Impulso netto sull'intera fase eccentrica (scarico + frenata). Poiché l'atleta parte e finisce questa fase da fermo, le due sotto-fasi tendono ad annullarsi a vicenda: valori vicini a zero sono normali.",
+    "propulsive impulse": "Impulso netto (forza meno peso corporeo) generato durante la fase propulsiva (dal punto più basso al distacco). Rappresenta l'integrale forza-tempo che accelera il corpo verso l'alto. Equivalente al 'Concentric Impulse' di altri sistemi.",
+    "rel. propulsive impulse": "Impulso durante la fase propulsiva relativo alla massa corporea.",
+    "braking impulse": "Impulso netto (forza meno peso corporeo) generato solo durante la fase di frenata/decelerazione (dal picco di velocità eccentrica al punto più basso). Quantifica quanto efficacemente l'atleta decelera dopo aver raggiunto la velocità massima verso il basso.",
+    "peak force": "Picco di forza istantanea durante l'intero salto.",
+    "min unweight force": "Forza minima misurata durante la fase di scarico (unweighting).",
+    "rel. min unweight force": "Forza minima durante lo scarico, espressa come multiplo del peso corporeo.",
+    "peak braking force": "Picco di forza istantanea durante la sola fase di frenata/decelerazione (dal picco di velocità eccentrica al punto più basso). Per l'intera fase eccentrica, vedi 'Peak Eccentric Force'.",
+    "avg. braking force": "Forza media durante la sola fase di frenata/decelerazione (dal picco di velocità eccentrica al punto più basso). Per l'intera fase eccentrica, vedi 'Avg Eccentric Force'.",
+    "avg braking force": "Forza media durante la sola fase di frenata/decelerazione (dal picco di velocità eccentrica al punto più basso). Per l'intera fase eccentrica, vedi 'Avg Eccentric Force'.",
+    "avg eccentric force": "Forza media durante l'intera fase eccentrica (scarico + frenata). Rappresenta la forza media dall'inizio del movimento al punto più basso del contromovimento.",
+    "peak eccentric force": "Picco di forza istantanea durante l'intera fase eccentrica (scarico + frenata). Rappresenta la forza massima dall'inizio del movimento al punto più basso del contromovimento.",
+    "avg. propulsive force": "Forza media durante la fase propulsiva.",
+    "avg propulsive force": "Forza media durante la fase propulsiva.",
+    "rel. avg. propulsive force": "Forza media durante la fase propulsiva, relativa alla massa corporea.",
+    "peak propulsive force": "Picco di forza istantanea durante la fase propulsiva.",
+    "relative peak force": "Picco di forza espresso come multiplo del peso corporeo.",
+    "rel. peak force": "Picco di forza espresso come multiplo del peso corporeo.",
+    "force peak power": "Forza istantanea nel momento di picco potenza (sull'intero dataset).",
+    "force at min displacement": "Forza totale (di reazione al suolo) misurata nel punto di massima profondità di spostamento durante il contromovimento.",
+    "relative force at min displacement": "Forza al punto di minimo spostamento, espressa come multiplo del peso corporeo.",
+    "peak braking power": "Picco di potenza istantanea durante la sola fase di frenata/decelerazione (valore negativo). Per l'intera fase eccentrica, vedi 'Peak Eccentric Power'.",
+    "avg. braking power": "Potenza meccanica media durante la sola fase di frenata/decelerazione (valore negativo). Per l'intera fase eccentrica, vedi 'Avg Eccentric Power'.",
+    "avg braking power": "Potenza meccanica media durante la sola fase di frenata/decelerazione (valore negativo). Per l'intera fase eccentrica, vedi 'Avg Eccentric Power'.",
+    "braking work": "Lavoro totale svolto durante la sola fase di frenata/decelerazione (valore negativo). Per l'intera fase eccentrica, vedi 'Eccentric Work'.",
+    "peak eccentric power": "Picco di potenza istantanea durante l'intera fase eccentrica (scarico + frenata). Riportato come valore assoluto. Valori alti indicano una buona capacità di potenza eccentrica.",
+    "avg eccentric power": "Potenza meccanica media durante l'intera fase eccentrica (scarico + frenata). Riportata come valore assoluto. Rappresenta il tasso medio di assorbimento di energia nella fase discendente.",
+    "eccentric work": "Lavoro totale svolto durante l'intera fase eccentrica (scarico + frenata). Riportato come valore assoluto. Quantifica l'energia totale assorbita dall'inizio del movimento al punto più basso.",
+    "peak propulsive power": "Potenza massima durante la fase propulsiva.",
+    "avg. propulsive power": "Potenza media durante la fase propulsiva.",
+    "avg propulsive power": "Potenza media durante la fase propulsiva.",
+    "propulsive work": "Lavoro totale svolto durante la fase propulsiva.",
+    "peak power": "Picco di potenza istantanea durante l'intero salto.",
+    "relative peak power": "Picco di potenza espresso in watt per chilogrammo di peso corporeo.",
+    "min braking velocity": "Velocità minima durante la fase di frenata.",
+    "avg. braking velocity": "Velocità media durante la fase di frenata.",
+    "avg braking velocity": "Velocità media durante la fase di frenata.",
+    "min eccentric velocity": "Velocità minima (più negativa) durante l'intera fase eccentrica \u2014 il picco di velocità verso il basso (Eccentric Peak Velocity, EPV), che segna il passaggio dallo scarico alla frenata.",
+    "avg eccentric velocity": "Velocità media durante l'intera fase eccentrica (scarico + frenata).",
+    "peak propulsive velocity": "Velocità massima raggiunta durante la fase propulsiva.",
+    "avg. propulsive velocity": "Velocità media durante la fase propulsiva.",
+    "avg propulsive velocity": "Velocità media durante la fase propulsiva.",
+    "peak velocity": "Picco di velocità istantanea durante la fase di propulsione.",
+    "velocity peak power": "Velocità istantanea nel momento di picco potenza (sull'intero dataset).",
+    "avg. rfd": "Tasso medio di sviluppo della forza (Rate of Force Development, RFD).",
+    "avg rfd": "Tasso medio di sviluppo della forza (Rate of Force Development, RFD).",
+    "braking rfd": "Pendenza media della forza durante la fase di frenata.",
+    "decel rfd": "Tasso di sviluppo della forza nella porzione di decelerazione della fase di frenata, misurato dalla velocità minima alla fine della frenata. Simile a 'Braking RFD' o 'Load' di altri sistemi, ma focalizzato sulla fase tardiva della frenata.",
+    "eccentric rfd": "Tasso di sviluppo della forza durante la fase eccentrica, calcolato dal valore iniziale al picco di forza.",
+    "propulsive rfd": "Tasso di sviluppo della forza durante la fase propulsiva, calcolato dal valore iniziale al picco di forza.",
+    "p1 impulse": "Impulso generato durante la prima metà della fase propulsiva (posizione iniziale a triplice flessione). Rappresenta il primo 50% dell'impulso propulsivo.",
+    "p2 impulse": "Impulso generato durante la seconda metà della fase propulsiva (fino alla triplice estensione). Rappresenta l'ultimo 50% dell'impulso propulsivo.",
+    "p1 duration": "Durata della prima metà della fase propulsiva.",
+    "p2 duration": "Durata della seconda metà della fase propulsiva.",
+    "p1 avg force": "Forza media durante la prima metà della fase propulsiva (posizione di squat profondo).",
+    "p2 avg force": "Forza media durante la seconda metà della fase propulsiva (estensione fino al distacco).",
+    "p1 p2 force ratio": "Rapporto tra la forza media in P1 e quella in P2. Sopra 1.0 = produzione di forza maggiore nella posizione più profonda; sotto 1.0 = maggiore durante l'estensione.",
+    "p1 p2 duration ratio": "Rapporto tra la durata di P1 e quella di P2. Sopra 1.0 = più tempo nella prima metà dell'impulso; sotto 1.0 = fase iniziale più rapida.",
+    "p1 peak force": "Picco di forza durante la fase propulsiva iniziale (P1).",
+    "p1 peak velocity": "Picco di velocità durante la fase propulsiva iniziale (P1).",
+    "p1 avg velocity": "Velocità media durante la fase propulsiva iniziale (P1).",
+    "p1 peak power": "Picco di potenza durante la fase propulsiva iniziale (P1).",
+    "p1 avg power": "Potenza media durante la fase propulsiva iniziale (P1).",
+    "p2 peak force": "Picco di forza durante la fase propulsiva finale (P2).",
+    "p2 peak velocity": "Picco di velocità durante la fase propulsiva finale (P2).",
+    "p2 avg velocity": "Velocità media durante la fase propulsiva finale (P2).",
+    "p2 peak power": "Picco di potenza durante la fase propulsiva finale (P2).",
+    "p2 avg power": "Potenza media durante la fase propulsiva finale (P2).",
+    "p1 p2 velocity ratio": "Rapporto tra la velocità media di P1 e P2, indica le caratteristiche di velocità tra fase iniziale e finale.",
+    "p1 p2 power ratio": "Rapporto tra la potenza media di P1 e P2, indica le caratteristiche di potenza tra fase iniziale e finale.",
+    "peak landing force": "Forza massima registrata durante la fase di atterraggio del salto. Misura la capacità di assorbire le forze in atterraggio.",
+    "relative peak landing force": "Picco di forza in atterraggio, espresso come multiplo del peso corporeo.",
+    "time to peak landing force": "Tempo dal contatto in atterraggio al picco di forza in atterraggio. Indica quanto rapidamente si raggiungono i picchi di forza durante l'atterraggio.",
+    "landing peak force time": "Tempo dal contatto in atterraggio al picco di forza in atterraggio. Indica quanto rapidamente si raggiungono i picchi di forza durante l'atterraggio.",
+    "avg landing rfd": "Tasso medio di sviluppo della forza in atterraggio, dal peso corporeo al picco di forza in atterraggio. Indica la rigidità in atterraggio.",
+    "landing rfd 0-20ms": "Tasso di sviluppo della forza nei primi 20ms dopo l'atterraggio.",
+    "landing rfd 0-40ms": "Tasso di sviluppo della forza nei primi 40ms dopo l'atterraggio.",
+    "landing rfd 0-60ms": "Tasso di sviluppo della forza nei primi 60ms dopo l'atterraggio.",
+    "landing rfd 0-80ms": "Tasso di sviluppo della forza nei primi 80ms dopo l'atterraggio.",
+    "time to peak force": "Tempo impiegato per raggiungere il picco di forza istantanea (dall'inizio del salto).",
+    "peak force time": "Tempo impiegato per raggiungere il picco di forza istantanea (dall'inizio del salto).",
+    "unweighted duration": "Tempo impiegato per completare la fase di scarico (unweighting).",
+    "braking duration": "Durata della sola fase di frenata/decelerazione, misurata dal picco di velocità eccentrica (EPV) al punto più basso del contromovimento.",
+    "propulsive duration": "Durata dalla fine della fase di frenata (quando la velocità diventa positiva) fino al distacco. A volte chiamato 'Concentric Time'.",
+    "flight time": "Tempo trascorso in fase di volo.",
+    "time to peak power": "Tempo dall'inizio del salto al momento di picco potenza.",
+    "contact time": "Tempo di contatto con il suolo tra atterraggio e distacco.",
+    "contraction time": "Tempo totale di contrazione muscolare dall'inizio del movimento al distacco. Per il CMJ: fasi eccentrica + concentrica. Per lo SJ: solo la fase propulsiva (concentrica).",
+    "time to takeoff": "Tempo dall'inizio del movimento al distacco. Indica il tempo totale di contatto col suolo prima del decollo.",
+    "takeoff time": "Tempo dall'inizio del movimento al distacco. Indica il tempo totale di contatto col suolo prima del decollo.",
+    "time to peak braking force": "Tempo per raggiungere il picco di forza durante la fase di frenata, misurato dall'inizio della frenata.",
+    "time to peak braking power": "Tempo per raggiungere il picco di potenza durante la fase di frenata, misurato dall'inizio della frenata.",
+    "time to peak eccentric force": "Tempo per raggiungere il picco di forza durante la fase eccentrica, misurato dall'inizio del salto.",
+    "time to peak eccentric power": "Tempo per raggiungere il picco di potenza durante la fase eccentrica, misurato dall'inizio del salto.",
+    "time to peak propulsive force": "Tempo per raggiungere il picco di forza durante la fase propulsiva, misurato dall'inizio della propulsione.",
+    "time to peak propulsive power": "Tempo per raggiungere il picco di potenza durante la fase propulsiva, misurato dall'inizio della propulsione.",
+    "system weight": "Peso misurato dell'atleta durante la fase di pesata, appena prima del salto.",
+    "body mass": "Massa corporea dell'atleta, misurata prima del test.",
+    "body weight": "Peso corporeo dell'atleta registrato per questo test.",
+    "body weight sd": "Deviazione standard del peso corporeo durante la fase di pesata (indica quanto l'atleta è rimasto fermo).",
+    "propulsive start time": "Momento in cui inizia la fase propulsiva (quando la forza passa da frenata a propulsiva).",
+}
+
+# Descrizioni specifiche IMTP (Isometric Mid-Thigh Pull): nomi e definizioni
+# non coincidono con quelli dei test di salto, quindi hanno priorità quando
+# jump_type == "imtp".
+_IMTP_METRIC_DESCRIPTIONS = {
+    "peak force": "Picco di forza (valore di forza più alto durante la contrazione volontaria massimale).",
+    "peak force net": "Picco di forza netta (valore di forza più alto durante la contrazione volontaria massimale).",
+    "peak force relative": "Picco di forza espresso come percentuale del peso corporeo.",
+    "peak force relative net": "Picco di forza netta espresso come percentuale del peso corporeo.",
+    "onset force": "Forza al momento dell'inizio (onset) della contrazione.",
+    "onset force net": "Forza netta al momento dell'inizio (onset) della contrazione.",
+    "onset force relative": "Forza all'inizio della contrazione, espressa come percentuale del peso corporeo.",
+    "onset force relative net": "Forza netta all'inizio della contrazione, espressa come percentuale del peso corporeo.",
+    "onset torque": "Coppia (torque) al momento dell'inizio della contrazione.",
+    "onset time": "Istante di inizio della contrazione (dall'inizio del segnale).",
+    "end of rise force": "Forza raggiunta nel punto in cui la derivata forza-tempo si stabilizza per la prima volta (fine della fase di salita).",
+    "end of rise force net": "Forza netta raggiunta nel punto in cui la derivata forza-tempo si stabilizza per la prima volta.",
+    "end of rise force relative": "Forza a fine salita, espressa come percentuale del peso corporeo.",
+    "end of rise force relative net": "Forza netta a fine salita, espressa come percentuale del peso corporeo.",
+    "end of rise torque": "Coppia raggiunta nel punto in cui la derivata coppia-tempo si stabilizza per la prima volta.",
+    "force at max rfd": "Forza nel punto in cui si raggiunge l'RFD massimo.",
+    "force at max rfd net": "Forza netta nel punto in cui si raggiunge l'RFD massimo.",
+    "force at max rfd relative": "Forza nel punto di RFD massimo, espressa come percentuale del peso corporeo.",
+    "force at max rfd relative net": "Forza netta nel punto di RFD massimo, espressa come percentuale del peso corporeo.",
+    "max rfd": "Picco del tasso di sviluppo della forza (Rate of Force Development) durante la contrazione.",
+    "impulse at max rfd": "Impulso dall'inizio della contrazione al punto di RFD massimo.",
+    "rfd impulse": "Impulso accumulato fino al punto di massimo tasso di sviluppo della forza.",
+    "steadiness rsme force": "Errore quadratico medio (RMSE) della forza durante la fase di stazionarietà (steady state).",
+    "steadiness rsme rfd": "Errore quadratico medio (RMSE) dell'RFD durante la fase di stazionarietà (steady state).",
+    "time to force end of rise": "Tempo dall'inizio della contrazione alla fine della fase di salita (End Of Rise).",
+    "time to peak force": "Tempo dall'inizio della contrazione al picco di forza durante la contrazione volontaria massimale.",
+    "time to peak rfd": "Tempo dall'inizio della contrazione al picco di RFD.",
+    "peak torque": "Picco di coppia (valore di coppia più alto durante la contrazione volontaria massimale).",
+    "torque at max rfd": "Coppia nel punto in cui si raggiunge l'RFD massimo.",
+    "system weight": "Peso corporeo misurato sulla pedana, appena prima della trazione.",
+}
+for _ms in (50, 100, 150, 200, 250):
+    _IMTP_METRIC_DESCRIPTIONS[f"force {_ms}ms"] = f"Forza a {_ms}ms dall'inizio della contrazione."
+    _IMTP_METRIC_DESCRIPTIONS[f"force {_ms}ms net"] = f"Forza netta a {_ms}ms dall'inizio della contrazione."
+    _IMTP_METRIC_DESCRIPTIONS[f"force {_ms}ms relative"] = f"Forza a {_ms}ms dall'inizio della contrazione, come percentuale del peso corporeo."
+    _IMTP_METRIC_DESCRIPTIONS[f"force {_ms}ms relative net"] = f"Forza netta a {_ms}ms dall'inizio della contrazione, come percentuale del peso corporeo."
+    _IMTP_METRIC_DESCRIPTIONS[f"rfd {_ms}ms"] = f"Tasso di sviluppo della forza (RFD) a {_ms}ms dall'inizio della contrazione."
+    _IMTP_METRIC_DESCRIPTIONS[f"impulse {_ms}ms"] = f"Impulso dall'inizio della contrazione a {_ms}ms."
+    _IMTP_METRIC_DESCRIPTIONS[f"torque {_ms}ms"] = f"Coppia a {_ms}ms dall'inizio della contrazione."
+
+# Metriche "rebound ..." (CMJ RE) documentate esplicitamente sul sito con
+# testo proprio (non solo "stessa metrica in fase di rimbalzo").
+_REBOUND_METRIC_OVERRIDES = {
+    "rebound jump height ft": "Altezza del salto di rimbalzo, calcolata dal tempo di volo.",
+    "rebound contact time": "Durata del contatto a terra tra l'atterraggio dal CMJ e il distacco del salto di rimbalzo.",
+    "rebound rsi": "Reactive Strength Index del salto di rimbalzo (altezza del salto \u00f7 tempo di contatto).",
+    "rebound rsi modified": "Reactive Strength Index modificato del salto di rimbalzo (altezza del salto \u00f7 tempo di contatto, formulazione modificata).",
+    "rebound jump momentum": "Quantità di moto verticale al distacco del salto di rimbalzo (massa corporea \u00d7 velocità al distacco).",
+    "rebound braking impulse": "Impulso totale generato durante la fase di frenata del rimbalzo.",
+    "rebound propulsive impulse": "Impulso totale generato durante la fase propulsiva del rimbalzo.",
+    "rebound force at min displacement": "Forza verticale nel punto più basso di spostamento del centro di massa durante il contatto di rimbalzo.",
+    "rebound relative force at min displacement": "Forza al punto di minimo spostamento durante il rimbalzo, normalizzata sul peso corporeo.",
+    "rebound avg braking force": "Forza verticale media durante la fase di frenata del rimbalzo.",
+    "rebound peak braking force": "Picco di forza verticale durante la fase di frenata del rimbalzo.",
+    "rebound avg propulsive force": "Forza verticale media durante la fase propulsiva del rimbalzo.",
+    "rebound peak propulsive force": "Picco di forza verticale durante la fase propulsiva del rimbalzo.",
+    "rebound avg braking power": "Potenza media durante la fase di frenata del rimbalzo.",
+    "rebound peak braking power": "Picco di potenza durante la fase di frenata del rimbalzo.",
+    "rebound avg propulsive power": "Potenza media durante la fase propulsiva del rimbalzo.",
+    "rebound peak propulsive power": "Picco di potenza durante la fase propulsiva del rimbalzo.",
+    "rebound braking work": "Lavoro totale svolto durante la fase di frenata del rimbalzo.",
+    "rebound propulsive work": "Lavoro totale svolto durante la fase propulsiva del rimbalzo.",
+    "rebound min braking velocity": "Velocità minima durante la fase di frenata del rimbalzo.",
+    "rebound avg braking velocity": "Velocità media durante la fase di frenata del rimbalzo.",
+    "rebound peak propulsive velocity": "Velocità massima raggiunta durante la fase propulsiva del rimbalzo.",
+    "rebound avg propulsive velocity": "Velocità media durante la fase propulsiva del rimbalzo.",
+    "rebound avg braking rfd": "Pendenza media della forza durante la fase di frenata del rimbalzo.",
+    "rebound propulsive rfd": "Tasso di sviluppo della forza durante la fase propulsiva del rimbalzo, calcolato dal valore iniziale al picco di forza.",
+    "rebound p1 impulse": "Impulso durante la prima metà della fase propulsiva del rimbalzo.",
+    "rebound p2 impulse": "Impulso durante la seconda metà della fase propulsiva del rimbalzo.",
+    "rebound p1 duration": "Durata della prima metà della fase propulsiva del rimbalzo.",
+    "rebound p1 peak force": "Picco di forza durante la fase propulsiva iniziale del rimbalzo (P1).",
+    "rebound p1 avg force": "Forza media durante la prima metà della fase propulsiva del rimbalzo.",
+    "rebound p1 peak velocity": "Picco di velocità durante la fase propulsiva iniziale del rimbalzo (P1).",
+    "rebound p1 avg velocity": "Velocità media durante la fase propulsiva iniziale del rimbalzo (P1).",
+    "rebound p1 peak power": "Picco di potenza durante la fase propulsiva iniziale del rimbalzo (P1).",
+    "rebound p1 avg power": "Potenza media durante la fase propulsiva iniziale del rimbalzo (P1).",
+    "rebound p2 duration": "Durata della seconda metà della fase propulsiva del rimbalzo.",
+    "rebound p2 peak force": "Picco di forza durante la fase propulsiva finale del rimbalzo (P2).",
+    "rebound p2 avg force": "Forza media durante la seconda metà della fase propulsiva del rimbalzo.",
+    "rebound p2 peak velocity": "Picco di velocità durante la fase propulsiva finale del rimbalzo (P2).",
+    "rebound p2 avg velocity": "Velocità media durante la fase propulsiva finale del rimbalzo (P2).",
+    "rebound p2 peak power": "Picco di potenza durante la fase propulsiva finale del rimbalzo (P2).",
+    "rebound p2 avg power": "Potenza media durante la fase propulsiva finale del rimbalzo (P2).",
+    "rebound p1 p2 force ratio": "Rapporto tra la forza media in P1 e in P2 del rimbalzo.",
+    "rebound p1 p2 velocity ratio": "Rapporto tra la velocità media di P1 e P2 del rimbalzo.",
+    "rebound p1 p2 power ratio": "Rapporto tra la potenza media di P1 e P2 del rimbalzo.",
+    "rebound p1 p2 duration ratio": "Rapporto tra la durata di P1 e la durata di P2 del rimbalzo.",
+    "rebound flight time": "Durata della fase di volo del salto di rimbalzo.",
+    "rebound time to peak braking force": "Tempo dall'inizio del contatto di rimbalzo al picco di forza in frenata.",
+    "rebound time to takeoff": "Tempo dall'inizio del contatto di rimbalzo al distacco del rimbalzo.",
+    "rebound time to peak braking power": "Tempo per raggiungere il picco di potenza durante la fase di frenata del rimbalzo, misurato dall'inizio della frenata.",
+    "rebound time to peak propulsive force": "Tempo per raggiungere il picco di forza durante la fase propulsiva del rimbalzo, misurato dall'inizio della propulsione.",
+    "rebound time to peak propulsive power": "Tempo per raggiungere il picco di potenza durante la fase propulsiva del rimbalzo, misurato dall'inizio della propulsione.",
+}
+
+# Descrizioni manuali per le metriche derivate dall'app stessa (nessun
+# raw_var diretto, quindi non ricavabili dal sito).
+_DERIVED_METRIC_DESCRIPTIONS = {
+    "imtp_rel_peak_force": "IMTP Peak Force diviso per la massa corporea (N/kg): permette di confrontare atleti di taglia diversa.",
+    "sj_net_rel_impulse": "SJ Net Impulse diviso per la massa corporea (N\u00b7s/kg).",
+    "cmj_net_rel_impulse": "CMJ Net Impulse diviso per la massa corporea (N\u00b7s/kg).",
+    "dsi": "Dynamic Strength Index: rapporto tra CMJ Peak Force e IMTP Peak Force. Indica quanto della forza massima isometrica viene espressa durante un gesto balistico come il CMJ.",
+    "eur": "Eccentric Utilisation Ratio: rapporto tra CMJ Height e SJ Height. Indica quanto la fase eccentrica (contromovimento) contribuisce alla prestazione rispetto a un salto puramente concentrico.",
+}
+
+
+def get_metric_description(jump_type, raw_var):
+    """Cerca la descrizione di una metrica (per l'help "?"), con fallback
+    su prefissi lato sinistro/destro, fase di rimbalzo (rebound) e indice
+    di simmetria. Ritorna None se non trovata (nessun help, per design)."""
+    if not raw_var:
+        return None
+    key = raw_var.strip().lower()
+
+    if jump_type == "imtp" and key in _IMTP_METRIC_DESCRIPTIONS:
+        return _IMTP_METRIC_DESCRIPTIONS[key]
+    if key in _REBOUND_METRIC_OVERRIDES:
+        return _REBOUND_METRIC_OVERRIDES[key]
+    if key in _CORE_METRIC_DESCRIPTIONS:
+        return _CORE_METRIC_DESCRIPTIONS[key]
+
+    # Nell'IMTP "left"/"right" compare come token in mezzo al nome (es.
+    # "force 100ms left net"), non come prefisso: lo rimuoviamo e cerchiamo
+    # la base risultante.
+    if jump_type == "imtp":
+        for side_label, token in (("lato sinistro", "left"), ("lato destro", "right")):
+            if re.search(rf"\b{token}\b", key):
+                candidate = re.sub(rf"\b{token}\b", "", key)
+                candidate = re.sub(r"\s+", " ", candidate).strip()
+                if candidate in _IMTP_METRIC_DESCRIPTIONS:
+                    return f"{_IMTP_METRIC_DESCRIPTIONS[candidate]} ({side_label})"
+
+    for side_label, prefix in (("lato sinistro", "left "), ("lato destro", "right ")):
+        if key.startswith(prefix):
+            base_desc = get_metric_description(jump_type, key[len(prefix):])
+            if base_desc:
+                return f"{base_desc} ({side_label})"
+
+    if key.startswith("rebound "):
+        base_desc = get_metric_description(jump_type, key[len("rebound "):])
+        if base_desc:
+            return f"{base_desc} (fase di rimbalzo / rebound)"
+
+    for suffix in (" sym. index", " symmetry index", " si"):
+        if key.endswith(suffix):
+            base_desc = get_metric_description(jump_type, key[: -len(suffix)].strip())
+            if base_desc:
+                return f"Indice di simmetria sinistra-destra per: {base_desc}"
+
+    return None
+
+
+# Attacca la descrizione a ciascuna metrica curata (usata per l'help "?"
+# nella scheda Dettaglio Test e nel report). Fatto qui, dopo la definizione
+# di get_metric_description, per evitare di duplicare il testo nel
+# dizionario METRICS stesso.
+for _m in METRICS:
+    if _m.get("raw_var"):
+        _m["desc"] = get_metric_description(_m.get("jump_type"), _m["raw_var"])
+    else:
+        _m["desc"] = _DERIVED_METRIC_DESCRIPTIONS.get(_m["key"])
 
 
 # ============================================================================
@@ -837,6 +1135,35 @@ def parse_dettaglio_csv(file_like) -> ParsedFile:
     return ParsedFile(filename="(da CSV)", metadata=metadata, reps=reps)
 
 
+def build_full_raw_export(files, nome, sesso, periodo):
+    """Dump grezzo di TUTTE le variabili presenti nei file XLSX caricati,
+    non solo quelle riconosciute dal catalogo dell'app (curate o extra):
+    pensato per studiare nuove metriche e costruire in futuro nuovi dati
+    di popolazione. Una riga per ripetizione; le colonne sono l'unione di
+    tutte le variabili incontrate in tutti i file/ripetizioni, quindi
+    normale che compaiano molte celle vuote (una ripetizione non ha tutte
+    le variabili di tutti gli altri tipi di test)."""
+    all_vars = set()
+    rep_entries = []
+    for pf in files:
+        for i, rep in enumerate(pf.reps):
+            rep_entries.append((pf.filename, i, rep))
+            all_vars.update(rep["vars"].keys())
+    all_vars_sorted = sorted(all_vars)
+
+    rows = []
+    for filename, idx, rep in rep_entries:
+        row = {
+            "Nome": nome, "Sesso": sesso, "Data test": periodo,
+            "File": filename, "Jump Type": rep.get("jump_type") or "—",
+            "Indice Ripetizione": idx + 1,
+        }
+        for var in all_vars_sorted:
+            row[var] = rep["vars"].get(var)
+        rows.append(row)
+    return pd.DataFrame(rows)
+
+
 parsed_files = []
 if csv_reload is not None:
     try:
@@ -992,6 +1319,7 @@ def build_results(files, pop_dict):
                 key=metric["key"], label=metric["label"], category=metric["category"],
                 unit=metric["unit"], kind=metric["kind"], n=stats["n"], mean=stats["mean"], sd=stats["sd"],
                 z=z, t=t, banda=banda, colore=colore, pop_mean=pop_mean, pop_sd=pop_sd,
+                desc=metric.get("desc"),
             ))
 
     # --- Indici derivati da medie aggregate (DSI, EUR) ---
@@ -1016,6 +1344,7 @@ def build_results(files, pop_dict):
             key=key, label=metric_def["label"], category="INDICI", unit="",
             kind="score_single", n=(1 if val is not None else 0), mean=val, sd=None,
             z=z, t=t, banda=banda, colore=colore, pop_mean=pop_mean, pop_sd=pop_sd,
+            desc=metric_def.get("desc"),
         ))
 
     # --- Checks a soglia ---
@@ -1468,7 +1797,7 @@ with tab_dettaglio:
             extra_metric_defs = [
                 dict(key=f"extra::{jump_type}::{name}", label=extra_metric_label(name), category=cat,
                      jump_type=jump_type, raw_var=name, unit="", pop_key=None,
-                     lower_is_better=False, kind="info")
+                     lower_is_better=False, kind="info", desc=get_metric_description(jump_type, name))
                 for name in extra_selected
             ]
 
@@ -1489,11 +1818,19 @@ with tab_dettaglio:
                     n=stats["n"], mean=stats["mean"], sd=stats["sd"], z=None, t=None, banda=None,
                     colore=None, pop_mean=None, pop_sd=None,
                 ))
+            empty_extra_labels = [r["label"] for r in extra_results if r["n"] == 0]
+            if empty_extra_labels:
+                st.warning(
+                    "⚠️ Nessun dato trovato per: " + ", ".join(empty_extra_labels) + ". La variabile "
+                    "potrebbe non essere presente in questo export ForceDecks (es. campo non calcolato "
+                    "dal software per questo tipo di test)."
+                )
             results_lookup = results + extra_results
             cat_metrics = cat_metrics + extra_metric_defs
 
             rows, best_per_row, worst_per_row = [], [], []
             cv_warnings = []
+            metric_descriptions = []  # (label, desc) per l'expander sotto la tabella
             jump_cols = [f"Prova {i + 1}" for i in range(n_reps)]
             for m in cat_metrics:
                 r = next((x for x in results_lookup if x["key"] == m["key"]), None)
@@ -1501,6 +1838,9 @@ with tab_dettaglio:
                 best_i, worst_i = best_worst_indices(values, incl_mask, m["lower_is_better"])
                 best_per_row.append(best_i)
                 worst_per_row.append(worst_i)
+                desc = m.get("desc")
+                if desc:
+                    metric_descriptions.append((m["label"], desc))
                 row = {"Metrica": m["label"], "Unità": m["unit"]}
                 for i, v in enumerate(values):
                     row[jump_cols[i]] = round(v, 3) if isinstance(v, (int, float)) else None
@@ -1548,6 +1888,10 @@ with tab_dettaglio:
                     "⚠️ Coefficiente di variazione (CV%) superiore al 10% per: " + ", ".join(cv_warnings) +
                     ". Indica un'elevata variabilità tra le ripetizioni incluse: valutarne l'affidabilità."
                 )
+            if metric_descriptions:
+                with st.expander("ℹ️ Cosa significano queste metriche?"):
+                    for label, desc in metric_descriptions:
+                        st.markdown(f"**{label}** — {desc}")
 
             # --- Grafico RSQ (Reactive Strength Quadrant) per le categorie
             # che includono un mRSI: mette in relazione la media di altezza
@@ -1612,6 +1956,25 @@ with tab_dettaglio:
                 file_name=f"forceplate_test_{nome.replace(' ', '_')}_{dt.date.today().isoformat()}.csv",
                 mime="text/csv",
             )
+
+        # --- Export completo e grezzo: TUTTE le variabili presenti nei file
+        # XLSX caricati, non solo quelle curate/extra mostrate nelle tabelle
+        # sopra. Non dipende da export_rows (che può saltare categorie senza
+        # metriche riconosciute): legge direttamente da parsed_files, quindi
+        # non perde mai dati per via del filtro sulle metriche note.
+        st.markdown("### 📤 Esporta TUTTE le metriche grezze")
+        st.caption(
+            "A differenza dell'export sopra (solo le metriche mostrate nelle tabelle), questo include "
+            "OGNI variabile presente nei file XLSX caricati — anche quelle non riconosciute dall'app. "
+            "Pensato per studiare nuove metriche e costruire in futuro il catalogo di popolazione."
+        )
+        df_full = build_full_raw_export(parsed_files, nome, sesso, periodo)
+        csv_full_bytes = df_full.to_csv(index=False).encode("utf-8-sig")
+        st.download_button(
+            "⬇️ Scarica export completo (.csv)", data=csv_full_bytes,
+            file_name=f"forceplate_full_{nome.replace(' ', '_')}_{dt.date.today().isoformat()}.csv",
+            mime="text/csv",
+        )
 
 with tab_profilo:
     if not parsed_files:
@@ -1711,6 +2074,23 @@ def _index_value_html(r):
     return f'<p class="index-value"><b>{r["label"]}: {r["mean"]:.3f}</b>{extra_html}</p>'
 
 
+def _metric_descriptions_html(items):
+    """Blocco a tendina (nativo, <details>/<summary>, nessun JS) con le
+    descrizioni delle metriche — stesso pattern dell'expander "ℹ️ Cosa
+    significano queste metriche?" della scheda Dettaglio Test. Ritorna
+    stringa vuota se nessuna delle metriche passate ha una descrizione."""
+    pairs = [(it["label"], it["desc"]) for it in items if it and it.get("desc")]
+    if not pairs:
+        return ""
+    li_html = "".join(
+        f"<li><b>{lbl}</b> — {_html.escape(desc)}</li>" for lbl, desc in pairs
+    )
+    return f"""<details class="metric-help">
+        <summary>ℹ️ Cosa significano queste metriche?</summary>
+        <ul>{li_html}</ul>
+    </details>"""
+
+
 def _metric_table_html(cat_results):
     rows_html = []
     for r in cat_results:
@@ -1767,6 +2147,7 @@ def genera_report_html(nome, sesso, periodo, results, profilo, commento):
             <h2>{cat}</h2>
             {_fig_div(tscore_fig, next_id('tscore'))}
             {_metric_table_html(cat_results)}
+            {_metric_descriptions_html(cat_results)}
             {f'<h3>RSQ — Reactive Strength Quadrant</h3>{_fig_div(rsq_fig, next_id("rsq"))}' if rsq_fig else ''}
         </section>""")
 
@@ -1789,6 +2170,7 @@ def genera_report_html(nome, sesso, periodo, results, profilo, commento):
         sections.append(f"""<section>
             <h2>Indici</h2>
             {''.join(indici_html)}
+            {_metric_descriptions_html([r_dsi, r_eur])}
         </section>""")
 
     # --- Analisi: testo scritto dal preparatore nella scheda Report
@@ -1835,8 +2217,24 @@ def genera_report_html(nome, sesso, periodo, results, profilo, commento):
     .profile-card-banda {{ font-size: 13px; }}
     .muted {{ color: #667; font-size: 13px; }}
     .index-value {{ font-size: 16px; margin: 6px 0 14px 0; }}
+    .metric-help {{ margin: 14px 0 4px 0; font-size: 14px; }}
+    .metric-help summary {{ cursor: pointer; color: var(--primary); font-weight: 600; }}
+    .metric-help ul {{ margin: 10px 0 0 0; padding-left: 20px; }}
+    .metric-help li {{ margin-bottom: 6px; line-height: 1.4; }}
     .analysis-box {{ min-height: 60px; border: 1px solid #e0e0e0; border-left: 4px solid var(--primary); border-radius: 6px; padding: 14px; line-height: 1.6; background: #f7fbfd; }}
-    @media print {{ section {{ break-inside: avoid; }} }}
+    .print-btn {{
+        background: var(--accent); color: #fff; border: none; border-radius: 6px;
+        padding: 10px 20px; font-size: 15px; font-weight: 600; cursor: pointer;
+        margin-top: 18px;
+    }}
+    .print-btn:hover {{ opacity: 0.9; }}
+    @media print {{
+        body {{ background: #fff; }}
+        .no-print {{ display: none !important; }}
+        section {{ break-inside: avoid; page-break-inside: avoid; }}
+        .js-plotly-plot .modebar {{ display: none !important; }}
+        details.metric-help {{ break-inside: avoid; }}
+    }}
 </style>
 </head>
 <body>
@@ -1848,6 +2246,7 @@ def genera_report_html(nome, sesso, periodo, results, profilo, commento):
                 <span><b>Sesso:</b> {sesso}</span>
                 <span><b>Data test:</b> {periodo}</span>
             </div>
+            <button class="print-btn no-print" onclick="window.print()">🖨️ Stampa / Salva come PDF</button>
         </header>
         <p class="intro-text">
             Per valutare i risultati del test è stato utilizzato il T-Score, un indice standardizzato
@@ -1862,14 +2261,246 @@ def genera_report_html(nome, sesso, periodo, results, profilo, commento):
     return html.encode("utf-8")
 
 
+
+# ============================================================================
+# PARTE 6bis — REPORT SCARICABILE (PDF statico)
+# ============================================================================
+# Alternativa "un tap e via" all'HTML per chi ha problemi ad aprire report
+# interattivi su iOS (Quick Look non esegue JavaScript). I grafici Plotly
+# vengono renderizzati come immagini statiche via kaleido (offline, nessuna
+# richiesta di rete) e assemblati in un PDF vero con fpdf2 (puro Python,
+# nessuna libreria di sistema richiesta — a differenza di weasyprint).
+
+_PDF_CHAR_REPLACEMENTS = {
+    "\u2014": " - ",  # em dash
+    "\u2013": "-",    # en dash
+    "\u2192": "->",   # freccia destra
+    "\u2018": "'", "\u2019": "'",
+    "\u201c": '"', "\u201d": '"',
+    "\u2022": "-",    # bullet
+}
+
+
+def _pdf_safe(text):
+    """I font core di fpdf2 (Helvetica) coprono solo Latin-1: sostituisce i
+    caratteri tipografici comuni (em dash, frecce, virgolette curve) con
+    equivalenti ASCII e scarta silenziosamente qualsiasi altro carattere
+    fuori range (es. emoji), invece di far fallire l'export."""
+    if text is None:
+        return ""
+    text = str(text)
+    for old, new in _PDF_CHAR_REPLACEMENTS.items():
+        text = text.replace(old, new)
+    return "".join(ch if ord(ch) <= 255 else "" for ch in text)
+
+
+def _hex_to_rgb(hex_color):
+    if not hex_color:
+        return (230, 230, 230)
+    h = hex_color.lstrip("#")
+    return tuple(int(h[i:i + 2], 16) for i in (0, 2, 4))
+
+
+def _fig_png_bytes(fig, width=1000, height=560, scale=2):
+    """Renderizza una figura Plotly in PNG (bytes) via kaleido, offline.
+    Ritorna (BytesIO, aspect_ratio) o None se fig è None."""
+    if fig is None:
+        return None
+    png_bytes = fig.to_image(format="png", width=width, height=height, scale=scale)
+    return io.BytesIO(png_bytes), height / width
+
+
+class _ReportPDF(FPDF):
+    def __init__(self):
+        super().__init__(format="A4")
+        self.set_auto_page_break(auto=True, margin=16)
+        self.set_margins(15, 15, 15)
+
+    def ensure_space(self, height_mm):
+        """Forza un salto pagina se l'elemento successivo (altezza nota in
+        mm) non entra nello spazio rimasto nella pagina corrente."""
+        if self.get_y() + height_mm > self.page_break_trigger:
+            self.add_page()
+
+    def section_title(self, text):
+        self.ensure_space(14)
+        self.set_font("Helvetica", "B", 14)
+        self.set_text_color(*_hex_to_rgb(TEXT_COLOR))
+        self.cell(0, 10, _pdf_safe(text), new_x="LMARGIN", new_y="NEXT")
+        self.set_draw_color(*_hex_to_rgb(ACCENT))
+        self.set_line_width(0.8)
+        self.line(self.l_margin, self.get_y(), self.l_margin + 6, self.get_y())
+        self.ln(3)
+
+    def subsection_title(self, text):
+        self.ensure_space(10)
+        self.set_font("Helvetica", "B", 11)
+        self.set_text_color(*_hex_to_rgb(TEXT_COLOR))
+        self.cell(0, 8, _pdf_safe(text), new_x="LMARGIN", new_y="NEXT")
+
+    def body_text(self, text, size=10):
+        self.set_font("Helvetica", "", size)
+        self.set_text_color(60, 60, 70)
+        self.multi_cell(0, 5.5, _pdf_safe(text))
+
+    def chart_image(self, fig, width_px=1000, height_px=560, content_width_mm=180):
+        result = _fig_png_bytes(fig, width=width_px, height=height_px)
+        if result is None:
+            return
+        img_io, aspect = result
+        h_mm = content_width_mm * aspect
+        self.ensure_space(h_mm + 4)
+        x = self.l_margin + (self.epw - content_width_mm) / 2
+        self.image(img_io, x=x, w=content_width_mm)
+        self.ln(4)
+
+    def metric_table(self, cat_results):
+        headers = ["Metrica", "Unita", "Media", "Media Pop.", "N", "T-score", "Valutazione"]
+        widths = [52, 14, 18, 18, 10, 16, 35]  # mm assoluti, sommano ~163mm su 180mm utili
+        self.set_font("Helvetica", "", 8.5)
+        self.set_draw_color(200, 200, 200)  # i bordi/il fill della tabella non devono
+        self.set_line_width(0.2)            # ereditare accent/testo/fill lasciati da altri
+        self.set_fill_color(255, 255, 255)  # elementi (es. il rettangolo blu dell'header,
+        self.set_text_color(30, 30, 30)     # o il testo blu del blocco Profilo di Forza)
+        self.ensure_space(10)
+        with self.table(
+            col_widths=widths, text_align="LEFT", line_height=5,
+            headings_style=FontFace(emphasis="BOLD", color=(255, 255, 255), fill_color=_hex_to_rgb(TEXT_COLOR)),
+        ) as table:
+            row = table.row()
+            for h in headers:
+                row.cell(h)
+            for r in cat_results:
+                row = table.row()
+                row.cell(_pdf_safe(r["label"]))
+                row.cell(_pdf_safe(r["unit"] or ""))
+                row.cell(f"{r['mean']:.3f}" if r["mean"] is not None else "N/D")
+                row.cell(f"{r['pop_mean']:.3f}" if r["pop_mean"] is not None else "-")
+                row.cell(str(r["n"]))
+                row.cell(f"{r['t']:.0f}" if r["t"] is not None else "-")
+                style = None
+                if r.get("colore"):
+                    style = FontFace(fill_color=_hex_to_rgb(r["colore"]))
+                row.cell(_pdf_safe(r["banda"] or "-"), style=style)
+
+    def descriptions_block(self, items):
+        pairs = [(it["label"], it["desc"]) for it in items if it and it.get("desc")]
+        if not pairs:
+            return
+        self.ensure_space(8)
+        self.set_font("Helvetica", "I", 8.5)
+        self.set_text_color(90, 90, 100)
+        for label, desc in pairs:
+            self.ensure_space(6)
+            self.multi_cell(0, 4.5, _pdf_safe(f"- {label}: {desc}"))
+        self.ln(1)
+
+
+def genera_report_pdf(nome, sesso, periodo, results, profilo, commento):
+    pdf = _ReportPDF()
+    pdf.add_page()
+
+    # --- Header ---
+    pdf.set_fill_color(*_hex_to_rgb(TEXT_COLOR))
+    pdf.rect(0, 0, 210, 26, style="F")
+    pdf.set_xy(15, 7)
+    pdf.set_text_color(255, 255, 255)
+    pdf.set_font("Helvetica", "B", 17)
+    pdf.cell(0, 8, "FORCE PLATE TEST REPORT", new_x="LMARGIN", new_y="NEXT")
+    pdf.set_x(15)
+    pdf.set_font("Helvetica", "", 10.5)
+    pdf.cell(0, 6, _pdf_safe(f"Atleta: {nome}   Sesso: {sesso}   Data test: {periodo}"), new_x="LMARGIN", new_y="NEXT")
+    pdf.set_y(32)
+
+    pdf.body_text(
+        "Per valutare i risultati del test e stato utilizzato il T-Score, un indice standardizzato "
+        "che confronta la prestazione dell'atleta rispetto a un gruppo di riferimento, esprimendo la "
+        "distanza dalla media in deviazioni standard. Punteggi tra 0 e 50 indicano valori inferiori "
+        "alla media, mentre punteggi tra 50 e 100 indicano valori superiori alla media."
+    )
+    pdf.ln(3)
+
+    # --- Profilo di Forza ---
+    cats_valide = [c for c in CATEGORIES if profilo.get(c) is not None]
+    pdf.section_title("Profilo di Forza")
+    radar_fig = build_radar_chart(cats_valide, profilo, nome)
+    if radar_fig:
+        pdf.chart_image(radar_fig, width_px=1000, height_px=620, content_width_mm=150)
+    else:
+        pdf.body_text("Nessuna metrica con confronto di popolazione disponibile.")
+    for cat in cats_valide:
+        t = profilo[cat]
+        banda, _ = banda_da_tscore(t)
+        pdf.set_font("Helvetica", "B", 9.5)
+        pdf.set_text_color(*_hex_to_rgb(TEXT_COLOR))
+        pdf.cell(0, 5.5, _pdf_safe(f"{cat}: T={t:.0f} ({banda})"), new_x="LMARGIN", new_y="NEXT")
+    pdf.ln(3)
+
+    # --- Categorie di test ---
+    for cat in CATEGORIES:
+        cat_results = [r for r in results if r["category"] == cat and r["mean"] is not None]
+        if not cat_results:
+            continue
+        pdf.section_title(cat)
+        tscore_fig = build_tscore_bar_chart(cat_results)
+        if tscore_fig:
+            n_metrics = len([r for r in cat_results if r["t"] is not None])
+            h_px = max(360, 70 * n_metrics + 150)
+            pdf.chart_image(tscore_fig, width_px=1000, height_px=h_px, content_width_mm=180)
+        pdf.metric_table(cat_results)
+        pdf.ln(2)
+        pdf.descriptions_block(cat_results)
+        rsq_fig = build_rsq_chart(cat, results)
+        if rsq_fig:
+            pdf.subsection_title("RSQ - Reactive Strength Quadrant")
+            pdf.chart_image(rsq_fig, width_px=900, height_px=430, content_width_mm=150)
+        pdf.ln(3)
+
+    # --- Indici (DSI, EUR) ---
+    r_dsi = next((r for r in results if r["key"] == "dsi" and r["mean"] is not None), None)
+    r_eur = next((r for r in results if r["key"] == "eur" and r["mean"] is not None), None)
+    dsi_fig = build_dsi_chart(results)
+    eur_fig = build_eur_chart(results)
+    if r_dsi or r_eur or dsi_fig or eur_fig:
+        pdf.section_title("Indici")
+        if r_dsi or dsi_fig:
+            pdf.subsection_title("DSI (Dynamic Strength Index)")
+            if r_dsi:
+                pdf.body_text(f"DSI: {r_dsi['mean']:.3f}" + (
+                    f"  (T-score {r_dsi['t']:.0f}, {r_dsi['banda']})" if r_dsi["t"] is not None else ""))
+            if dsi_fig:
+                pdf.chart_image(dsi_fig, width_px=900, height_px=430, content_width_mm=150)
+            pdf.descriptions_block([r_dsi])
+        if r_eur or eur_fig:
+            pdf.subsection_title("EUR (Eccentric Utilisation Ratio)")
+            if r_eur:
+                pdf.body_text(f"EUR: {r_eur['mean']:.3f}" + (
+                    f"  (T-score {r_eur['t']:.0f}, {r_eur['banda']})" if r_eur["t"] is not None else ""))
+            if eur_fig:
+                pdf.chart_image(eur_fig, width_px=900, height_px=430, content_width_mm=150)
+            pdf.descriptions_block([r_eur])
+
+    # --- Analisi ---
+    pdf.section_title("Analisi")
+    testo = commento.strip() if commento and commento.strip() else "Nessuna analisi inserita."
+    pdf.body_text(testo)
+
+    return bytes(pdf.output())
+
+
 with tab_report:
     if not parsed_files:
         st.info("Carica dei file dalla barra laterale per generare il report.")
     else:
         st.markdown(
-            "Genera un report HTML autosufficiente (grafici interattivi inclusi) con profilo di forza "
-            "e tabelle riassuntive. Si apre in qualunque browser; se serve una copia statica, si può "
-            "stampare/salvare come PDF direttamente da lì."
+            "Genera il report in due formati: **HTML interattivo** (grafici zoomabili, pensato per "
+            "desktop/laptop) oppure **PDF statico** (un file che si apre nativamente ovunque, "
+            "consigliato su iPhone/iPad dove i file HTML scaricati spesso non si aprono correttamente)."
+        )
+        st.caption(
+            "📱 Su iPhone/iPad: il file HTML scaricato spesso mostra solo testo grezzo, perché Quick Look "
+            "non esegue le pagine web (serve \"Condividi → Apri in Safari\" per vederlo come pagina "
+            "interattiva). Il PDF invece si apre correttamente subito, ma i grafici non sono interattivi."
         )
         st.markdown("**Analisi del preparatore**")
         st.caption(
@@ -1882,10 +2513,21 @@ with tab_report:
             placeholder="Es. Buoni valori di forza isometrica, mRSI sopra media. Da lavorare sulla "
                         "reattività nel CMJ Rebound...",
         )
-        if st.button("📄 Genera report HTML", type="primary"):
-            html_bytes = genera_report_html(nome, sesso, periodo, results, profilo, commento)
-            st.download_button(
-                "⬇️ Scarica report (.html)", data=html_bytes,
-                file_name=f"Report_{nome.replace(' ', '_')}_{dt.date.today().isoformat()}.html",
-                mime="text/html",
-            )
+        col_html, col_pdf = st.columns(2)
+        with col_html:
+            if st.button("📄 Genera report HTML", type="primary", use_container_width=True):
+                html_bytes = genera_report_html(nome, sesso, periodo, results, profilo, commento)
+                st.download_button(
+                    "⬇️ Scarica report (.html)", data=html_bytes,
+                    file_name=f"Report_{nome.replace(' ', '_')}_{dt.date.today().isoformat()}.html",
+                    mime="text/html", use_container_width=True,
+                )
+        with col_pdf:
+            if st.button("📕 Genera report PDF", use_container_width=True):
+                with st.spinner("Rendering grafici e impaginazione PDF..."):
+                    pdf_bytes = genera_report_pdf(nome, sesso, periodo, results, profilo, commento)
+                st.download_button(
+                    "⬇️ Scarica report (.pdf)", data=pdf_bytes,
+                    file_name=f"Report_{nome.replace(' ', '_')}_{dt.date.today().isoformat()}.pdf",
+                    mime="application/pdf", use_container_width=True,
+                )
