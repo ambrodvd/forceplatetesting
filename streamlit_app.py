@@ -878,10 +878,10 @@ uploaded = st.sidebar.file_uploader(
 st.sidebar.markdown("---")
 
 csv_reload = st.sidebar.file_uploader(
-    "🔁 Ricarica CSV esportato (Dettaglio Test)", type=["csv"],
-    help="Carica un CSV precedentemente esportato dalla scheda 'Dettaglio Test' per rivedere "
-         "grafici e tabelle senza dover ricaricare i file XLSX originali. Se presente, ha "
-         "precedenza sui file XLSX caricati sotto.",
+    "🔁 Ricarica export completo (CSV)", type=["csv"],
+    help="Carica un CSV precedentemente esportato dalla scheda 'Dettaglio Test' "
+         "(forceplate_fulldata_...) per rivedere grafici e tabelle senza i file XLSX "
+         "originali. Se presente, ha precedenza sui file XLSX caricati sotto.",
 )
 
 
@@ -1091,78 +1091,70 @@ def _parse_imtp_trial_rows(rows, filename: str) -> ParsedFile:
     return ParsedFile(filename=filename, metadata=metadata, reps=reps)
 
 
-def parse_dettaglio_csv(file_like) -> ParsedFile:
-    """Ricostruisce un ParsedFile sintetico a partire da un CSV esportato dalla
-    scheda Dettaglio Test (colonne Categoria/Metrica/Prova N/...), per poter
-    rivedere grafici e tabelle senza i file XLSX originali. I valori "Rel"
-    (dipendenti dal peso corporeo, non presente nel CSV) vengono ricostruiti
-    retro-calcolando un peso corporeo equivalente dal valore assoluto e dal
-    rapporto già esportato."""
+FULL_META_COLS = {"Nome", "Sesso", "Data test", "File", "Jump Type", "Indice Ripetizione"}
+
+
+def parse_full_export_to_parsed(file_like) -> ParsedFile:
+    """Ricostruisce un ParsedFile dall'export completo (una riga per
+    ripetizione, una colonna per variabile grezza), per rivedere grafici e
+    tabelle senza i file XLSX originali. I dati sono già per ripetizione e
+    completi: nulla va ricostruito a ritroso, nemmeno il peso corporeo
+    delle metriche 'Rel'."""
     df = pd.read_csv(file_like, encoding="utf-8-sig")
-    if not {"Categoria", "Metrica"}.issubset(df.columns):
-        raise ValueError("Il file non sembra un export di un precedente test (colonne mancanti).")
+    if "Jump Type" not in df.columns:
+        raise ValueError("Il file non sembra un export completo: manca la colonna 'Jump Type'.")
 
-    prova_cols = sorted(
-        (c for c in df.columns if re.fullmatch(r"Prova \d+", str(c))),
-        key=lambda c: int(c.split(" ")[1]),
-    )
-
-    nome = str(df["Nome"].iloc[0]) if "Nome" in df.columns and len(df) else None
-    sesso = str(df["Sesso"].iloc[0]) if "Sesso" in df.columns and len(df) else None
-    periodo = str(df["Data test"].iloc[0]) if "Data test" in df.columns and len(df) else None
+    var_cols = [c for c in df.columns if c not in FULL_META_COLS]
+    if not var_cols:
+        raise ValueError("Nessuna colonna di variabili trovata nel file.")
 
     reps = []
-    for cat in CATEGORIES:
-        cat_df = df[df["Categoria"] == cat]
-        if cat_df.empty:
-            continue
-        cat_metrics = [m for m in METRICS if m["category"] == cat and m.get("jump_type")]
-        if not cat_metrics:
-            continue
-        jump_type = cat_metrics[0]["jump_type"]
-        label_to_metric = {m["label"]: m for m in cat_metrics}
+    for _, row in df.iterrows():
+        jump_type = str(row["Jump Type"]).strip().lower()
+        if jump_type in ("", "—", "-", "nan", "none"):
+            jump_type = None
+        variables = {}
+        for c in var_cols:
+            v = pd.to_numeric(row[c], errors="coerce")
+            if pd.notna(v):
+                variables[c] = float(v)
+        if variables:
+            reps.append({"jump_type": jump_type, "vars": variables, "units": {}})
 
-        n_reps_cat = 0
-        for _, row in cat_df.iterrows():
-            cnt = sum(pd.notna(row.get(pc)) for pc in prova_cols)
-            n_reps_cat = max(n_reps_cat, cnt)
+    if not reps:
+        raise ValueError("Nessuna ripetizione valida nel file.")
 
-        for i in range(n_reps_cat):
-            pc = f"Prova {i + 1}"
-            rep_vars, derive_targets = {}, {}
-            for _, row in cat_df.iterrows():
-                m = label_to_metric.get(row.get("Metrica"))
-                if m is None:
-                    continue
-                val = row.get(pc)
-                if pd.isna(val):
-                    continue
-                val = float(val)
-                if m.get("raw_var"):
-                    rep_vars[m["raw_var"]] = val
-                elif m.get("derive"):
-                    derive_targets[m["key"]] = val
-
-            # Le metriche "Rel" (per kg) derivano da raw_var / body_mass: non
-            # avendo il peso corporeo nel CSV, lo ricaviamo a ritroso dal
-            # valore assoluto già noto e dal rapporto già esportato.
-            for key, target in derive_targets.items():
-                base = None
-                if key == "imtp_rel_peak_force":
-                    base = rep_vars.get("peak force")
-                elif key in ("sj_net_rel_impulse", "cmj_net_rel_impulse"):
-                    base = rep_vars.get("net impulse")
-                if base is not None and target:
-                    rep_vars["body mass"] = base / target
-
-            reps.append({"jump_type": jump_type, "vars": rep_vars, "units": {}})
+    def _primo(colonna):
+        if colonna in df.columns and len(df):
+            v = str(df[colonna].iloc[0]).strip()
+            if v and v.lower() not in ("nan", "none", "-"):
+                return v
+        return None
 
     metadata = {
-        "nome": nome, "sesso": sesso, "altezza_cm": None, "peso_kg_input": None,
-        "data_test": None, "device": None, "team": None,
-        "test_period": None, "test_type": None, "periodo_override": periodo,
+        "nome": _primo("Nome"), "sesso": _primo("Sesso"), "altezza_cm": None,
+        "peso_kg_input": None, "data_test": None, "device": None, "team": None,
+        "test_period": None, "test_type": None, "periodo_override": _primo("Data test"),
     }
     return ParsedFile(filename="(da CSV)", metadata=metadata, reps=reps)
+
+
+def _slug_nome(text):
+    """Nome atleta utilizzabile in un nome file."""
+    s = re.sub(r"[^A-Za-z0-9]+", "_", str(text or "").strip())
+    return re.sub(r"_+", "_", s).strip("_") or "atleta"
+
+
+def _data_file_token(files, periodo_str):
+    """Data del test in formato ISO per il nome file: si preferisce la data
+    reale dei file XLSX, poi quella scritta nel CSV ricaricato, infine oggi."""
+    date_tests = [pf.metadata.get("data_test") for pf in files if pf.metadata.get("data_test")]
+    if date_tests:
+        return min(date_tests).strftime("%Y-%m-%d")
+    m = re.search(r"(\d{2})/(\d{2})/(\d{4})", str(periodo_str or ""))
+    if m:
+        return f"{m.group(3)}-{m.group(2)}-{m.group(1)}"
+    return dt.date.today().isoformat()
 
 
 def build_full_raw_export(files, nome, sesso, periodo):
@@ -1172,11 +1164,25 @@ def build_full_raw_export(files, nome, sesso, periodo):
     di popolazione. Una riga per ripetizione; le colonne sono l'unione di
     tutte le variabili incontrate in tutti i file/ripetizioni, quindi
     normale che compaiano molte celle vuote (una ripetizione non ha tutte
-    le variabili di tutti gli altri tipi di test)."""
+    le variabili di tutti gli altri tipi di test).
+
+    Le ripetizioni deselezionate nella scheda Dettaglio Test vengono
+    escluse, coerentemente con l'altro export e con medie/T-score."""
     all_vars = set()
     rep_entries = []
+    tipo_counter = {}
     for pf in files:
         for i, rep in enumerate(pf.reps):
+            jt = rep.get("jump_type")
+            # Indice progressivo PER TIPO DI TEST attraverso tutti i file,
+            # nello stesso ordine di collect_reps_all(): è la chiave con cui
+            # sono salvate le checkbox "Prova N" (incl_{jump_type}_{indice}).
+            # Va incrementato anche per le ripetizioni scartate, altrimenti
+            # le successive si disallineano.
+            idx_tipo = tipo_counter.get(jt, 0)
+            tipo_counter[jt] = idx_tipo + 1
+            if jt and not is_rep_included(jt, idx_tipo):
+                continue
             rep_entries.append((pf.filename, i, rep))
             all_vars.update(rep["vars"].keys())
     all_vars_sorted = sorted(all_vars)
@@ -1197,7 +1203,7 @@ def build_full_raw_export(files, nome, sesso, periodo):
 parsed_files = []
 if csv_reload is not None:
     try:
-        parsed_files = [parse_dettaglio_csv(io.BytesIO(csv_reload.getvalue()))]
+        parsed_files = [parse_full_export_to_parsed(io.BytesIO(csv_reload.getvalue()))]
         st.sidebar.success(f"Dati ricaricati da '{csv_reload.name}'.")
         if uploaded:
             st.sidebar.caption("File XLSX caricati sotto ignorati: è attivo il CSV ricaricato sopra.")
@@ -1866,8 +1872,8 @@ else:
         "scheda '⚙️ Costanti'."
     )
 
-tab_costanti, tab_dettaglio, tab_profilo, tab_report = st.tabs(
-    ["⚙️ Costanti", "🔍 Dettaglio Test", "📊 Profilo di Forza", "📄 Report"]
+tab_costanti, tab_dettaglio, tab_profilo, tab_comparazione, tab_report = st.tabs(
+    ["⚙️ Costanti", "🔍 Dettaglio Test", "📊 Profilo di Forza", "🔀 Comparazione", "📄 Report"]
 )
 
 with tab_costanti:
@@ -1978,7 +1984,6 @@ with tab_dettaglio:
     if not parsed_files:
         st.info("Carica dei file dalla barra laterale per vedere il dettaglio dei test.")
     else:
-        export_rows = []
         for cat in CATEGORIES:
             cat_results = [r for r in results if r["category"] == cat and r["mean"] is not None]
             if not cat_results:
@@ -2083,9 +2088,6 @@ with tab_dettaglio:
                 row["Valutazione"] = (r["banda"] if r and r["banda"] else "—")
                 rows.append(row)
 
-            for row in rows:
-                export_rows.append({"Nome": nome, "Sesso": sesso, "Data test": periodo, "Categoria": cat, **row})
-
             df = pd.DataFrame(rows).reset_index(drop=True)
 
             def _highlight(row):
@@ -2163,40 +2165,21 @@ with tab_dettaglio:
 
             st.markdown("---")
 
-        # --- Esportazione CSV di tutti i dati mostrati nelle tabelle di
-        # dettaglio (per ripetizione, media, dev.std, CV%, T-score),
-        # pensata per raccogliere i dati grezzi da più atleti/test e
-        # ricavarne in seguito medie e deviazioni standard di popolazione.
-        if export_rows:
-            st.markdown("### 📤 Esporta dati del test")
-            st.caption(
-                "Esporta in CSV tutti i dati delle tabelle sopra (valori per ripetizione, media, dev.std, "
-                "CV% e T-score), utile per la successiva determinazione dei dati di popolazione."
-            )
-            df_export = pd.DataFrame(export_rows)
-            csv_bytes = df_export.to_csv(index=False).encode("utf-8-sig")
-            st.download_button(
-                "⬇️ Scarica dati test (.csv)", data=csv_bytes,
-                file_name=f"forceplate_test_{nome.replace(' ', '_')}_{dt.date.today().isoformat()}.csv",
-                mime="text/csv",
-            )
-
-        # --- Export completo e grezzo: TUTTE le variabili presenti nei file
-        # XLSX caricati, non solo quelle curate/extra mostrate nelle tabelle
-        # sopra. Non dipende da export_rows (che può saltare categorie senza
-        # metriche riconosciute): legge direttamente da parsed_files, quindi
-        # non perde mai dati per via del filtro sulle metriche note.
-        st.markdown("### 📤 Esporta TUTTE le metriche grezze")
+        # --- Export unico: TUTTE le variabili presenti nei file XLSX, una
+        # riga per ripetizione, escluse quelle deselezionate. È lo stesso
+        # file che si ricarica dalla sidebar e che alimenta la Comparazione.
+        st.markdown("### 📤 Esporta dati del test")
         st.caption(
-            "A differenza dell'export sopra (solo le metriche mostrate nelle tabelle), questo include "
-            "OGNI variabile presente nei file XLSX caricati — anche quelle non riconosciute dall'app. "
-            "Pensato per studiare nuove metriche e costruire in futuro il catalogo di popolazione."
+            "Esporta OGNI variabile presente nei file caricati, una riga per ripetizione, "
+            "escluse le prove deselezionate sopra. È il file da ricaricare nella barra "
+            "laterale per rivedere questo test e da usare nella scheda 🔀 Comparazione."
         )
         df_full = build_full_raw_export(parsed_files, nome, sesso, periodo)
         csv_full_bytes = df_full.to_csv(index=False).encode("utf-8-sig")
         st.download_button(
-            "⬇️ Scarica export completo (.csv)", data=csv_full_bytes,
-            file_name=f"forceplate_full_{nome.replace(' ', '_')}_{dt.date.today().isoformat()}.csv",
+            "⬇️ Scarica dati completi (.csv)", data=csv_full_bytes,
+            file_name=f"forceplate_fulldata_{_slug_nome(nome)}_"
+                      f"{_data_file_token(parsed_files, periodo)}.csv",
             mime="text/csv",
         )
 
@@ -2257,7 +2240,1110 @@ with tab_profilo:
                 st.plotly_chart(fig_wedge, use_container_width=True)
                 st.caption(caption)
 
+# ============================================================================
+# PARTE 5bis — COMPARAZIONE TRA SESSIONI
+# ============================================================================
+# Confronta il test attualmente caricato con lo storico dell'atleta, caricato
+# come CSV prodotti da "Dettaglio Test → Esporta TUTTE le metriche grezze".
+#
+# Due confronti con statuto diverso:
+#
+#  - CONTRO LA MEDIA delle sedute precedenti (esclusa l'attuale): è il
+#    confronto statistico. La media di k sedute è più precisa della singola,
+#    quindi l'incertezza si stringe: SE = TE * sqrt(1 + 1/k) invece di
+#    TE * sqrt(2) del testa a testa.
+#
+#  - CONTRO IL MIGLIOR VALORE storico: puramente DESCRITTIVO, senza giudizio
+#    di significatività. Il massimo di k misure rumorose è per costruzione
+#    una sovrastima (il record è quasi sempre il giorno in cui l'atleta era
+#    in forma E il rumore ha aiutato), e la distorsione cresce con k:
+#    applicarci un test darebbe "peggiorato" in modo sistematico.
+#
+# L'app non dice MAI se un cambiamento è un bene: mostra direzione (freccia)
+# e ampiezza (scala SWC di Hopkins). Il giudizio di merito resta al
+# preparatore, che è l'unico a conoscere obiettivo e contesto.
+#
+#   TE  = errore tipico between-day (rumore della misura), in CV%
+#   SE  = TE * sqrt(1 + 1/k)           incertezza della differenza dalla media
+#   IC  = delta ± 1.645 * SE           intervallo di confidenza al 90%
+#   SWC = 0.2 * SD                     soglia di rilevanza pratica
 
+Z90 = 1.645
+SWC_FACTOR = 0.2
+MIN_SESSIONS_TE_ATLETA = 4  # servono almeno 3 differenze consecutive
+
+# CV% between-day di letteratura, usati finché non ci sono abbastanza
+# sessioni per stimare il TE sull'atleta stesso. Il primo pattern che
+# matcha vince: ordine dal più specifico al più generico.
+DEFAULT_TE_CV = [
+    (("asimmetria", "asymmetry", "sym. index", "symmetry index"), 20.0),
+    (("rfd",), 15.0),
+    (("dsi", "eur"), 10.0),
+    (("eccentric", "eccentrica", "braking", "frenata", "unweight"), 9.0),
+    (("rsi",), 7.0),
+    (("contraction time", "contact time", "time to", "duration", "durata", "time"), 7.0),
+    (("power", "potenza"), 5.0),
+    (("impulse", "impulso", "work"), 5.0),
+    (("velocity", "velocità"), 4.0),
+    (("height", "altezza"), 4.0),
+    (("force", "forza", "torque"), 4.0),
+    (("mass", "weight", "peso"), 1.5),
+]
+FALLBACK_TE_CV = 8.0
+
+# Indici di simmetria: il segno indica il lato dominante, non la qualità,
+# quindi vanno confrontati in valore assoluto (da -2% a +6% è un aumento
+# dello sbilanciamento, non una diminuzione).
+COMP_ABS_KEYWORDS = ("sym. index", "symmetry index", "asimmetria", "asymmetry")
+COMP_ABS_SUFFIXES = (" si",)
+
+# Scala di ampiezza di Hopkins, in multipli di SWC (= 0,2 SD, quindi
+# 1x = 0.2 SD, 3x = 0.6, 6x = 1.2, 10x = 2.0 deviazioni standard).
+# Il livello "Trascurabile" sotto 1x non è nella scala originale ma serve:
+# senza, i cambiamenti minuscoli non avrebbero etichetta.
+SWC_SCALE = [
+    (1.0, "Trascurabile", "#e4e4dd"),
+    (3.0, "Piccolo", "#cfe3f7"),
+    (6.0, "Moderato", "#9ecbf0"),
+    (10.0, "Grande", "#4FC3F7"),
+    (float("inf"), "Molto grande", "#0bb6ff"),
+]
+
+ESITO_REALE = "🟢 Alta"
+ESITO_STABILE = "🟡 Bassa"
+ESITO_INCERTO = "❓ Incerta"
+ESITO_ND = "⚠ Non valutabile"
+ESITO_COLORI = {
+    ESITO_REALE: "#2E7D32",
+    ESITO_STABILE: TEXT_COLOR,
+    ESITO_INCERTO: "#8d8d8d",
+    ESITO_ND: "#E4572E",
+}
+
+# Colonne di intestazione dell'export completo: tutto il resto è variabile.
+COMP_META_COLS = {"Nome", "Sesso", "Data test", "File", "Jump Type", "Indice Ripetizione"}
+
+# Bridge tra variabili grezze e catalogo curato: dove esiste una metrica
+# curata si usano la sua etichetta e la sua norma di popolazione.
+COMP_CURATED_BY_RAW = {
+    (m["jump_type"], m["raw_var"]): m
+    for m in METRICS if m.get("jump_type") and m.get("raw_var")
+}
+COMP_DERIVED = [m for m in METRICS if m.get("jump_type") and m.get("derive")]
+
+COMP_DEFAULT_PRIMARY_KEYS = (
+    "imtp_peak_force", "sj_height", "cmj_height", "mrsi_cmj", "cmj_re_rebound_height",
+)
+
+
+def _metric_id(jump_type, var_name):
+    """Identità di una metrica tra sessioni: tipo di test + nome variabile.
+    Il tipo serve perché la stessa variabile grezza (es. 'peak force')
+    esiste in test diversi con significati diversi."""
+    return f"{jump_type}||{var_name}"
+
+
+def _metric_label(jump_type, var_name):
+    m = COMP_CURATED_BY_RAW.get((jump_type, var_name))
+    if m:
+        return m["label"]
+    m = next((x for x in COMP_DERIVED
+              if x["key"] == var_name and x["jump_type"] == jump_type), None)
+    if m:
+        return m["label"]
+    return extra_metric_label(var_name)
+
+
+def _metric_unit(jump_type, var_name):
+    m = COMP_CURATED_BY_RAW.get((jump_type, var_name))
+    if m:
+        return m.get("unit") or ""
+    m = next((x for x in COMP_DERIVED
+              if x["key"] == var_name and x["jump_type"] == jump_type), None)
+    return (m.get("unit") or "") if m else ""
+
+
+def is_symmetry_metric(label):
+    lab = str(label).strip().lower()
+    return any(k in lab for k in COMP_ABS_KEYWORDS) or lab.endswith(COMP_ABS_SUFFIXES)
+
+
+def comp_lower_is_better(jump_type, var_name):
+    """Solo per scegliere QUALE valore storico è il migliore. Non viene
+    usato per giudicare il cambiamento: quello lo fa il preparatore."""
+    m = COMP_CURATED_BY_RAW.get((jump_type, var_name))
+    if m is None:
+        m = next((x for x in COMP_DERIVED
+                  if x["key"] == var_name and x["jump_type"] == jump_type), None)
+    if m is not None:
+        return bool(m["lower_is_better"]), True
+    if is_symmetry_metric(var_name):
+        return True, True
+    return False, False
+
+
+def te_cv_default(label):
+    """CV% between-day di letteratura per una metrica, dal suo nome."""
+    lab = str(label).lower()
+    for keys, cv in DEFAULT_TE_CV:
+        if any(k in lab for k in keys):
+            return cv
+    return FALLBACK_TE_CV
+
+
+def _sd_campionaria(values):
+    n = len(values)
+    if n < 2:
+        return None
+    m = sum(values) / n
+    return math.sqrt(sum((v - m) ** 2 for v in values) / (n - 1))
+
+
+def scala_ampiezza(rapporto):
+    """(etichetta, colore) dal rapporto |delta| / SWC."""
+    for soglia, etichetta, colore in SWC_SCALE:
+        if rapporto < soglia:
+            return etichetta, colore
+    return SWC_SCALE[-1][1], SWC_SCALE[-1][2]
+
+
+def comp_pop_sd_map(pop_dict, sesso_atleta):
+    """{metric_id: SD di popolazione} per le metriche curate che hanno una
+    norma. Le altre ricadranno sulla SD storica dell'atleta."""
+    is_female = bool(sesso_atleta) and str(sesso_atleta).upper().startswith("F")
+    out = {}
+    for m in METRICS:
+        if not m.get("pop_key"):
+            continue
+        sd = pop_dict[m["pop_key"]]["sd_f" if is_female else "sd_m"]
+        if not sd:
+            continue
+        if m.get("jump_type") and m.get("raw_var"):
+            out[_metric_id(m["jump_type"], m["raw_var"])] = float(sd)
+        elif m.get("jump_type") and m.get("derive"):
+            out[_metric_id(m["jump_type"], m["key"])] = float(sd)
+        elif m["key"] in ("dsi", "eur"):
+            out[_metric_id("indici", m["key"])] = float(sd)
+    return out
+
+
+# ----------------------------------------------------------------------------
+# Da ripetizioni a formato lungo
+# ----------------------------------------------------------------------------
+COMP_RATIO_IDS = {_metric_id("indici", "dsi"), _metric_id("indici", "eur")}
+
+
+def reps_to_long(reps_by_type, session_label, data_test=None, ordine=0):
+    """reps_by_type: {jump_type: [dict_variabili_per_ripetizione, ...]}.
+
+    Aggrega media/dev.std/n per ogni variabile presente, aggiunge le metriche
+    derivate del catalogo (rapporti per kg) e infine gli indici cross-test
+    DSI ed EUR calcolati dalle medie della sessione."""
+    rows = []
+    medie = {}
+
+    def _add(jump_type, var, etichetta, stats):
+        medie[(jump_type, var)] = stats["mean"]
+        rows.append(dict(
+            session=session_label, data=data_test, ordine=ordine, jump_type=jump_type,
+            test=JUMP_TYPE_LABELS.get(jump_type, jump_type), var=var,
+            metric_id=_metric_id(jump_type, var), metrica=etichetta,
+            unit=_metric_unit(jump_type, var),
+            mean=stats["mean"], sd=stats["sd"], n=stats["n"],
+        ))
+
+    for jump_type, reps in reps_by_type.items():
+        if not jump_type or not reps:
+            continue
+        for var in sorted({k for rep in reps for k in rep.keys()}):
+            stats = pooled_stats([rep.get(var) for rep in reps
+                                  if isinstance(rep.get(var), (int, float))])
+            if stats["n"]:
+                _add(jump_type, var, _metric_label(jump_type, var), stats)
+        for m in COMP_DERIVED:
+            if m["jump_type"] != jump_type:
+                continue
+            stats = pooled_stats([v for v in (m["derive"](rep) for rep in reps)
+                                  if isinstance(v, (int, float))])
+            if stats["n"]:
+                _add(jump_type, m["key"], m["label"], stats)
+
+    # Indici cross-test: stesse formule della PARTE 4, calcolate qui sulle
+    # medie di questa sessione. Essendo rapporti fra test diversi non
+    # esistono "per ripetizione" e non hanno dev.std.
+    cmj_peak = medie.get(("cmj", "peak propulsive force"))
+    imtp_peak = medie.get(("imtp", "peak force"))
+    cmj_h = medie.get(("cmj", "jump height ft"))
+    sj_h = medie.get(("sj", "jump height ft"))
+    for key, val in (("dsi", (cmj_peak / imtp_peak) if (cmj_peak and imtp_peak) else None),
+                     ("eur", (cmj_h / sj_h) if (cmj_h and sj_h) else None)):
+        if val is None:
+            continue
+        rows.append(dict(
+            session=session_label, data=data_test, ordine=ordine, jump_type="indici",
+            test="Indici", var=key, metric_id=_metric_id("indici", key),
+            metrica=key.upper(), unit="", mean=val, sd=None, n=1,
+        ))
+
+    return pd.DataFrame(rows)
+
+
+def current_reps_by_type(files):
+    """Ripetizioni della sessione attuale, già filtrate dalle checkbox
+    'Prova N' della scheda Dettaglio Test."""
+    out = {}
+    for jump_type in ("imtp", "sj", "cmj", "cmrj"):
+        reps = collect_reps(files, jump_type)
+        if reps:
+            out[jump_type] = [rep["vars"] for rep in reps]
+    return out
+
+
+def _parse_data_test(valore):
+    """La colonna 'Data test' contiene 'gg/mm/aaaa' oppure un intervallo
+    'gg/mm/aaaa → gg/mm/aaaa': si prende la prima data utile."""
+    if valore is None:
+        return None
+    testo = str(valore).strip()
+    match = re.search(r"(\d{2})/(\d{2})/(\d{4})", testo)
+    if not match:
+        return None
+    try:
+        return dt.date(int(match.group(3)), int(match.group(2)), int(match.group(1)))
+    except ValueError:
+        return None
+
+
+def parse_full_export_csv(file_like, fallback_label, ordine=0):
+    """Legge un CSV prodotto da 'Scarica export completo (.csv)':
+    una riga per ripetizione, una colonna per variabile grezza."""
+    df = pd.read_csv(file_like, encoding="utf-8-sig")
+    if "Jump Type" not in df.columns:
+        raise ValueError(
+            "manca la colonna 'Jump Type'. Serve il file prodotto da "
+            "\"Scarica export completo (.csv)\", non l'altro export."
+        )
+
+    etichetta, data_test = fallback_label, None
+    if "Data test" in df.columns and len(df):
+        v = str(df["Data test"].iloc[0]).strip()
+        if v and v.lower() not in ("-", "nan", "none"):
+            etichetta = v
+            data_test = _parse_data_test(v)
+
+    var_cols = [c for c in df.columns if c not in COMP_META_COLS]
+    if not var_cols:
+        raise ValueError("nessuna colonna di variabili trovata.")
+
+    reps_by_type = {}
+    for _, row in df.iterrows():
+        jump_type = str(row["Jump Type"]).strip().lower()
+        if not jump_type or jump_type in ("—", "-", "nan", "none"):
+            continue
+        rep = {}
+        for c in var_cols:
+            v = pd.to_numeric(row[c], errors="coerce")
+            if pd.notna(v):
+                rep[c] = float(v)
+        if rep:
+            reps_by_type.setdefault(jump_type, []).append(rep)
+
+    if not reps_by_type:
+        raise ValueError("nessuna ripetizione con un tipo di test valido.")
+    return reps_to_long(reps_by_type, etichetta, data_test, ordine)
+
+
+def ordina_sessioni(long_frames):
+    """Riordina le sessioni per 'Data test'. Serve al TE dell'atleta, che si
+    calcola sulle differenze tra sedute CONSECUTIVE: con i file caricati in
+    ordine sparso il TE risulterebbe sbagliato. Le sessioni senza data
+    leggibile restano in coda, nell'ordine di caricamento."""
+    con_data, senza_data = [], []
+    for frame in long_frames:
+        if frame.empty:
+            continue
+        data = frame["data"].iloc[0]
+        (con_data if data is not None else senza_data).append((data, frame))
+    con_data.sort(key=lambda t: t[0])
+    ordinati = [f for _, f in con_data] + [f for f in senza_data]
+    for i, frame in enumerate(ordinati):
+        frame["ordine"] = i
+    return ordinati
+
+
+# ----------------------------------------------------------------------------
+# Typical Error dall'atleta
+# ----------------------------------------------------------------------------
+def athlete_te_table(all_long):
+    """TE individuale per metrica: SD delle differenze tra sessioni
+    consecutive / sqrt(2). Molto più preciso dei valori di letteratura,
+    perché ogni atleta ha la propria stabilità."""
+    te = {}
+    if all_long is None or all_long.empty:
+        return te
+    for mid, g in all_long.groupby("metric_id"):
+        vals = [v for v in g.sort_values("ordine")["mean"].tolist()
+                if isinstance(v, (int, float)) and not math.isnan(v)]
+        if len(vals) < MIN_SESSIONS_TE_ATLETA:
+            continue
+        if mid in COMP_RATIO_IDS and all(v > 0 for v in vals):
+            vals = [math.log(v) for v in vals]
+            base = 1.0  # in scala log il TE è già una frazione -> CV%
+        else:
+            base = sum(abs(v) for v in vals) / len(vals)
+            if base == 0:
+                continue
+        sd_diff = _sd_campionaria([b - a for a, b in zip(vals, vals[1:])])
+        if not sd_diff:
+            continue
+        cv = (sd_diff / math.sqrt(2)) / base * 100.0
+        if cv > 0 and not math.isinf(cv):
+            te[mid] = (cv, len(vals))
+    return te
+
+
+# ----------------------------------------------------------------------------
+# Motore di confronto
+# ----------------------------------------------------------------------------
+def compare_to_history(cur_long, hist_long, athlete_te=None, pop_sd_map=None):
+    """Confronta la sessione attuale con la MEDIA delle sedute precedenti, e
+    riporta accanto il miglior valore storico (descrittivo)."""
+    athlete_te = athlete_te or {}
+    pop_sd_map = pop_sd_map or {}
+    if cur_long.empty or hist_long.empty:
+        return pd.DataFrame()
+
+    cur = cur_long.drop_duplicates("metric_id").set_index("metric_id")
+
+    rows = []
+    for mid, g in hist_long.groupby("metric_id"):
+        if mid not in cur.index:
+            continue
+        storiche = [v for v in g["mean"].tolist()
+                    if isinstance(v, (int, float)) and not math.isnan(v)]
+        if not storiche:
+            continue
+        m_cur = float(cur.loc[mid, "mean"])
+        if math.isnan(m_cur):
+            continue
+
+        etichetta = cur.loc[mid, "metrica"]
+        jump_type, var = cur.loc[mid, "jump_type"], cur.loc[mid, "var"]
+        if is_symmetry_metric(etichetta) or is_symmetry_metric(var):
+            m_cur, storiche = abs(m_cur), [abs(v) for v in storiche]
+
+        k = len(storiche)
+        media_rif = sum(storiche) / k
+        if media_rif == 0:
+            continue
+
+        # Miglior valore storico: direzione nota solo per il catalogo curato,
+        # altrove si usa il massimo. È una colonna descrittiva, senza test.
+        lower_better, _ = comp_lower_is_better(jump_type, var)
+        migliore = min(storiche) if lower_better else max(storiche)
+        riga_migliore = g[g["mean"].apply(
+            lambda v: isinstance(v, (int, float)) and abs(abs(v) - migliore) < 1e-9
+            if (is_symmetry_metric(etichetta) or is_symmetry_metric(var))
+            else v == migliore)]
+        sess_migliore = riga_migliore["session"].iloc[0] if len(riga_migliore) else "—"
+
+        if mid in athlete_te:
+            cv, _ = athlete_te[mid]
+            fonte_te = "atleta"
+        else:
+            cv, fonte_te = te_cv_default(etichetta), "letteratura"
+
+        log_scale = mid in COMP_RATIO_IDS and m_cur > 0 and media_rif > 0
+        if log_scale:
+            delta = math.log(m_cur / media_rif)
+            te_abs = cv / 100.0
+            mostra = lambda x: (math.exp(x) - 1) * 100.0
+        else:
+            delta = m_cur - media_rif
+            te_abs = cv / 100.0 * abs(media_rif)
+            mostra = lambda x: x
+
+        # SWC a tre livelli: norma di popolazione, poi variabilità storica
+        # dell'atleta (per il monitoraggio individuale è anche più pertinente
+        # della popolazione), poi niente -> non valutabile.
+        pop_sd = pop_sd_map.get(mid)
+        sd_storica = _sd_campionaria(storiche) if k >= MIN_SESSIONS_TE_ATLETA else None
+        if pop_sd:
+            swc = SWC_FACTOR * (pop_sd / abs(media_rif) if log_scale else pop_sd)
+            fonte_swc = "norma"
+        elif sd_storica:
+            swc = SWC_FACTOR * (sd_storica / abs(media_rif) if log_scale else sd_storica)
+            fonte_swc = "atleta"
+        else:
+            swc, fonte_swc = None, "—"
+
+        # La media di k sedute è più precisa della singola: l'incertezza
+        # della differenza è TE*sqrt(1 + 1/k), non TE*sqrt(2).
+        margine = Z90 * te_abs * math.sqrt(1.0 + 1.0 / k)
+        lo, hi = delta - margine, delta + margine
+
+        if swc is None:
+            esito, ampiezza, colore_amp = ESITO_ND, "—", None
+            rapporto = None
+        else:
+            rapporto = abs(delta) / swc if swc else 0.0
+            etichetta_amp, colore_amp = scala_ampiezza(rapporto)
+            freccia = "🔺" if delta > 0 else ("🔻" if delta < 0 else "▪")
+            ampiezza = f"{freccia} {etichetta_amp}"
+            if lo > swc or hi < -swc:
+                esito = ESITO_REALE
+            elif lo > -swc and hi < swc:
+                esito = ESITO_STABILE
+            else:
+                esito = ESITO_INCERTO
+
+        rows.append({
+            "Test": cur.loc[mid, "test"],
+            "Metrica": etichetta,
+            "Attendibilità": esito,
+            "Cambiamento": ampiezza,
+            "Unità": cur.loc[mid, "unit"],
+            "Media rif.": media_rif,
+            "Attuale": m_cur,
+            "Delta": mostra(delta),
+            "Delta %": (m_cur / media_rif - 1) * 100.0,
+            "Migliore": migliore,
+            # Sempre orientata alla prestazione: 100% = pari al record,
+            # oltre 100% = meglio del record. Per le metriche dove meno e'
+            # meglio il rapporto va invertito, altrimenti un nuovo primato
+            # (valore piu' basso) apparirebbe come un calo.
+            "% del migliore": ((migliore / m_cur if lower_better else m_cur / migliore) * 100.0
+                               if migliore and m_cur else None),
+            "Seduta migliore": sess_migliore,
+            "N sedute": k,
+            "_mid": mid,
+            "_display": f"{cur.loc[mid, 'test']} · {etichetta}",
+            "_swc": swc,
+            "_margine": margine,
+            "_rapporto": rapporto,
+            "_colore_amp": colore_amp,
+            "_log": log_scale,
+            "_fonte_te": fonte_te,
+            "_fonte_swc": fonte_swc,
+        })
+
+    if not rows:
+        return pd.DataFrame()
+    return pd.DataFrame(rows).sort_values(
+        "_rapporto", ascending=False, na_position="last")
+
+
+def build_swc_strip(riga, height=165):
+    """Striscia a bande per una metrica, nelle sue unità native. Stessa
+    geometria del grafico usato per DSI/EUR: fascia sottile, marcatore del
+    valore, etichette sopra. Le bande cadono a ±1/3/6/10 SWC attorno alla
+    media di riferimento, così l'allenatore legge insieme il valore reale e
+    quanto si è spostato."""
+    swc, media_rif = riga["_swc"], riga["Media rif."]
+    if not swc or media_rif is None:
+        return None
+
+    # In scala log il grafico resta in unità native: le soglie sono
+    # moltiplicative, quindi si convertono in valori assoluti.
+    def confine(mult):
+        if riga["_log"]:
+            return media_rif * math.exp(mult * swc)
+        return media_rif + mult * swc
+
+    valore = riga["Attuale"]
+    margine_abs = (abs(confine(riga["_margine"] / swc) - media_rif)
+                   if riga["_log"] else riga["_margine"])
+
+    limiti = [1.0, 3.0, 6.0, 10.0]
+    estensione = max(limiti[-1], (riga["_rapporto"] or 0) * 1.25 + 1.5)
+    lo_ax, hi_ax = confine(-estensione), confine(estensione)
+    if lo_ax > hi_ax:
+        lo_ax, hi_ax = hi_ax, lo_ax
+
+    fig = go.Figure()
+    bordi = [-estensione] + [-m for m in reversed(limiti)] + limiti + [estensione]
+    for a, b in zip(bordi, bordi[1:]):
+        centro = (abs(a) + abs(b)) / 2
+        _, colore = scala_ampiezza(centro if a * b >= 0 else 0.0)
+        x0, x1 = confine(a), confine(b)
+        fig.add_vrect(x0=min(x0, x1), x1=max(x0, x1), fillcolor=colore,
+                      opacity=0.55, line_width=0)
+
+    for mult, etichetta in ((-6.5, "Grande"), (-4.5, "Moderato"), (-2.0, "Piccolo"),
+                            (0.0, "Trascurabile"), (2.0, "Piccolo"), (4.5, "Moderato"),
+                            (6.5, "Grande")):
+        if abs(mult) > estensione:
+            continue
+        fig.add_annotation(x=confine(mult), y=1.10, xref="x", yref="paper",
+                           yanchor="bottom", text=etichetta, showarrow=False,
+                           font=dict(size=9, color="#484343"))
+
+    fig.add_vline(x=media_rif, line_dash="dash", line_color=ACCENT, line_width=1.5)
+    fig.add_trace(go.Scatter(
+        x=[valore], y=[0], mode="markers+text",
+        marker=dict(size=13, color=PRIMARY, symbol="diamond",
+                    line=dict(width=1.5, color="white")),
+        error_x=dict(type="data", array=[margine_abs], color=PRIMARY,
+                     thickness=1.5, width=5),
+        text=[f"{valore:.3g}"], textposition="bottom center",
+        textfont=dict(color=TEXT_COLOR, size=13), cliponaxis=False,
+        hovertemplate=(f"Attuale: %{{x:.3g}}<br>Media rif.: {media_rif:.3g}"
+                       f"<extra></extra>"),
+    ))
+
+    unita = f" ({riga['Unità']})" if riga["Unità"] else ""
+    # Il nome della metrica sta SOPRA il grafico come titolo, non sotto come
+    # etichetta dell'asse: e' l'informazione che si cerca per prima quando si
+    # scorre una sequenza di strisce. Il margine superiore va alzato insieme
+    # all'altezza, altrimenti il titolo si sovrappone alle etichette delle
+    # fasce (annotazioni in coordinate paper appena sopra l'area di plot).
+    fig.update_layout(
+        title=dict(text=f"<b>{riga['Metrica']}{unita}</b>", x=0, xanchor="left",
+                   y=0.97, yanchor="top",
+                   font=dict(size=15, color=TEXT_COLOR)),
+        xaxis=dict(range=[lo_ax, hi_ax], showgrid=False, automargin=True,
+                   tickvals=[media_rif], ticktext=[f"media {media_rif:.3g}"]),
+        yaxis=dict(range=[-1, 1], showgrid=False, showticklabels=False, zeroline=False),
+        height=height, margin=dict(t=95, b=50, l=20, r=20), showlegend=False,
+        plot_bgcolor=BG_COLOR, paper_bgcolor=BG_COLOR, font=dict(color=TEXT_COLOR),
+    )
+    return fig
+
+
+# ----------------------------------------------------------------------------
+# Confronto dei profili di forza (T-score) e degli indici DSI / EUR
+# ----------------------------------------------------------------------------
+# I T-score sono già normalizzati e direzionali (per le metriche dove meno è
+# meglio lo z viene invertito in z_t_score), quindi un T più alto è sempre
+# migliore: qui, a differenza delle metriche grezze, "migliore" ha senso.
+#
+# La scala di ampiezza si traduce senza inventare nulla: T = 50 + 10*z e
+# SWC = 0,2 SD, quindi 1 SWC = 2 punti di T-score. Piccolo = 2 punti,
+# moderato = 6, grande = 12, molto grande = 20.
+SWC_IN_PUNTI_T = 10.0 * SWC_FACTOR
+
+
+def comp_score_specs(pop_dict, sesso_atleta):
+    """{metric_id: (categoria, media_pop, sd_pop, lower_is_better)} per le
+    sole metriche curate che hanno un T-score."""
+    is_female = bool(sesso_atleta) and str(sesso_atleta).upper().startswith("F")
+    specs = {}
+    for m in METRICS:
+        if m.get("kind") != "score" or not m.get("pop_key") or not m.get("jump_type"):
+            continue
+        pop = pop_dict[m["pop_key"]]
+        media = pop["mean_f"] if is_female else pop["mean_m"]
+        sd = pop["sd_f"] if is_female else pop["sd_m"]
+        if not sd:
+            continue
+        mid = _metric_id(m["jump_type"], m.get("raw_var") or m["key"])
+        specs[mid] = (m["category"], float(media), float(sd), bool(m["lower_is_better"]))
+    return specs
+
+
+def profili_per_sessione(long_df, specs):
+    """(profili, t_per_metrica): profili è {sessione: {categoria: T medio}},
+    t_per_metrica è {sessione: {metric_id: T}}. Stessa media semplice per
+    categoria usata da profilo_forza() nella PARTE 4."""
+    profili, t_metrica = {}, {}
+    for sessione, g in long_df.groupby("session", sort=False):
+        per_cat, per_mid = {}, {}
+        for _, riga in g.iterrows():
+            spec = specs.get(riga["metric_id"])
+            if not spec or riga["mean"] is None:
+                continue
+            categoria, media_pop, sd_pop, lower = spec
+            _z, t = z_t_score(riga["mean"], media_pop, sd_pop, lower)
+            if t is None:
+                continue
+            per_mid[riga["metric_id"]] = t
+            per_cat.setdefault(categoria, []).append(t)
+        if per_cat:
+            profili[sessione] = {c: sum(v) / len(v) for c, v in per_cat.items()}
+            t_metrica[sessione] = per_mid
+    return profili, t_metrica
+
+
+def confronta_profili(prof_cur, prof_hist, t_hist, hist_long, specs, athlete_te):
+    """Confronta il profilo attuale con la media dei profili precedenti.
+
+    L'incertezza in punti T viene ricavata dal TE delle metriche che compongono
+    la categoria: TE_T = (TE assoluto / SD popolazione) * 10. Non viene divisa
+    per la radice del numero di metriche, perché le metriche di una stessa
+    categoria sono correlate fra loro: la stima resta prudente."""
+    if not prof_cur or not prof_hist:
+        return pd.DataFrame()
+
+    medie_rif = {}
+    for _sess, per_cat in prof_hist.items():
+        for categoria, t in per_cat.items():
+            medie_rif.setdefault(categoria, []).append(t)
+
+    # TE in punti T per categoria, dalle metriche che la compongono
+    medie_metrica = hist_long.groupby("metric_id")["mean"].mean().to_dict()
+    te_per_cat = {}
+    for mid, (categoria, _media_pop, sd_pop, _lower) in specs.items():
+        media = medie_metrica.get(mid)
+        if media is None or not sd_pop:
+            continue
+        cv = athlete_te[mid][0] if mid in athlete_te else te_cv_default(mid)
+        te_punti = (cv / 100.0 * abs(media)) / sd_pop * 10.0
+        te_per_cat.setdefault(categoria, []).append(te_punti)
+
+    rows = []
+    for categoria in CATEGORIES:
+        if categoria not in prof_cur or categoria not in medie_rif:
+            continue
+        storici = medie_rif[categoria]
+        k = len(storici)
+        media_rif = sum(storici) / k
+        t_cur = prof_cur[categoria]
+        delta = t_cur - media_rif
+
+        te_punti = te_per_cat.get(categoria)
+        if te_punti:
+            margine = Z90 * (sum(te_punti) / len(te_punti)) * math.sqrt(1.0 + 1.0 / k)
+        else:
+            margine = None
+
+        if margine is None:
+            esito, ampiezza, colore = ESITO_ND, "—", None
+            rapporto = None
+        else:
+            rapporto = abs(delta) / SWC_IN_PUNTI_T
+            etichetta, colore = scala_ampiezza(rapporto)
+            freccia = "🔺" if delta > 0 else ("🔻" if delta < 0 else "▪")
+            ampiezza = f"{freccia} {etichetta}"
+            lo, hi = delta - margine, delta + margine
+            if lo > SWC_IN_PUNTI_T or hi < -SWC_IN_PUNTI_T:
+                esito = ESITO_REALE
+            elif lo > -SWC_IN_PUNTI_T and hi < SWC_IN_PUNTI_T:
+                esito = ESITO_STABILE
+            else:
+                esito = ESITO_INCERTO
+
+        migliore = max(storici)
+        sess_migliore = next((s for s, p in prof_hist.items()
+                              if p.get(categoria) == migliore), "—")
+        banda_cur, _colore_banda = banda_da_tscore(t_cur)
+
+        rows.append({
+            "Categoria": categoria,
+            "Attendibilità": esito,
+            "Cambiamento": ampiezza,
+            "T medio rif.": media_rif,
+            "T attuale": t_cur,
+            "Delta T": delta,
+            "Valutazione attuale": banda_cur or "—",
+            "T migliore": migliore,
+            "Seduta migliore": sess_migliore,
+            "N sedute": k,
+            "_margine": margine,
+            "_rapporto": rapporto,
+            "_colore": colore,
+        })
+    return pd.DataFrame(rows)
+
+
+def build_profili_radar(cats, serie, nome_atleta):
+    """Radar con più serie sovrapposte (attuale, media storico, migliore),
+    sulla stessa geometria di build_radar_chart della PARTE 4."""
+    if not cats:
+        return None
+    cats_closed = [_wrap_label(c) for c in cats] + [_wrap_label(cats[0])]
+    fig = go.Figure()
+    fig.add_trace(go.Scatterpolar(
+        r=[50] * (len(cats) + 1), theta=cats_closed, mode="lines",
+        line=dict(color="rgba(233,74,38,0.6)", dash="dash"),
+        name="Media popolazione (T=50)",
+    ))
+    stili = [
+        ("Media sedute precedenti", "#8d8d8d", "dot", None, 2),
+        ("Miglior seduta", "#2E7D32", "dash", None, 2),
+        (f"{nome_atleta} — attuale", PRIMARY, "solid", "rgba(11,182,255,0.25)", 3),
+    ]
+    for (etichetta, colore, tratto, riempimento, spessore) in stili:
+        valori = serie.get(etichetta)
+        if not valori:
+            continue
+        vals = [valori.get(c) for c in cats]
+        if any(v is None for v in vals):
+            continue
+        fig.add_trace(go.Scatterpolar(
+            r=vals + [vals[0]], theta=cats_closed, name=etichetta,
+            fill="toself" if riempimento else None, fillcolor=riempimento,
+            line=dict(color=colore, width=spessore, dash=tratto),
+        ))
+    fig.update_layout(
+        polar=dict(
+            domain=dict(x=[0.12, 0.88], y=[0.08, 0.92]),
+            radialaxis=dict(range=[0, 100], showticklabels=True, ticks="",
+                            tickfont=dict(color=TEXT_COLOR)),
+        ),
+        font=dict(color=TEXT_COLOR), paper_bgcolor=BG_COLOR,
+        showlegend=True, height=560, margin=dict(t=60, b=60, l=60, r=60),
+        legend=dict(orientation="h", yanchor="bottom", y=-0.12, x=0),
+    )
+    return fig
+
+
+def build_indice_zone_strip(key, valore_attuale, valore_rif, thr_low, thr_high,
+                            decimals=3, height=140):
+    """Striscia a zone di profilo per DSI/EUR (stesse bande e stesse etichette
+    di ratio_band_strip della PARTE 4), con due marcatori: media delle sedute
+    precedenti e test attuale. Serve a vedere se l'atleta ha cambiato ZONA,
+    non solo se il numero si è mosso."""
+    if valore_attuale is None or not thr_low or not thr_high:
+        return None
+    valori = [v for v in (valore_attuale, valore_rif) if v is not None]
+    lo = min([thr_low - 0.2] + [v - 0.05 for v in valori])
+    hi = max([thr_high + 0.2] + [v + 0.05 for v in valori])
+    labels = INDEX_ZONE_LABELS[key]
+
+    fig = go.Figure()
+    for a, b, i in ((lo, thr_low, 0), (thr_low, thr_high, 1), (thr_high, hi, 2)):
+        fig.add_vrect(x0=a, x1=b, fillcolor=INDEX_ZONE_COLORS[i], opacity=0.35, line_width=0)
+        fig.add_annotation(x=(a + b) / 2, y=1.10, xref="x", yref="paper", yanchor="bottom",
+                           text=_wrap_label(labels[i], 22), showarrow=False,
+                           font=dict(size=11, color="#484343"))
+    if valore_rif is not None:
+        fig.add_trace(go.Scatter(
+            x=[valore_rif], y=[0], mode="markers", name="Media precedenti",
+            marker=dict(size=12, color="#8d8d8d", symbol="circle-open",
+                        line=dict(width=2.5, color="#8d8d8d")),
+            cliponaxis=False,
+            hovertemplate=f"Media precedenti: %{{x:.{decimals}f}}<extra></extra>",
+        ))
+    fig.add_trace(go.Scatter(
+        x=[valore_attuale], y=[0], mode="markers+text", name="Attuale",
+        marker=dict(size=13, color=PRIMARY, symbol="diamond",
+                    line=dict(width=1.5, color="white")),
+        text=[f"{valore_attuale:.{decimals}f}"], textposition="bottom center",
+        textfont=dict(color=TEXT_COLOR, size=13), cliponaxis=False,
+        hovertemplate=f"Attuale: %{{x:.{decimals}f}}<extra></extra>",
+    ))
+    fig.update_layout(
+        xaxis=dict(range=[lo, hi], showgrid=False, tickvals=[thr_low, thr_high],
+                   ticktext=[f"{thr_low:.2f}", f"{thr_high:.2f}"], automargin=True,
+                   title=dict(text=key.upper(), standoff=12)),
+        yaxis=dict(range=[-1, 1], showgrid=False, showticklabels=False, zeroline=False),
+        height=height, margin=dict(t=64, b=50, l=20, r=20),
+        showlegend=True, legend=dict(orientation="h", yanchor="bottom", y=-0.55, x=0),
+        plot_bgcolor=BG_COLOR, paper_bgcolor=BG_COLOR, font=dict(color=TEXT_COLOR),
+    )
+    return fig
+
+
+# ----------------------------------------------------------------------------
+# UI del tab
+# ----------------------------------------------------------------------------
+with tab_comparazione:
+    if not parsed_files:
+        st.info("Carica dei file dalla barra laterale per confrontare questo test con i precedenti.")
+    else:
+        st.markdown(
+            "Confronta il test attuale con lo storico dell'atleta. Carica i CSV prodotti da "
+            "**🔍 Dettaglio Test → Esporta TUTTE le metriche grezze**."
+        )
+        st.caption(
+            "Il confronto statistico è contro la MEDIA delle sedute precedenti: la media di più "
+            "sedute è più precisa di una singola, quindi l'incertezza si stringe. Il miglior "
+            "valore storico è riportato solo come riferimento descrittivo — un record è quasi "
+            "sempre il giorno in cui l'atleta era in forma e il rumore ha aiutato, quindi "
+            "confrontarcisi statisticamente darebbe 'peggiorato' quasi sempre."
+        )
+
+        comp_files = st.file_uploader(
+            "CSV delle sedute precedenti (export completo)", type=["csv"],
+            accept_multiple_files=True, key="comp_files",
+            help="Uno o più file 'Scarica export completo (.csv)' dello STESSO atleta. "
+                 "Da 4 sedute in su l'app stima il rumore della misura sull'atleta stesso.",
+        )
+
+        if not comp_files:
+            st.info("Carica almeno un CSV di riferimento per iniziare il confronto.")
+        else:
+            storico, errori = [], []
+            for i, f in enumerate(comp_files):
+                try:
+                    storico.append(parse_full_export_csv(
+                        io.BytesIO(f.getvalue()), f.name.rsplit(".", 1)[0], ordine=i))
+                except Exception as e:
+                    errori.append(f"**{f.name}**: {e}")
+            for msg in errori:
+                st.warning(msg)
+
+            if storico:
+                storico = ordina_sessioni(storico)
+                hist_long = pd.concat(storico, ignore_index=True)
+                cur_long = reps_to_long(current_reps_by_type(parsed_files), "Attuale",
+                                        _parse_data_test(periodo), ordine=len(storico))
+                pop_sd_map = comp_pop_sd_map(st.session_state["pop"], sesso)
+
+                senza_data = [f["session"].iloc[0] for f in storico if f["data"].iloc[0] is None]
+                if senza_data:
+                    st.caption(
+                        "Sedute senza data leggibile, ordinate come caricate: "
+                        + ", ".join(senza_data)
+                    )
+
+                all_long = pd.concat([hist_long, cur_long], ignore_index=True)
+                te_atleta = athlete_te_table(all_long)
+                n_sedute = len(storico)
+
+                if te_atleta:
+                    st.success(
+                        f"✅ {n_sedute} sedute di riferimento: rumore della misura stimato "
+                        f"sull'atleta per {len(te_atleta)} metriche. Le altre usano valori "
+                        "di letteratura."
+                    )
+                else:
+                    st.info(
+                        f"ℹ️ {n_sedute} sedute di riferimento. Da {MIN_SESSIONS_TE_ATLETA} in su "
+                        "l'app stima il rumore sull'atleta stesso e ricava una soglia di "
+                        "rilevanza anche per le metriche prive di norme; per ora usa valori "
+                        "di letteratura, quindi gli intervalli sono più larghi del necessario."
+                    )
+
+                res = compare_to_history(cur_long, hist_long, te_atleta, pop_sd_map)
+
+                if res.empty:
+                    st.error(
+                        "Nessuna metrica in comune tra il test attuale e lo storico. Verifica "
+                        "che i CSV appartengano allo stesso atleta e agli stessi tipi di test."
+                    )
+                else:
+                    st.caption(f"Metriche confrontabili trovate: {len(res)}.")
+                    primarie_ids = {
+                        _metric_id(m["jump_type"], m.get("raw_var") or m["key"])
+                        for m in METRICS
+                        if m["key"] in COMP_DEFAULT_PRIMARY_KEYS and m.get("jump_type")
+                    }
+                    opzioni = list(res["_display"])
+                    default_sel = [r["_display"] for _, r in res.iterrows()
+                                   if r["_mid"] in primarie_ids]
+                    scelte = st.multiselect(
+                        "Metriche da mostrare", opzioni,
+                        default=default_sel or opzioni[: min(5, len(opzioni))],
+                        key="comp_scelte",
+                        help="Sceglile PRIMA di guardare i dati: è ciò che distingue una "
+                             "decisione da un inseguimento del rumore.",
+                    )
+                    vista = res[res["_display"].isin(scelte)] if scelte else res
+
+                    conteggi = vista["Attendibilità"].value_counts()
+                    k1, k2, k3, k4 = st.columns(4)
+                    k1.metric("🟢 Alta", int(conteggi.get(ESITO_REALE, 0)))
+                    k2.metric("🟡 Bassa", int(conteggi.get(ESITO_STABILE, 0)))
+                    k3.metric("❓ Incerta", int(conteggi.get(ESITO_INCERTO, 0)))
+                    k4.metric("⚠ Non valutabile", int(conteggi.get(ESITO_ND, 0)))
+
+                    tab_df = vista[[
+                        "Test", "Metrica", "Attendibilità", "Cambiamento", "Unità",
+                        "Media rif.", "Attuale", "Delta", "Delta %",
+                        "Migliore", "% del migliore", "Seduta migliore", "N sedute",
+                    ]].reset_index(drop=True)
+
+                    def _stile_comp(row):
+                        stili = [""] * len(row)
+                        col = ESITO_COLORI.get(row["Attendibilità"])
+                        if col:
+                            stili[tab_df.columns.get_loc("Attendibilità")] = (
+                                f"color:{col}; font-weight:600;")
+                        return stili
+
+                    st.dataframe(
+                        tab_df.style.apply(_stile_comp, axis=1).format({
+                            "Media rif.": "{:.3g}", "Attuale": "{:.3g}", "Delta": "{:+.3g}",
+                            "Delta %": "{:+.1f}%", "Migliore": "{:.3g}",
+                            "% del migliore": "{:.0f}%",
+                        }, na_rep="—"),
+                        use_container_width=True, hide_index=True,
+                    )
+
+                    nd = [r["_display"] for _, r in vista.iterrows()
+                          if r["Attendibilità"] == ESITO_ND]
+                    if nd:
+                        st.warning(
+                            f"⚠️ {len(nd)} metriche non valutabili: manca sia una norma di "
+                            f"popolazione sia lo storico necessario ({MIN_SESSIONS_TE_ATLETA} "
+                            "sedute) per ricavare una soglia di rilevanza dall'atleta. Il "
+                            "valore si vede comunque, ma non si può dire se lo scostamento conti."
+                        )
+
+                    # --- Strisce per metrica ---
+                    st.markdown("#### Scostamento dalla media, metrica per metrica")
+                    st.caption(
+                        "Il rombo è il test attuale con la sua barra di incertezza; la linea "
+                        "tratteggiata arancione è la media delle sedute precedenti. Le fasce "
+                        "colorate sono l'entità dello scostamento (trascurabile, piccolo, moderato, "
+                        "grande), simmetriche sopra e sotto la media."
+                    )
+                    strip_opzioni = [r["_display"] for _, r in vista.iterrows()
+                                     if r["_swc"] is not None]
+                    strip_scelte = st.multiselect(
+                        "Metriche da graficare", strip_opzioni,
+                        default=strip_opzioni[: min(5, len(strip_opzioni))],
+                        key="comp_strip",
+                        help="Le metriche non valutabili (⚠) non compaiono: senza soglia di "
+                             "rilevanza non c'è scala da disegnare.",
+                    )
+                    if not strip_opzioni:
+                        st.info("Nessuna metrica con una soglia di rilevanza disponibile.")
+                    for _, riga in vista[vista["_display"].isin(strip_scelte)].iterrows():
+                        fig_strip = build_swc_strip(riga)
+                        if fig_strip:
+                            st.plotly_chart(fig_strip, use_container_width=True)
+
+                    # --- Profili di forza (T-score) e indici -----------------
+                    st.markdown("---")
+                    st.markdown("#### Profilo di forza: attuale vs storico")
+                    specs = comp_score_specs(st.session_state["pop"], sesso)
+                    prof_hist, _t_hist = profili_per_sessione(hist_long, specs)
+                    prof_cur_all, _t_cur = profili_per_sessione(cur_long, specs)
+                    prof_cur = prof_cur_all.get("Attuale", {})
+
+                    if not prof_cur or not prof_hist:
+                        st.info(
+                            "Profilo non calcolabile: servono metriche con norme di popolazione "
+                            "(IMTP, SJ, CMJ o CMJ RE) sia nel test attuale sia nello storico."
+                        )
+                    else:
+                        cats_valide = [c for c in CATEGORIES
+                                       if c in prof_cur and any(c in p for p in prof_hist.values())]
+                        medie_cat, migliori_cat = {}, {}
+                        for c in cats_valide:
+                            valori = [p[c] for p in prof_hist.values() if c in p]
+                            medie_cat[c] = sum(valori) / len(valori)
+                            migliori_cat[c] = max(valori)
+
+                        radar = build_profili_radar(cats_valide, {
+                            "Media sedute precedenti": medie_cat,
+                            "Miglior seduta": migliori_cat,
+                            f"{nome} — attuale": prof_cur,
+                        }, nome)
+                        if radar:
+                            st.plotly_chart(radar, use_container_width=True)
+                        st.caption(
+                            "Il T-score è già orientato alla prestazione (per le metriche dove meno "
+                            "è meglio lo scarto viene invertito), quindi qui un valore più alto è "
+                            "sempre migliore. 1 soglia di rilevanza = 2 punti di T-score, perché "
+                            "T = 50 + 10·z e la soglia vale 0,2 deviazioni standard."
+                        )
+
+                        prof_res = confronta_profili(prof_cur, prof_hist, _t_hist, hist_long,
+                                                     specs, te_atleta)
+                        if not prof_res.empty:
+                            prof_df = prof_res[[
+                                "Categoria", "Attendibilità", "Cambiamento", "T attuale",
+                                "Delta T", "Valutazione attuale", "T migliore",
+                                "Seduta migliore", "N sedute",
+                            ]].reset_index(drop=True)
+
+                            def _stile_prof(row):
+                                stili = [""] * len(row)
+                                col = ESITO_COLORI.get(row["Attendibilità"])
+                                if col:
+                                    stili[prof_df.columns.get_loc("Attendibilità")] = (
+                                        f"color:{col}; font-weight:600;")
+                                return stili
+
+                            st.dataframe(
+                                prof_df.style.apply(_stile_prof, axis=1).format({
+                                    "T attuale": "{:.1f}",
+                                    "Delta T": "{:+.1f}", "T migliore": "{:.1f}",
+                                }, na_rep="—"),
+                                use_container_width=True, hide_index=True,
+                            )
+
+                    # --- Indici di profilo DSI / EUR ------------------------
+                    idx_disponibili = [
+                        k for k in ("dsi", "eur")
+                        if _metric_id("indici", k) in set(cur_long["metric_id"])
+                    ]
+                    if idx_disponibili:
+                        st.markdown("#### Indici di profilo: si è spostato di zona?")
+                        st.caption(
+                            "DSI ed EUR non hanno un verso migliore: quello che conta è se "
+                            "l'atleta ha cambiato zona di profilo. Il rombo è il test attuale, "
+                            "il cerchio vuoto la media delle sedute precedenti."
+                        )
+                        for key in idx_disponibili:
+                            mid = _metric_id("indici", key)
+                            att = cur_long[cur_long["metric_id"] == mid]["mean"]
+                            rif = hist_long[hist_long["metric_id"] == mid]["mean"]
+                            v_att = float(att.iloc[0]) if len(att) else None
+                            v_rif = float(rif.mean()) if len(rif) else None
+                            lo_thr, hi_thr = st.session_state["idx_thr"][key]
+                            fig_idx = build_indice_zone_strip(key, v_att, v_rif, lo_thr, hi_thr)
+                            if fig_idx is None:
+                                continue
+                            zona_att, _c1 = zona_da_indice(key, v_att, lo_thr, hi_thr)
+                            zona_rif, _c2 = zona_da_indice(key, v_rif, lo_thr, hi_thr)
+                            if zona_att and zona_rif and zona_att != zona_rif:
+                                st.markdown(
+                                    f"**{key.upper()}** — cambio di zona: "
+                                    f"da *{zona_rif}* a *{zona_att}*."
+                                )
+                            elif zona_att:
+                                st.markdown(f"**{key.upper()}** — zona invariata: *{zona_att}*.")
+                            st.plotly_chart(fig_idx, use_container_width=True)
+
+                    st.download_button(
+                        "⬇️ Scarica comparazione (.csv)",
+                        data=res.drop(columns=[c for c in res.columns if c.startswith("_")])
+                                .to_csv(index=False).encode("utf-8-sig"),
+                        file_name=f"comparazione_{nome.replace(' ', '_')}_"
+                                  f"{dt.date.today().isoformat()}.csv",
+                        mime="text/csv",
+                    )
+
+                    with st.expander("ℹ️ Come si leggono questi risultati"):
+                        st.markdown(
+                            f"""
+**Attendibilità — il cambiamento è reale?**
+
+- **{ESITO_REALE}** — l'intervallo di incertezza sta interamente oltre la soglia
+  di rilevanza: il cambiamento supera il rumore della misura ed è abbastanza
+  grande da contare.
+- **{ESITO_STABILE}** — l'intervallo sta interamente dentro la soglia: l'atleta è
+  davvero fermo. È una conclusione, non un dato mancante.
+- **{ESITO_INCERTO}** — l'intervallo scavalca la soglia: i dati non bastano per
+  decidere. Con poche sedute è l'esito più frequente, ed è la risposta onesta.
+- **{ESITO_ND}** — manca una soglia di rilevanza: né norma di popolazione né
+  {MIN_SESSIONS_TE_ATLETA} sedute da cui ricavarla. Il valore resta leggibile, il
+  giudizio no.
+
+**Cambiamento — quanto si è spostato?** Scala di Hopkins in multipli della soglia:
+trascurabile (sotto 1), piccolo (1-3), moderato (3-6), grande (6-10), molto grande
+(oltre 10). La freccia dice solo la direzione: 🔺 il numero è salito, 🔻 è sceso.
+**L'app non dice se sia un bene**: per un tempo di contatto scendere è un
+progresso, per un'altezza di salto è un calo. Quel giudizio spetta a te.
+
+**Media rif.** — media delle sedute precedenti, esclusa l'attuale. Escluderla è
+necessario: altrimenti confronteresti il test con qualcosa che contiene sé
+stesso, e lo scostamento risulterebbe artificialmente più piccolo.
+
+**Migliore** — il miglior valore mai registrato, con la seduta in cui è avvenuto.
+È **descrittivo**: non ha né attendibilità né entità. Il massimo di più misure rumorose
+è per costruzione una sovrastima, quindi un confronto statistico con il record
+segnalerebbe un peggioramento quasi sempre, per un difetto del metodo e non
+dell'atleta. Usalo come riferimento pratico ("è al 92% del suo record").
+
+**La soglia di rilevanza (SWC)** vale 0,2 deviazioni standard e viene presa, in
+ordine: dalle norme di popolazione della scheda ⚙️ Costanti; se mancano, dalla
+variabilità storica dell'atleta stesso (da {MIN_SESSIONS_TE_ATLETA} sedute in su)
+— che per il monitoraggio individuale è anche più pertinente della popolazione;
+se mancano entrambe, l'esito è {ESITO_ND}.
+
+**Indici di simmetria** — confrontati in valore assoluto: il segno indica il lato
+dominante, non la qualità, quindi passare da -2% a +6% è un aumento dello
+sbilanciamento anche se il numero "cresce".
+
+**DSI ed EUR** — sono rapporti fra test diversi: variazione e soglia sono in
+percentuale, non in unità assolute.
+                            """
+                        )
 # ============================================================================
 # PARTE 6 — REPORT SCARICABILE (HTML interattivo)
 # ============================================================================
