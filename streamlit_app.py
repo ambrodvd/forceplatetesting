@@ -62,9 +62,8 @@ def banda_da_tscore(t):
 
 
 # Soglie di lettura degli indici-rapporto (DSI, EUR): delimitano le tre zone
-# di profilo mostrate nei grafici. Valori di DEFAULT, modificabili sopra il
-# grafico nella scheda "Profilo di Forza" (a runtime si usa sempre
-# st.session_state["idx_thr"]).
+# di profilo mostrate nei grafici. Valori di DEFAULT, modificabili nella
+# scheda "⚙️ Costanti" (a runtime si usa sempre st.session_state["idx_thr"]).
 #   DSI  0.60 / 0.80  — Sheppard & Chapman (2011), via Science for Sport
 #   EUR  1.00 / 1.10  — McGuigan et al. (2006), via VALD / Clubb
 # NB: le soglie EUR di letteratura cadono praticamente sulla media di
@@ -892,8 +891,8 @@ csv_reload = st.sidebar.file_uploader(
 if "pop" not in st.session_state:
     st.session_state["pop"] = {k: dict(v) for k, v in DEFAULT_POP.items()}
 
-# Soglie degli indici a rapporto (DSI, EUR): modificabili direttamente sopra
-# il relativo grafico nella scheda "Profilo di Forza".
+# Soglie degli indici a rapporto (DSI, EUR): modificabili nella scheda
+# "⚙️ Costanti", insieme alle costanti di popolazione.
 if "idx_thr" not in st.session_state:
     st.session_state["idx_thr"] = {k: list(v) for k, v in DEFAULT_INDEX_THRESHOLDS.items()}
 
@@ -1601,13 +1600,16 @@ def ratio_wedge_chart(x_mean, y_mean, x_sd, y_sd, x_label, y_label, key,
 
     for thr in (thr_low, thr_high):
         fig.add_shape(type="line", x0=x0, y0=x0 / thr, x1=x1, y1=x1 / thr,
-                      line=dict(color="#9e9e9e", dash="dot", width=3))
+                      line=dict(color="#8d8d8d", dash="dot", width=3))
 
     # Le linee di popolazione compaiono solo dove il dato esiste: oggi
     # cmj_peak_force non ha una norma, quindi il DSI mostra la sola
     # orizzontale (IMTP). Aggiungendo la norma mancante a DEFAULT_POP /
     # CONST_LABELS e impostando pop_key sulla metrica, la verticale
     # comparirà da sola senza altre modifiche.
+    # Peso visivo: le diagonali (che rappresentano l'indice) sono spesse,
+    # il crosshair di popolazione è sottile — è l'indice il soggetto del
+    # grafico, la popolazione è solo contesto.
     if pop_x is not None:
         fig.add_vline(x=pop_x, line_dash="dash", line_color=ACCENT, line_width=1)
     if pop_y is not None:
@@ -1637,7 +1639,14 @@ def ratio_wedge_chart(x_mean, y_mean, x_sd, y_sd, x_label, y_label, key,
 def ratio_band_strip(key, value, thr_low, thr_high, label, decimals=2, height=120):
     """Barra orizzontale a tre bande con il valore dell'indice: la zona si
     legge a colpo d'occhio, senza dover interpretare una pendenza. Range =
-    soglie ± 0.2, allargato automaticamente se il valore cade fuori."""
+    soglie ± 0.2, allargato automaticamente se il valore cade fuori.
+
+    Lo spessore della fascia NON si imposta direttamente: add_vrect riempie
+    sempre tutta l'area di plot, quindi la fascia è alta esattamente
+    (height - margin.t - margin.b) = 10px. Per spostare le etichette senza
+    ingrassare la fascia si alzano margin_t E height della stessa quantità.
+    Il marcatore (13px) e il suo valore sono più alti della fascia: senza
+    cliponaxis=False verrebbero tagliati dai bordi dell'area di plot."""
     if value is None or not thr_low or not thr_high:
         return None
     lo = min(thr_low - 0.2, value - 0.05)
@@ -1647,20 +1656,25 @@ def ratio_band_strip(key, value, thr_low, thr_high, label, decimals=2, height=12
     fig = go.Figure()
     for a, b, i in ((lo, thr_low, 0), (thr_low, thr_high, 1), (thr_high, hi, 2)):
         fig.add_vrect(x0=a, x1=b, fillcolor=INDEX_ZONE_COLORS[i], opacity=0.35, line_width=0)
-        fig.add_annotation(x=(a + b) / 2, y=1.04, xref="x", yref="paper", yanchor="bottom",
-                           text=_wrap_label(labels[i], 18), showarrow=False,
-                           font=dict(size=9, color="#484343"))
+        # Le etichette sono annotazioni in coordinate "paper" sopra l'area di
+        # plot: non partecipano all'automargin, quindi lo spazio per loro va
+        # riservato a mano con margin_t. Wrap a 22 caratteri = due righe al
+        # massimo per le etichette attuali.
+        fig.add_annotation(x=(a + b) / 2, y=1.10, xref="x", yref="paper", yanchor="bottom",
+                           text=_wrap_label(labels[i], 22), showarrow=False,
+                           font=dict(size=11, color="#484343"))
     fig.add_trace(go.Scatter(
         x=[value], y=[0], mode="markers+text",
-        marker=dict(size=16, color=PRIMARY, symbol="diamond", line=dict(width=1.5, color="white")),
+        marker=dict(size=13, color=PRIMARY, symbol="diamond", line=dict(width=1.5, color="white")),
         text=[f"{value:.{decimals}f}"], textposition="bottom center",
         textfont=dict(color=TEXT_COLOR, size=13),
+        cliponaxis=False,
         hovertemplate=f"{label}: %{{x:.{decimals}f}}<extra></extra>",
     ))
     fig.update_layout(
         xaxis=dict(range=[lo, hi], showgrid=False, tickvals=[thr_low, thr_high],
                    ticktext=[f"{thr_low:.2f}", f"{thr_high:.2f}"], automargin=True,
-                   title=dict(text=label, standoff=14)),
+                   title=dict(text=label, standoff=12)),
         yaxis=dict(range=[-1, 1], showgrid=False, showticklabels=False, zeroline=False),
         height=height, margin=dict(t=60, b=50, l=20, r=20), showlegend=False,
         plot_bgcolor=BG_COLOR, paper_bgcolor=BG_COLOR, font=dict(color=TEXT_COLOR),
@@ -1866,7 +1880,7 @@ with tab_costanti:
         "Nota: DSI ed EUR non usano più il T-score (sono indici diagnostici, non metriche "
         "'più alto = meglio'), ma la loro media di popolazione resta utile come riferimento e "
         "viene mostrata accanto al valore dell'atleta. Le soglie di lettura di DSI ed EUR si "
-        "modificano direttamente sopra il relativo grafico, nella scheda '📊 Profilo di Forza'."
+        "modificano qui sotto."
     )
 
     df_pop = costanti_dataframe(st.session_state["pop"])
@@ -1886,6 +1900,35 @@ with tab_costanti:
         mm, sm, mf, sf = row["Media Uomini"], row["Dev.Std Uomini"], row["Media Donne"], row["Dev.Std Donne"]
         if None not in (mm, sm, mf, sf):
             st.session_state["pop"][key] = dict(mean_m=float(mm), sd_m=float(sm), mean_f=float(mf), sd_f=float(sf))
+
+    # --- Soglie degli indici a rapporto (DSI, EUR) ---
+    # Stanno qui, e non accanto ai grafici, perché sono costanti di lettura
+    # esattamente come le norme di popolazione sopra. Il blocco viene
+    # eseguito PRIMA di build_results(), quindi una modifica si applica
+    # nello stesso rerun (nessun click aggiuntivo).
+    st.markdown("---")
+    st.markdown("**Soglie di lettura degli indici (DSI, EUR)**")
+    st.caption(
+        "Delimitano le tre zone di profilo nei grafici di DSI ed EUR. Default di letteratura: "
+        "DSI 0.60 / 0.80, EUR 1.00 / 1.10. Nota: le soglie EUR di letteratura cadono quasi sulla "
+        "media di popolazione qui usata (1.108 U / 1.091 D), quindi un atleta 'medio' finisce sul "
+        "confine superiore — da valutare una ricalibrazione sui propri dati."
+    )
+    tc1, tc2, tc3, tc4 = st.columns(4)
+    dsi_low = tc1.number_input("DSI — soglia bassa", key="thr_dsi_low", min_value=0.0, step=0.05,
+                               format="%.2f", value=float(st.session_state["idx_thr"]["dsi"][0]))
+    dsi_high = tc2.number_input("DSI — soglia alta", key="thr_dsi_high", min_value=0.0, step=0.05,
+                                format="%.2f", value=float(st.session_state["idx_thr"]["dsi"][1]))
+    eur_low = tc3.number_input("EUR — soglia bassa", key="thr_eur_low", min_value=0.0, step=0.05,
+                               format="%.2f", value=float(st.session_state["idx_thr"]["eur"][0]))
+    eur_high = tc4.number_input("EUR — soglia alta", key="thr_eur_high", min_value=0.0, step=0.05,
+                                format="%.2f", value=float(st.session_state["idx_thr"]["eur"][1]))
+    for _idx_key, _lo, _hi in (("dsi", dsi_low, dsi_high), ("eur", eur_low, eur_high)):
+        if _hi <= _lo:
+            st.warning(f"{_idx_key.upper()}: la soglia alta deve essere maggiore della soglia bassa "
+                       "(soglie non aggiornate).")
+        else:
+            st.session_state["idx_thr"][_idx_key] = [_lo, _hi]
 
     st.markdown("---")
     col_dl, col_ul, col_reset = st.columns([1, 1, 1])
@@ -2177,7 +2220,7 @@ with tab_profilo:
                 col.caption(banda)
 
         # --- Indici a rapporto (DSI, EUR): barra a bande + grafico a spicchi.
-        # Le soglie sono modificabili sopra ciascun grafico e si applicano
+        # Le soglie si modificano nella scheda ⚙️ Costanti e si applicano
         # subito anche ai report scaricabili. Le etichette delle zone
         # descrivono il PROFILO dell'atleta, non l'indicazione di
         # allenamento: quella resta una decisione del preparatore, da
@@ -2196,33 +2239,23 @@ with tab_profilo:
                 continue
 
             st.markdown(f"#### {titolo}")
-            tc1, tc2, _tc3 = st.columns([1, 1, 3])
-            thr_low = tc1.number_input(
-                "Soglia bassa", key=f"thr_{idx_key}_low", min_value=0.0, step=0.05, format="%.2f",
-                value=float(st.session_state["idx_thr"][idx_key][0]))
-            thr_high = tc2.number_input(
-                "Soglia alta", key=f"thr_{idx_key}_high", min_value=0.0, step=0.05, format="%.2f",
-                value=float(st.session_state["idx_thr"][idx_key][1]))
-            if thr_high <= thr_low:
-                st.warning("La soglia alta deve essere maggiore della soglia bassa: soglie non aggiornate.")
-            else:
-                st.session_state["idx_thr"][idx_key] = [thr_low, thr_high]
-
             if r_idx:
                 help_parts = []
                 if r_idx.get("zona"):
                     help_parts.append(r_idx["zona"])
                 if r_idx["pop_mean"] is not None:
                     help_parts.append(f"Media popolazione: {r_idx['pop_mean']:.3f}")
+                lo, hi = st.session_state["idx_thr"][idx_key]
+                help_parts.append(f"Soglie {lo:.2f} / {hi:.2f} (modificabili in ⚙️ Costanti)")
                 st.metric(idx_key.upper(), f"{r_idx['mean']:.{decimali}f}",
-                          help=" — ".join(help_parts) or None)
-                strip = ratio_band_strip(idx_key, r_idx["mean"], *st.session_state["idx_thr"][idx_key],
+                          help=" — ".join(help_parts))
+                strip = ratio_band_strip(idx_key, r_idx["mean"], lo, hi,
                                          label=idx_key.upper(), decimals=decimali)
                 if strip:
                     st.plotly_chart(strip, use_container_width=True)
-            st.caption(caption)
             if fig_wedge:
                 st.plotly_chart(fig_wedge, use_container_width=True)
+                st.caption(caption)
 
 
 # ============================================================================
@@ -2597,6 +2630,51 @@ class _ReportPDF(FPDF):
         # larghezza quasi nulla e sollevare FPDFException.
         self.set_x(self.l_margin)
 
+    def profile_cards(self, cats, profilo):
+        """Riquadri affiancati per il Profilo di Forza, equivalenti alle
+        .profile-card del report HTML: categoria, T-score grande nel colore
+        della banda, etichetta della banda. Sostituisce l'elenco di righe di
+        testo, poco leggibile a colpo d'occhio."""
+        if not cats:
+            return
+        n = len(cats)
+        gap, h = 4, 26
+        w = (self.epw - gap * (n - 1)) / n
+        self.ensure_space(h + 6)
+        y0 = self.get_y()
+        for i, cat in enumerate(cats):
+            t = profilo[cat]
+            banda, colore = banda_da_tscore(t)
+            x = self.l_margin + i * (w + gap)
+
+            self.set_fill_color(247, 251, 253)
+            self.set_draw_color(224, 224, 224)
+            self.set_line_width(0.2)
+            self.rect(x, y0, w, h, style="DF")
+
+            self.set_xy(x + 2, y0 + 2.5)
+            self.set_font("Helvetica", "B", 6.5)
+            self.set_text_color(120, 145, 160)
+            self.multi_cell(w - 4, 3.2, _pdf_safe(cat), align="C")
+
+            self.set_xy(x, y0 + 11.5)
+            self.set_font("Helvetica", "B", 20)
+            self.set_text_color(*_hex_to_rgb(colore))
+            self.cell(w, 9, f"{t:.0f}", align="C")
+
+            self.set_xy(x + 2, y0 + 20.5)
+            self.set_font("Helvetica", "", 6.5)
+            self.set_text_color(90, 90, 100)
+            self.multi_cell(w - 4, 3.2, _pdf_safe(banda or "-"), align="C")
+
+        # Reset esplicito: fill/testo/bordo restano impostati sull'ultimo
+        # riquadro disegnato e verrebbero ereditati dagli elementi seguenti.
+        self.set_xy(self.l_margin, y0 + h)
+        self.set_fill_color(255, 255, 255)
+        self.set_text_color(30, 30, 30)
+        self.set_draw_color(200, 200, 200)
+        self.ln(5)
+
     def descriptions_block(self, items):
         pairs = [(it["label"], it["desc"]) for it in items if it and it.get("desc")]
         if not pairs:
@@ -2646,13 +2724,9 @@ def genera_report_pdf(nome, sesso, periodo, results, profilo, commento, threshol
         pdf.chart_image(radar_fig, width_px=1000, height_px=620, content_width_mm=150)
     else:
         pdf.body_text("Nessuna metrica con confronto di popolazione disponibile.")
-    for cat in cats_valide:
-        t = profilo[cat]
-        banda, _ = banda_da_tscore(t)
-        pdf.set_font("Helvetica", "B", 9.5)
-        pdf.set_text_color(*_hex_to_rgb(TEXT_COLOR))
-        pdf.cell(0, 5.5, _pdf_safe(f"{cat}: T={t:.0f} ({banda})"), new_x="LMARGIN", new_y="NEXT")
-    pdf.ln(3)
+    pdf.profile_cards(cats_valide, profilo)
+
+    pdf.add_page()
 
     # --- Categorie di test ---
     for cat in CATEGORIES:
@@ -2666,13 +2740,13 @@ def genera_report_pdf(nome, sesso, periodo, results, profilo, commento, threshol
             h_px = max(360, 70 * n_metrics + 150)
             pdf.chart_image(tscore_fig, width_px=1000, height_px=h_px, content_width_mm=180)
         pdf.metric_table(cat_results)
-        pdf.ln(2)
-        pdf.descriptions_block(cat_results)
+        pdf.ln(1)
         rsq_fig = build_rsq_chart(cat, results)
         if rsq_fig:
             pdf.subsection_title("RSQ - Reactive Strength Quadrant")
             pdf.chart_image(rsq_fig, width_px=900, height_px=430, content_width_mm=150)
-        pdf.ln(3)
+        pdf.descriptions_block(cat_results)
+        pdf.add_page()
 
     # --- Indici (DSI, EUR) ---
     r_dsi = next((r for r in results if r["key"] == "dsi" and r["mean"] is not None), None)
@@ -2694,13 +2768,19 @@ def genera_report_pdf(nome, sesso, periodo, results, profilo, commento, threshol
                 pop = f"   Media pop. {r_idx['pop_mean']:.3f}" if r_idx["pop_mean"] is not None else ""
                 pdf.body_text(f"{idx_key.upper()}: {r_idx['mean']:.3f}{zona}{pop}   "
                               f"soglie {lo:.2f} / {hi:.2f}")
+                # height della figura e height_px di kaleido DEVONO coincidere:
+                # lo spessore della fascia e' (height - margini) dell'altezza
+                # effettivamente renderizzata, non di quella dichiarata nella
+                # figura. Se divergono, in PDF la fascia diventa un blocco.
                 strip = ratio_band_strip(idx_key, r_idx["mean"], lo, hi,
                                          label=idx_key.upper(), decimals=3)
                 if strip:
-                    pdf.chart_image(strip, width_px=900, height_px=180, content_width_mm=160)
+                    pdf.chart_image(strip, width_px=900, height_px=strip.layout.height,
+                                    content_width_mm=150)
             if fig_idx:
                 pdf.chart_image(fig_idx, width_px=900, height_px=470, content_width_mm=150)
             pdf.descriptions_block([r_idx])
+            pdf.add_page()
 
     # --- Analisi ---
     pdf.section_title("Analisi")
