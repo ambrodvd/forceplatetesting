@@ -31,6 +31,7 @@ import plotly.graph_objects as go
 import openpyxl
 import sys
 from fpdf import FPDF
+from fpdf.fonts import FontFace
 
 # ============================================================================
 # PARTE 1 — COSTANTI E DATI DI POPOLAZIONE
