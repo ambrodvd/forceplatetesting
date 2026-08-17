@@ -27,33 +27,9 @@ from dataclasses import dataclass, field
 
 import streamlit as st
 import pandas as pd
+os.environ.setdefault("BROWSER_PATH", "/usr/bin/chromium")
 import plotly.graph_objects as go
 import openpyxl
-import subprocess, sys, importlib
-import sys, os, subprocess, importlib
-
-_DEPS = "/tmp/fpdf2_clean"
-_MARK = os.path.join(_DEPS, ".ok")
-
-if not os.path.exists(_MARK):
-    r = subprocess.run([sys.executable, "-m", "pip", "install", "--target", _DEPS,
-                        "--no-deps", "--upgrade", "fpdf2==2.8.8"],
-                       capture_output=True, text=True)
-    if r.returncode == 0:
-        open(_MARK, "w").close()
-    else:
-        print("FPDF2 SIDELOAD FAILED:", r.stderr[-2000:], file=sys.stderr, flush=True)
-
-if os.path.isdir(_DEPS):
-    sys.path.insert(0, _DEPS)
-    for m in [k for k in list(sys.modules) if k == "fpdf" or k.startswith("fpdf.")]:
-        del sys.modules[m]
-    importlib.invalidate_caches()
-
-import fpdf, inspect
-print("FPDF FROM:", fpdf.__file__, "| new_x:",
-      "new_x" in inspect.signature(fpdf.FPDF.cell).parameters,
-      file=sys.stderr, flush=True)
 from fpdf import FPDF
 from fpdf.fonts import FontFace
 
