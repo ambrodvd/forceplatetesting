@@ -29,7 +29,18 @@ import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
 import openpyxl
-import sys
+import subprocess, sys, importlib
+try:
+    import fpdf, inspect
+    if "new_x" not in inspect.signature(fpdf.FPDF.cell).parameters:
+        raise ImportError("legacy fpdf detected")
+except Exception:
+    subprocess.run([sys.executable, "-m", "pip", "uninstall", "-y", "fpdf"], check=False)
+    subprocess.run([sys.executable, "-m", "pip", "install", "--force-reinstall",
+                    "--no-deps", "fpdf2==2.8.8"], check=False)
+    importlib.invalidate_caches()
+    for m in [k for k in sys.modules if k == "fpdf" or k.startswith("fpdf.")]:
+        del sys.modules[m]
 from fpdf import FPDF
 from fpdf.fonts import FontFace
 
