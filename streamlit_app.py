@@ -41,6 +41,16 @@ from fpdf.fonts import FontFace
 
 CATEGORIES = ["ISOMETRIC PULL TEST", "SQUAT JUMP TEST", "COUNTERMOVEMENT JUMP TEST", "COUNTERMOVEMENT JUMP REBOUND TEST"]
 
+# Qualità fisica misurata da ciascun test: il nome del protocollo dice COME si
+# è misurato, l'etichetta dice COSA significa. Serve all'atleta, che non ha
+# motivo di sapere cosa sia un "countermovement jump rebound".
+CATEGORY_QUALITY = {
+    "ISOMETRIC PULL TEST": "Forza massima",
+    "SQUAT JUMP TEST": "Potenza",
+    "COUNTERMOVEMENT JUMP TEST": "Esplosività",
+    "COUNTERMOVEMENT JUMP REBOUND TEST": "Reattività",
+}
+
 # Bande di valutazione basate sul T-score (media 50, deviazione standard 10)
 BANDS = [
     (float("-inf"), 30, "MOLTO SOTTO LA MEDIA", "#B00020"),
@@ -1883,8 +1893,7 @@ with tab_costanti:
         "modifiche si applicano subito alle altre schede."
     )
     st.caption(
-        "Nota: DSI ed EUR non usano più il T-score (sono indici diagnostici, non metriche "
-        "'più alto = meglio'), ma la loro media di popolazione resta utile come riferimento e "
+        "Nota: per DSI ed EUR la media di popolazione non viene usata per il T-score ma è utile come riferimento e "
         "viene mostrata accanto al valore dell'atleta. Le soglie di lettura di DSI ed EUR si "
         "modificano qui sotto."
     )
@@ -2198,9 +2207,15 @@ with tab_profilo:
             for col, cat in zip(cols, cats_valide):
                 t = profilo[cat]
                 banda, colore = banda_da_tscore(t)
-                col.markdown(f"**{cat}**")
-                col.markdown(f"<span style='font-size:28px;color:{colore}'>{t:.0f}</span>", unsafe_allow_html=True)
-                col.caption(banda)
+                with col.container(border=True):
+                    st.markdown(
+                        f"<div style='font-size:11px;letter-spacing:0.5px;opacity:0.65'>{cat}</div>"
+                        f"<div style='font-size:17px;font-weight:600;color:{TEXT_COLOR};"
+                        f"margin:2px 0 4px 0'>{CATEGORY_QUALITY.get(cat, '')}</div>"
+                        f"<div style='font-size:30px;font-weight:700;color:{colore}'>{t:.0f}</div>"
+                        f"<div style='font-size:13px;opacity:0.75'>{banda}</div>",
+                        unsafe_allow_html=True,
+                    )
 
         # --- Indici a rapporto (DSI, EUR): barra a bande + grafico a spicchi.
         # Le soglie si modificano nella scheda ⚙️ Costanti e si applicano
@@ -2309,15 +2324,18 @@ SWC_SCALE = [
     (float("inf"), "Molto grande", "#0bb6ff"),
 ]
 
-ESITO_REALE = "🟢 Alta"
-ESITO_STABILE = "🟡 Bassa"
-ESITO_INCERTO = "❓ Incerta"
-ESITO_ND = "⚠ Non valutabile"
+# Semaforo sull'attendibilita' del cambiamento, non sulla sua desiderabilita':
+# verde = c'e' stato un cambiamento reale; giallo = non si puo' dire; rosso =
+# quasi certamente nessun cambiamento rilevante.
+ESITO_REALE = "\U0001F7E2 Alta"
+ESITO_INCERTO = "\U0001F7E1 Incerta"
+ESITO_STABILE = "\U0001F534 Bassa"
+ESITO_ND = "\u26A0\uFE0F Non valutabile"
 ESITO_COLORI = {
     ESITO_REALE: "#2E7D32",
-    ESITO_STABILE: TEXT_COLOR,
-    ESITO_INCERTO: "#8d8d8d",
-    ESITO_ND: "#E4572E",
+    ESITO_INCERTO: "#B8860B",
+    ESITO_STABILE: "#B00020",
+    ESITO_ND: "#8d8d8d",
 }
 
 # Colonne di intestazione dell'export completo: tutto il resto è variabile.
@@ -2397,6 +2415,19 @@ def _sd_campionaria(values):
         return None
     m = sum(values) / n
     return math.sqrt(sum((v - m) ** 2 for v in values) / (n - 1))
+
+
+def fmt_valore(v, segno=False):
+    """Numero leggibile senza notazione scientifica: i decimali si adattano
+    alla grandezza. "{:.3g}" trasformerebbe 1815 in "1.82e+03", illeggibile
+    per un allenatore che si aspetta dei newton."""
+    if v is None or (isinstance(v, float) and math.isnan(v)):
+        return "—"
+    if not isinstance(v, (int, float)):
+        return str(v)
+    a = abs(v)
+    dec = 0 if a >= 100 else (1 if a >= 10 else (2 if a >= 1 else 3))
+    return f"{v:+.{dec}f}" if segno else f"{v:.{dec}f}"
 
 
 def scala_ampiezza(rapporto):
@@ -2733,7 +2764,7 @@ def compare_to_history(cur_long, hist_long, athlete_te=None, pop_sd_map=None):
         "_rapporto", ascending=False, na_position="last")
 
 
-def build_swc_strip(riga, height=165):
+def build_swc_strip(riga, height=134):
     """Striscia a bande per una metrica, nelle sue unità native. Stessa
     geometria del grafico usato per DSI/EUR: fascia sottile, marcatore del
     valore, etichette sopra. Le bande cadono a ±1/3/6/10 SWC attorno alla
@@ -2778,16 +2809,25 @@ def build_swc_strip(riga, height=165):
                            yanchor="bottom", text=etichetta, showarrow=False,
                            font=dict(size=9, color="#484343"))
 
-    fig.add_vline(x=media_rif, line_dash="dash", line_color=ACCENT, line_width=1.5)
+    # La media di riferimento e' un rombo VUOTO, non una linea tratteggiata:
+    # su una fascia alta ~20px una vline verticale e' praticamente invisibile.
+    # Vuoto vs pieno distingue il riferimento dal dato del test a colpo d'occhio.
+    fig.add_trace(go.Scatter(
+        x=[media_rif], y=[0], mode="markers", name="Media rif.",
+        marker=dict(size=15, color=ACCENT, symbol="diamond-open",
+                    line=dict(width=3, color=ACCENT)),
+        cliponaxis=False,
+        hovertemplate=f"Media riferimento: {fmt_valore(media_rif)}<extra></extra>",
+    ))
     fig.add_trace(go.Scatter(
         x=[valore], y=[0], mode="markers+text",
         marker=dict(size=13, color=PRIMARY, symbol="diamond",
                     line=dict(width=1.5, color="white")),
         error_x=dict(type="data", array=[margine_abs], color=PRIMARY,
                      thickness=1.5, width=5),
-        text=[f"{valore:.3g}"], textposition="bottom center",
+        text=[fmt_valore(valore)], textposition="bottom center",
         textfont=dict(color=TEXT_COLOR, size=13), cliponaxis=False,
-        hovertemplate=(f"Attuale: %{{x:.3g}}<br>Media rif.: {media_rif:.3g}"
+        hovertemplate=(f"Attuale: %{{x:.4g}}<br>Media rif.: {fmt_valore(media_rif)}"
                        f"<extra></extra>"),
     ))
 
@@ -2798,13 +2838,13 @@ def build_swc_strip(riga, height=165):
     # all'altezza, altrimenti il titolo si sovrappone alle etichette delle
     # fasce (annotazioni in coordinate paper appena sopra l'area di plot).
     fig.update_layout(
-        title=dict(text=f"<b>{riga['Metrica']}{unita}</b>", x=0, xanchor="left",
-                   y=0.97, yanchor="top",
+        title=dict(text=f"<b>{riga['Metrica']}{unita}</b>", x=0.5, xanchor="center",
+                   y=0.90, yanchor="top",
                    font=dict(size=15, color=TEXT_COLOR)),
         xaxis=dict(range=[lo_ax, hi_ax], showgrid=False, automargin=True,
-                   tickvals=[media_rif], ticktext=[f"media {media_rif:.3g}"]),
+                   tickvals=[media_rif], ticktext=[f"media {fmt_valore(media_rif)}"]),
         yaxis=dict(range=[-1, 1], showgrid=False, showticklabels=False, zeroline=False),
-        height=height, margin=dict(t=95, b=50, l=20, r=20), showlegend=False,
+        height=height, margin=dict(t=64, b=50, l=20, r=20), showlegend=False,
         plot_bgcolor=BG_COLOR, paper_bgcolor=BG_COLOR, font=dict(color=TEXT_COLOR),
     )
     return fig
@@ -2821,6 +2861,15 @@ def build_swc_strip(riga, height=165):
 # SWC = 0,2 SD, quindi 1 SWC = 2 punti di T-score. Piccolo = 2 punti,
 # moderato = 6, grande = 12, molto grande = 20.
 SWC_IN_PUNTI_T = 10.0 * SWC_FACTOR
+
+
+def colore_delta_t(delta):
+    """Verde se il T-score sale, rosso se scende. Qui il colore e' legittimo
+    (a differenza delle metriche grezze): il T-score e' gia' orientato alla
+    prestazione, quindi piu' alto e' sempre migliore."""
+    if delta is None or (isinstance(delta, float) and math.isnan(delta)):
+        return "#8d8d8d"
+    return "#2E7D32" if delta > 0 else ("#B00020" if delta < 0 else "#8d8d8d")
 
 
 def comp_score_specs(pop_dict, sesso_atleta):
@@ -3046,11 +3095,8 @@ with tab_comparazione:
             "**🔍 Dettaglio Test → Esporta TUTTE le metriche grezze**."
         )
         st.caption(
-            "Il confronto statistico è contro la MEDIA delle sedute precedenti: la media di più "
-            "sedute è più precisa di una singola, quindi l'incertezza si stringe. Il miglior "
-            "valore storico è riportato solo come riferimento descrittivo — un record è quasi "
-            "sempre il giorno in cui l'atleta era in forma e il rumore ha aiutato, quindi "
-            "confrontarcisi statisticamente darebbe 'peggiorato' quasi sempre."
+            "Il confronto statistico è contro la MEDIA delle sedute precedenti. È riportato anche il miglior "
+            "valore storico come riferimento."
         )
 
         comp_files = st.file_uploader(
@@ -3133,14 +3179,14 @@ with tab_comparazione:
 
                     conteggi = vista["Attendibilità"].value_counts()
                     k1, k2, k3, k4 = st.columns(4)
-                    k1.metric("🟢 Alta", int(conteggi.get(ESITO_REALE, 0)))
-                    k2.metric("🟡 Bassa", int(conteggi.get(ESITO_STABILE, 0)))
-                    k3.metric("❓ Incerta", int(conteggi.get(ESITO_INCERTO, 0)))
-                    k4.metric("⚠ Non valutabile", int(conteggi.get(ESITO_ND, 0)))
+                    k1.metric(ESITO_REALE, int(conteggi.get(ESITO_REALE, 0)))
+                    k2.metric(ESITO_STABILE, int(conteggi.get(ESITO_STABILE, 0)))
+                    k3.metric(ESITO_INCERTO, int(conteggi.get(ESITO_INCERTO, 0)))
+                    k4.metric(ESITO_ND, int(conteggi.get(ESITO_ND, 0)))
 
                     tab_df = vista[[
-                        "Test", "Metrica", "Attendibilità", "Cambiamento", "Unità",
-                        "Media rif.", "Attuale", "Delta", "Delta %",
+                        "Test", "Metrica", "Unità", "Media rif.", "Attuale",
+                        "Delta", "Delta %", "Cambiamento", "Attendibilità",
                         "Migliore", "% del migliore", "Seduta migliore", "N sedute",
                     ]].reset_index(drop=True)
 
@@ -3154,8 +3200,9 @@ with tab_comparazione:
 
                     st.dataframe(
                         tab_df.style.apply(_stile_comp, axis=1).format({
-                            "Media rif.": "{:.3g}", "Attuale": "{:.3g}", "Delta": "{:+.3g}",
-                            "Delta %": "{:+.1f}%", "Migliore": "{:.3g}",
+                            "Media rif.": fmt_valore, "Attuale": fmt_valore,
+                            "Delta": lambda v: fmt_valore(v, segno=True),
+                            "Delta %": "{:+.1f}%", "Migliore": fmt_valore,
                             "% del migliore": "{:.0f}%",
                         }, na_rep="—"),
                         use_container_width=True, hide_index=True,
@@ -3174,10 +3221,9 @@ with tab_comparazione:
                     # --- Strisce per metrica ---
                     st.markdown("#### Scostamento dalla media, metrica per metrica")
                     st.caption(
-                        "Il rombo è il test attuale con la sua barra di incertezza; la linea "
-                        "tratteggiata arancione è la media delle sedute precedenti. Le fasce "
-                        "colorate sono l'entità dello scostamento (trascurabile, piccolo, moderato, "
-                        "grande), simmetriche sopra e sotto la media."
+                        "Il rombo pieno azzurro è il test attuale con la sua barra di "
+                        "incertezza; il rombo vuoto arancione è la media delle sedute "
+                        "precedenti."
                     )
                     strip_opzioni = [r["_display"] for _, r in vista.iterrows()
                                      if r["_swc"] is not None]
@@ -3203,6 +3249,7 @@ with tab_comparazione:
                     prof_cur_all, _t_cur = profili_per_sessione(cur_long, specs)
                     prof_cur = prof_cur_all.get("Attuale", {})
 
+                    prof_res, prof_serie, prof_cats = pd.DataFrame(), None, []
                     if not prof_cur or not prof_hist:
                         st.info(
                             "Profilo non calcolabile: servono metriche con norme di popolazione "
@@ -3217,27 +3264,59 @@ with tab_comparazione:
                             medie_cat[c] = sum(valori) / len(valori)
                             migliori_cat[c] = max(valori)
 
-                        radar = build_profili_radar(cats_valide, {
+                        prof_cats = cats_valide
+                        prof_serie = {
                             "Media sedute precedenti": medie_cat,
                             "Miglior seduta": migliori_cat,
                             f"{nome} — attuale": prof_cur,
-                        }, nome)
-                        if radar:
-                            st.plotly_chart(radar, use_container_width=True)
-                        st.caption(
-                            "Il T-score è già orientato alla prestazione (per le metriche dove meno "
-                            "è meglio lo scarto viene invertito), quindi qui un valore più alto è "
-                            "sempre migliore. 1 soglia di rilevanza = 2 punti di T-score, perché "
-                            "T = 50 + 10·z e la soglia vale 0,2 deviazioni standard."
-                        )
-
+                        }
+                        # confronta_profili() viene chiamata PRIMA del radar
+                        # perche' le card sotto il grafico usano il Delta T.
                         prof_res = confronta_profili(prof_cur, prof_hist, _t_hist, hist_long,
                                                      specs, te_atleta)
+                        delta_per_cat = ({r["Categoria"]: r["Delta T"]
+                                          for _, r in prof_res.iterrows()}
+                                         if not prof_res.empty else {})
+
+                        radar = build_profili_radar(cats_valide, prof_serie, nome)
+                        if radar:
+                            st.plotly_chart(radar, use_container_width=True)
+
+                        # Card come nella scheda Profilo di Forza, piu' il solo
+                        # scostamento in punti T: entita' e attendibilita' si
+                        # leggono in tabella, qui servirebbero solo a togliere
+                        # risalto al T-score.
+                        cols_prof = st.columns(len(cats_valide))
+                        for col, cat in zip(cols_prof, cats_valide):
+                            t = prof_cur[cat]
+                            banda, colore = banda_da_tscore(t)
+                            d = delta_per_cat.get(cat)
+                            html_card = (
+                                f"<div style='font-size:11px;letter-spacing:0.5px;"
+                                f"opacity:0.65'>{cat}</div>"
+                                f"<div style='font-size:17px;font-weight:600;"
+                                f"color:{TEXT_COLOR};margin:2px 0 4px 0'>"
+                                f"{CATEGORY_QUALITY.get(cat, '')}</div>"
+                                f"<div style='font-size:30px;font-weight:700;"
+                                f"color:{colore}'>{t:.0f}</div>"
+                            )
+                            if d is not None:
+                                html_card += (
+                                    f"<div style='font-size:15px;font-weight:600;"
+                                    f"color:{colore_delta_t(d)}'>{d:+.1f}</div>"
+                                )
+                            html_card += (
+                                f"<div style='font-size:13px;opacity:0.75;"
+                                f"margin-top:4px'>{banda}</div>"
+                            )
+                            with col.container(border=True):
+                                st.markdown(html_card, unsafe_allow_html=True)
+
                         if not prof_res.empty:
                             prof_df = prof_res[[
-                                "Categoria", "Attendibilità", "Cambiamento", "T attuale",
-                                "Delta T", "Valutazione attuale", "T migliore",
-                                "Seduta migliore", "N sedute",
+                                "Categoria", "T medio rif.", "T attuale", "Delta T",
+                                "Cambiamento", "Attendibilità", "Valutazione attuale",
+                                "T migliore", "Seduta migliore", "N sedute",
                             ]].reset_index(drop=True)
 
                             def _stile_prof(row):
@@ -3250,23 +3329,22 @@ with tab_comparazione:
 
                             st.dataframe(
                                 prof_df.style.apply(_stile_prof, axis=1).format({
-                                    "T attuale": "{:.1f}",
+                                    "T medio rif.": "{:.1f}", "T attuale": "{:.1f}",
                                     "Delta T": "{:+.1f}", "T migliore": "{:.1f}",
                                 }, na_rep="—"),
                                 use_container_width=True, hide_index=True,
                             )
 
                     # --- Indici di profilo DSI / EUR ------------------------
+                    idx_export = []
                     idx_disponibili = [
                         k for k in ("dsi", "eur")
                         if _metric_id("indici", k) in set(cur_long["metric_id"])
                     ]
                     if idx_disponibili:
-                        st.markdown("#### Indici di profilo: si è spostato di zona?")
+                        st.markdown("#### Indici di profilo")
                         st.caption(
-                            "DSI ed EUR non hanno un verso migliore: quello che conta è se "
-                            "l'atleta ha cambiato zona di profilo. Il rombo è il test attuale, "
-                            "il cerchio vuoto la media delle sedute precedenti."
+                            "Il rombo è il test attuale, il cerchio vuoto la media delle sedute precedenti."
                         )
                         for key in idx_disponibili:
                             mid = _metric_id("indici", key)
@@ -3288,6 +3366,24 @@ with tab_comparazione:
                             elif zona_att:
                                 st.markdown(f"**{key.upper()}** — zona invariata: *{zona_att}*.")
                             st.plotly_chart(fig_idx, use_container_width=True)
+                            idx_export.append(dict(
+                                key=key, attuale=v_att, riferimento=v_rif,
+                                zona_att=zona_att, zona_rif=zona_rif,
+                                thr=(lo_thr, hi_thr),
+                            ))
+
+                    # Rende i risultati disponibili alla scheda 📄 Report: i
+                    # generatori HTML/PDF leggono questa chiave se presente, e
+                    # includono la sezione Comparazione. Le figure NON vengono
+                    # salvate qui (sono ricostruite al momento dell'export dalle
+                    # stesse funzioni), solo i dati.
+                    st.session_state["comp_export"] = dict(
+                        vista=vista.copy(), n_sedute=n_sedute,
+                        prof=prof_res.copy() if not prof_res.empty else None,
+                        prof_serie=prof_serie, prof_cats=list(prof_cats),
+                        strip=[d for d in strip_scelte],
+                        indici=idx_export,
+                    )
 
                     st.download_button(
                         "⬇️ Scarica comparazione (.csv)",
@@ -3306,8 +3402,9 @@ with tab_comparazione:
 - **{ESITO_REALE}** — l'intervallo di incertezza sta interamente oltre la soglia
   di rilevanza: il cambiamento supera il rumore della misura ed è abbastanza
   grande da contare.
-- **{ESITO_STABILE}** — l'intervallo sta interamente dentro la soglia: l'atleta è
-  davvero fermo. È una conclusione, non un dato mancante.
+- **{ESITO_STABILE}** — l'intervallo sta interamente dentro la soglia: quasi
+  certamente NON c'è stato un cambiamento rilevante. È una conclusione, non un
+  dato mancante: sapere che l'atleta è fermo è un'informazione.
 - **{ESITO_INCERTO}** — l'intervallo scavalca la soglia: i dati non bastano per
   decidere. Con poche sedute è l'esito più frequente, ed è la risposta onesta.
 - **{ESITO_ND}** — manca una soglia di rilevanza: né norma di popolazione né
@@ -3355,6 +3452,17 @@ percentuale, non in unità assolute.
 # duplicazione della logica di analisi/plotting). Chi riceve il file può
 # aprirlo in qualunque browser e, se serve una copia statica, stampare /
 # "Salva come PDF" direttamente da lì.
+#
+# ORDINE DEL FILE (non modificarlo a caso):
+#   PARTE 6    — helper HTML condivisi
+#   PARTE 6ter — sezione Comparazione (HTML + PDF)
+#   genera_report_html
+#   PARTE 6bis — infrastruttura PDF (_pdf_safe, _ReportPDF, ...)
+#   genera_report_pdf
+#   with tab_report
+# La 6ter usa _pdf_safe/_hex_to_rgb/FontFace, definiti più in basso nella
+# 6bis: non è un problema, i nomi vengono risolti alla CHIAMATA e non alla
+# definizione della funzione.
 
 def _fig_div(fig, div_id):
     """Converte una figura Plotly in un <div> HTML incorporabile nel report,
@@ -3422,7 +3530,375 @@ def _metric_table_html(cat_results):
     </table>"""
 
 
-def genera_report_html(nome, sesso, periodo, results, profilo, commento, thresholds):
+# ============================================================================
+# PARTE 6ter — SEZIONE COMPARAZIONE NEI REPORT
+# ============================================================================
+# I risultati della scheda 🔀 Comparazione vengono salvati in
+# st.session_state["comp_export"] dalla PARTE 5bis. Qui vengono trasformati
+# in HTML e in PDF. Se la chiave non esiste (comparazione non eseguita in
+# questa sessione) le funzioni restituiscono contenuto vuoto e il report
+# resta identico a prima: la sezione è opzionale, non obbligatoria.
+#
+# Le FIGURE non vengono salvate nello stato ma ricostruite qui dalle stesse
+# funzioni build_swc_strip / build_profili_radar / build_indice_zone_strip
+# usate nella UI live: un solo posto dove cambiare la grafica.
+
+# Emoji -> testo per il PDF: i font core di fpdf2 sono Latin-1, quindi ogni
+# emoji verrebbe scartata da _pdf_safe lasciando l'etichetta mutila
+# ("🟢 Alta" -> " Alta"). Le frecce diventano segni ASCII, i pallini del
+# semaforo sparisc­ono perché nel PDF il colore lo dà il riempimento cella.
+_PDF_COMP_REPLACEMENTS = {
+    "\U0001F7E2": "", "\U0001F7E1": "", "\U0001F534": "",
+    "\u26A0\uFE0F": "", "\u26A0": "", "\u2753": "",
+    "\U0001F53A": "+", "\U0001F53B": "-", "\u25AA": "=",
+}
+
+
+def _pdf_comp(text):
+    """_pdf_safe + traduzione delle emoji di Comparazione."""
+    t = str(text if text is not None else "")
+    for old, new in _PDF_COMP_REPLACEMENTS.items():
+        t = t.replace(old, new)
+    return _pdf_safe(t.strip())
+
+
+def _delta_t_html(delta):
+    """Riga compatta col solo scostamento in punti T. Entita' e attendibilita'
+    restano in tabella: nella card toglierebbero risalto al T-score."""
+    if delta is None or (isinstance(delta, float) and math.isnan(delta)):
+        return ""
+    return (f'<div class="profile-card-delta" style="color:{colore_delta_t(delta)}">'
+            f'{delta:+.1f}</div>')
+
+
+def _comp_esito_colore(esito):
+    """Colore associato a un'etichetta di attendibilità, con fallback grigio."""
+    return ESITO_COLORI.get(str(esito), "#8d8d8d")
+
+
+def _fmt(valore, decimali=3, segno=False, suffisso=""):
+    """Wrapper su fmt_valore della PARTE 5bis: stessa resa numerica in UI e
+    nei report. `decimali` e' rispettato solo per le percentuali, dove serve
+    un numero fisso di cifre."""
+    if valore is None or (isinstance(valore, float) and math.isnan(valore)):
+        return "—"
+    if suffisso == "%" and isinstance(valore, (int, float)):
+        return (f"{valore:+.{decimali}f}" if segno else f"{valore:.{decimali}f}") + suffisso
+    return fmt_valore(valore, segno=segno) + suffisso
+
+
+# ----------------------------------------------------------------------------
+# HTML
+# ----------------------------------------------------------------------------
+COMP_HTML_COLS = [
+    ("Test", 0, False), ("Metrica", 0, False), ("Unità", 0, False),
+    ("Media rif.", 3, False), ("Attuale", 3, False),
+    ("Delta", 3, True), ("Delta %", 1, True),
+    ("Cambiamento", 0, False), ("Attendibilità", 0, False),
+    ("Migliore", 3, False), ("% del migliore", 0, False),
+    ("Seduta migliore", 0, False),
+]
+
+
+def _comp_table_html(vista):
+    """Tabella della Comparazione: stesse colonne e stesso ordine della UI."""
+    if vista is None or vista.empty:
+        return ""
+    thead = "".join(f"<th>{c}</th>" for c, _d, _s in COMP_HTML_COLS)
+    righe = []
+    for _, r in vista.iterrows():
+        celle = []
+        for col, dec, segno in COMP_HTML_COLS:
+            v = r.get(col)
+            if col == "Attendibilità":
+                celle.append(f'<td style="color:{_comp_esito_colore(v)};'
+                             f'font-weight:600">{v}</td>')
+            elif col == "Delta %":
+                celle.append(f"<td>{_fmt(v, 1, True, '%')}</td>")
+            elif col == "% del migliore":
+                celle.append(f"<td>{_fmt(v, 0, False, '%')}</td>")
+            elif dec:
+                celle.append(f"<td>{_fmt(v, dec, segno)}</td>")
+            else:
+                celle.append(f"<td>{v if v not in (None, '') else '—'}</td>")
+        righe.append("<tr>" + "".join(celle) + "</tr>")
+    return (f'<table class="report-table"><thead><tr>{thead}</tr></thead>'
+            f'<tbody>{"".join(righe)}</tbody></table>')
+
+
+PROF_HTML_COLS = [
+    ("Categoria", 0), ("T medio rif.", 1), ("T attuale", 1), ("Delta T", 1),
+    ("Cambiamento", 0), ("Attendibilità", 0), ("Valutazione attuale", 0),
+    ("T migliore", 1), ("Seduta migliore", 0), ("N sedute", 0),
+]
+
+
+def _prof_table_html(prof):
+    if prof is None or prof.empty:
+        return ""
+    thead = "".join(f"<th>{c}</th>" for c, _d in PROF_HTML_COLS)
+    righe = []
+    for _, r in prof.iterrows():
+        celle = []
+        for col, dec in PROF_HTML_COLS:
+            v = r.get(col)
+            if col == "Attendibilità":
+                celle.append(f'<td style="color:{_comp_esito_colore(v)};'
+                             f'font-weight:600">{v}</td>')
+            elif col == "Delta T":
+                celle.append(f"<td>{v:+.1f}</td>" if isinstance(v, (int, float)) else "<td>—</td>")
+            elif dec:
+                celle.append(f"<td>{v:.{dec}f}</td>" if isinstance(v, (int, float)) else "<td>—</td>")
+            else:
+                celle.append(f"<td>{v if v not in (None, '') else '—'}</td>")
+        righe.append("<tr>" + "".join(celle) + "</tr>")
+    return (f'<table class="report-table"><thead><tr>{thead}</tr></thead>'
+            f'<tbody>{"".join(righe)}</tbody></table>')
+
+
+def comparazione_sections_html(comp, nome_atleta, next_id):
+    """Sezioni HTML della Comparazione. Lista vuota se comp è None."""
+    if not comp:
+        return []
+    vista = comp.get("vista")
+    if vista is None or vista.empty:
+        return []
+
+    conteggi = vista["Attendibilità"].value_counts()
+    cards = "".join(
+        f"""<div class="profile-card">
+                <div class="profile-card-cat">{etichetta}</div>
+                <div class="profile-card-t" style="color:{_comp_esito_colore(etichetta)}">
+                    {int(conteggi.get(etichetta, 0))}</div>
+            </div>"""
+        for etichetta in (ESITO_REALE, ESITO_INCERTO, ESITO_STABILE, ESITO_ND)
+    )
+
+    sezioni = [f"""<section>
+        <h2>Comparazione con lo storico</h2>
+        <p class="intro-text">Il test è confrontato con la <b>media di
+        {comp.get('n_sedute', 0)} sedute precedenti</b> (esclusa l'attuale).
+        <b>Cambiamento</b> dice direzione ed entità dello scostamento;
+        <b>Attendibilità</b> è un indice statistico per valutare quanto è credibile che un cambiamento ci sia stato davvero</p>
+        <div class="profile-cards">{cards}</div>
+        {_comp_table_html(vista)}
+    </section>"""]
+
+    # Strisce per le metriche scelte nella UI
+    scelte = comp.get("strip") or []
+    strisce = []
+    for _, riga in vista[vista["_display"].isin(scelte)].iterrows():
+        fig = build_swc_strip(riga)
+        if fig is not None:
+            strisce.append(_fig_div(fig, next_id("comp_strip")))
+    if strisce:
+        sezioni.append(f"""<section>
+            <h2>Scostamento dalla media, metrica per metrica</h2>
+            <p class="intro-text">Il rombo pieno azzurro è il test attuale con la
+            sua barra di incertezza; il rombo vuoto arancione è la media delle
+            sedute precedenti.</p>
+            {''.join(strisce)}
+        </section>""")
+
+    # Profilo di forza: radar sovrapposto + tabella per categoria
+    prof, serie, cats = comp.get("prof"), comp.get("prof_serie"), comp.get("prof_cats")
+    if serie and cats:
+        radar = build_profili_radar(cats, serie, nome_atleta)
+        attuale = serie.get(f"{nome_atleta} — attuale", {})
+        delta_map = ({r["Categoria"]: r["Delta T"] for _, r in prof.iterrows()}
+                     if prof is not None and not prof.empty else {})
+        cards = "".join(
+            f"""<div class="profile-card">
+                    <div class="profile-card-cat">{c}</div>
+                    <div class="profile-card-qualita">{CATEGORY_QUALITY.get(c, '')}</div>
+                    <div class="profile-card-t" style="color:{banda_da_tscore(attuale[c])[1]}">{attuale[c]:.0f}</div>
+                    {_delta_t_html(delta_map.get(c))}
+                    <div class="profile-card-banda">{banda_da_tscore(attuale[c])[0]}</div>
+                </div>"""
+            for c in cats if c in attuale
+        )
+        sezioni.append(f"""<section>
+            <h2>Profilo di forza: attuale vs storico</h2>
+            {_fig_div(radar, next_id('comp_radar')) if radar else ''}
+            <div class="profile-cards">{cards}</div>
+            {_prof_table_html(prof)}
+        </section>""")
+
+    # Indici di profilo
+    indici = comp.get("indici") or []
+    if indici:
+        blocchi = []
+        for voce in indici:
+            fig = build_indice_zone_strip(
+                voce["key"], voce["attuale"], voce["riferimento"], *voce["thr"])
+            if fig is None:
+                continue
+            if voce["zona_att"] and voce["zona_rif"] and voce["zona_att"] != voce["zona_rif"]:
+                nota = (f"cambio di zona: da <i>{voce['zona_rif']}</i> "
+                        f"a <i>{voce['zona_att']}</i>")
+            elif voce["zona_att"]:
+                nota = f"zona invariata: <i>{voce['zona_att']}</i>"
+            else:
+                nota = ""
+            blocchi.append(
+                f"<h3>{voce['key'].upper()}</h3>"
+                f'<p class="index-value"><b>{_fmt(voce["attuale"], 3)}</b>'
+                f' <span class="muted">— {nota}</span></p>'
+                f"{_fig_div(fig, next_id('comp_idx'))}"
+            )
+        if blocchi:
+            sezioni.append(f"""<section>
+                <h2>Indici di profilo</h2>
+                {''.join(blocchi)}
+            </section>""")
+
+    return sezioni
+
+
+# ----------------------------------------------------------------------------
+# PDF
+# ----------------------------------------------------------------------------
+# Larghezze in mm: somma 180 = larghezza utile con margini 15/15. "Test" e le
+# colonne di coda della tabella HTML sono omesse per stare in A4 verticale.
+COMP_PDF_COLS = [
+    ("Metrica", 40, lambda r: _pdf_comp(r.get("Metrica"))),
+    ("UdM", 11, lambda r: _pdf_comp(r.get("Unità"))),
+    ("Media rif.", 17, lambda r: _fmt(r.get("Media rif."), 3)),
+    ("Attuale", 17, lambda r: _fmt(r.get("Attuale"), 3)),
+    ("Delta", 17, lambda r: _fmt(r.get("Delta"), 3, True)),
+    ("Cambiam.", 22, lambda r: _pdf_comp(r.get("Cambiamento"))),
+    ("Attendib.", 25, lambda r: _pdf_comp(r.get("Attendibilità"))),
+    ("Migliore", 17, lambda r: _fmt(r.get("Migliore"), 3)),
+    ("% migl.", 14, lambda r: _fmt(r.get("% del migliore"), 0, False, "%")),
+]
+
+PROF_PDF_COLS = [
+    ("Categoria", 48, lambda r: _pdf_comp(r.get("Categoria"))),
+    ("T rif.", 15, lambda r: f"{r.get('T medio rif.'):.1f}"),
+    ("T att.", 15, lambda r: f"{r.get('T attuale'):.1f}"),
+    ("Delta T", 17, lambda r: f"{r.get('Delta T'):+.1f}"),
+    ("Cambiam.", 22, lambda r: _pdf_comp(r.get("Cambiamento"))),
+    ("Attendib.", 25, lambda r: _pdf_comp(r.get("Attendibilità"))),
+    ("Valutazione", 38, lambda r: _pdf_comp(r.get("Valutazione attuale"))),
+]
+
+
+def _pdf_comp_table(pdf, df, colonne, col_esito="Attendibilità"):
+    """Tabella PDF generica per la Comparazione. La cella di attendibilità
+    viene riempita col colore del semaforo, perché nel PDF le emoji non
+    esistono e il colore è l'unico segnale visivo che resta."""
+    if df is None or df.empty:
+        return
+    pdf.set_x(pdf.l_margin)
+    pdf.set_font("Helvetica", "", 8)
+    pdf.set_draw_color(200, 200, 200)
+    pdf.set_line_width(0.2)
+    pdf.set_fill_color(255, 255, 255)
+    pdf.set_text_color(30, 30, 30)
+    pdf.ensure_space(12)
+    with pdf.table(
+        col_widths=[w for _h, w, _f in colonne], text_align="LEFT", line_height=4.6,
+        headings_style=FontFace(emphasis="BOLD", color=(255, 255, 255),
+                                fill_color=_hex_to_rgb(TEXT_COLOR)),
+    ) as table:
+        riga = table.row()
+        for intestazione, _w, _f in colonne:
+            riga.cell(intestazione)
+        for _, r in df.iterrows():
+            riga = table.row()
+            for intestazione, _w, estrai in colonne:
+                try:
+                    testo = estrai(r)
+                except (TypeError, ValueError):
+                    testo = "-"
+                stile = None
+                if intestazione.startswith("Attendib"):
+                    stile = FontFace(color=(255, 255, 255),
+                                     fill_color=_hex_to_rgb(_comp_esito_colore(r.get(col_esito))))
+                riga.cell(testo, style=stile)
+    pdf.set_x(pdf.l_margin)
+
+
+def comparazione_sezione_pdf(pdf, comp, nome_atleta):
+    """Aggiunge al PDF la sezione Comparazione. No-op se comp è None."""
+    if not comp:
+        return
+    vista = comp.get("vista")
+    if vista is None or vista.empty:
+        return
+    pdf.section_title("Comparazione con lo storico")
+    pdf.body_text(
+        f"Il test e confrontato con la media di {comp.get('n_sedute', 0)} sedute "
+        "precedenti (esclusa l'attuale). La colonna Cambiamento indica direzione "
+        "(+ in aumento, - in diminuzione) ed entita dello scostamento; "
+        "Attendibilita' e' un indice statistico per valutare quanto e' credibile "
+        "che un cambiamento ci sia stato davvero"
+    )
+    conteggi = vista["Attendibilità"].value_counts()
+    pdf.body_text("   ".join(
+        f"{_pdf_comp(e)}: {int(conteggi.get(e, 0))}"
+        for e in (ESITO_REALE, ESITO_INCERTO, ESITO_STABILE, ESITO_ND)
+    ), size=9)
+    pdf.ln(1)
+    _pdf_comp_table(pdf, vista, COMP_PDF_COLS)
+
+    # Strisce: height_px DEVE coincidere con l'altezza della figura, altrimenti
+    # kaleido rende la fascia con uno spessore diverso da quello previsto.
+    scelte = comp.get("strip") or []
+    strisce = vista[vista["_display"].isin(scelte)]
+    if not strisce.empty:
+        pdf.ln(2)
+        pdf.subsection_title("Scostamento dalla media, metrica per metrica")
+        pdf.body_text(
+            "Rombo pieno = test attuale con barra di incertezza; rombo vuoto = "
+            "media delle sedute precedenti.", size=9)
+        for _, riga in strisce.iterrows():
+            fig = build_swc_strip(riga)
+            if fig is not None:
+                pdf.chart_image(fig, width_px=900, height_px=fig.layout.height,
+                                content_width_mm=165)
+
+    prof, serie, cats = comp.get("prof"), comp.get("prof_serie"), comp.get("prof_cats")
+    if serie and cats:
+        pdf.add_page()
+        pdf.section_title("Profilo di forza: attuale vs storico")
+        radar = build_profili_radar(cats, serie, nome_atleta)
+        if radar:
+            pdf.chart_image(radar, width_px=1000, height_px=620, content_width_mm=150)
+        attuale = serie.get(f"{nome_atleta} — attuale", {})
+        if attuale:
+            delta_map = ({r["Categoria"]: r["Delta T"] for _, r in prof.iterrows()}
+                         if prof is not None and not prof.empty else {})
+            pdf.profile_cards([c for c in cats if c in attuale], attuale, delta_map)
+        pdf.body_text(
+            "Il T-score e gia orientato alla prestazione, quindi qui un valore "
+            "piu alto e sempre migliore. 1 soglia di rilevanza = 2 punti di T-score.",
+            size=9)
+        _pdf_comp_table(pdf, prof, PROF_PDF_COLS)
+
+    indici = comp.get("indici") or []
+    if indici:
+        pdf.ln(3)
+        pdf.subsection_title("Indici di profilo: si e spostato di zona?")
+        for voce in indici:
+            fig = build_indice_zone_strip(
+                voce["key"], voce["attuale"], voce["riferimento"], *voce["thr"])
+            if fig is None:
+                continue
+            if voce["zona_att"] and voce["zona_rif"] and voce["zona_att"] != voce["zona_rif"]:
+                nota = f"cambio di zona: da {voce['zona_rif']} a {voce['zona_att']}"
+            elif voce["zona_att"]:
+                nota = f"zona invariata: {voce['zona_att']}"
+            else:
+                nota = ""
+            pdf.body_text(f"{voce['key'].upper()}: {_fmt(voce['attuale'], 3)}   {nota}",
+                          size=9)
+            pdf.chart_image(fig, width_px=900, height_px=fig.layout.height,
+                            content_width_mm=150)
+
+
+def genera_report_html(nome, sesso, periodo, results, profilo, commento, thresholds,
+                       comp=None):
     div_counter = {"n": 0}
 
     def next_id(prefix):
@@ -3437,6 +3913,7 @@ def genera_report_html(nome, sesso, periodo, results, profilo, commento, thresho
     profilo_cards = "".join(
         f"""<div class="profile-card">
                 <div class="profile-card-cat">{cat}</div>
+                <div class="profile-card-qualita">{CATEGORY_QUALITY.get(cat, '')}</div>
                 <div class="profile-card-t" style="color:{banda_da_tscore(profilo[cat])[1]}">{profilo[cat]:.0f}</div>
                 <div class="profile-card-banda">{banda_da_tscore(profilo[cat])[0]}</div>
             </div>"""
@@ -3494,6 +3971,12 @@ def genera_report_html(nome, sesso, periodo, results, profilo, commento, thresho
             {_metric_descriptions_html([r_dsi, r_eur])}
         </section>""")
 
+    # --- Comparazione con lo storico ---
+    # Sezione OPZIONALE: comparazione_sections_html() restituisce una lista
+    # vuota se comp è None, cioè se la scheda 🔀 Comparazione non è stata
+    # usata in questa sessione. Va prima dell'Analisi, che chiude il report.
+    sections.extend(comparazione_sections_html(comp, nome, next_id))
+
     # --- Analisi: testo scritto dal preparatore nella scheda Report
     # dell'app, incluso qui come testo statico (non modificabile nel report).
     commento_html = _html.escape(commento).replace("\n", "<br>") if commento and commento.strip() else (
@@ -3534,8 +4017,10 @@ def genera_report_html(nome, sesso, periodo, results, profilo, commento, thresho
     .profile-cards {{ display: flex; flex-wrap: wrap; gap: 16px; margin-top: 16px; }}
     .profile-card {{ flex: 1 1 200px; background: #f7fbfd; border-radius: 8px; padding: 14px 16px; border: 1px solid #e0e0e0; }}
     .profile-card-cat {{ font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text); opacity: 0.7; }}
+    .profile-card-qualita {{ font-size: 17px; font-weight: 600; color: var(--text); margin: 2px 0 4px 0; }}
     .profile-card-t {{ font-size: 30px; font-weight: 700; }}
     .profile-card-banda {{ font-size: 13px; }}
+    .profile-card-delta {{ font-size: 15px; font-weight: 600; }}
     .muted {{ color: #667; font-size: 13px; }}
     .index-value {{ font-size: 16px; margin: 6px 0 14px 0; }}
     .metric-help {{ margin: 14px 0 4px 0; font-size: 14px; }}
@@ -3574,9 +4059,6 @@ def genera_report_html(nome, sesso, periodo, results, profilo, commento, thresho
             che confronta la prestazione dell'atleta rispetto a un gruppo di riferimento, esprimendo la
             distanza dalla media in deviazioni standard. Punteggi tra 0 e 50 indicano valori inferiori
             alla media, mentre punteggi tra 50 e 100 indicano valori superiori alla media.
-            DSI ed EUR fanno eccezione: essendo rapporti tra due test, non vengono letti come
-            "più alto = meglio" ma per zona di profilo, confrontando la posizione dell'atleta con
-            le soglie di riferimento indicate accanto a ciascun grafico.
         </p>
         {''.join(sections)}
     </div>
@@ -3716,15 +4198,23 @@ class _ReportPDF(FPDF):
         # larghezza quasi nulla e sollevare FPDFException.
         self.set_x(self.l_margin)
 
-    def profile_cards(self, cats, profilo):
+    def profile_cards(self, cats, profilo, delta_map=None):
         """Riquadri affiancati per il Profilo di Forza, equivalenti alle
-        .profile-card del report HTML: categoria, T-score grande nel colore
-        della banda, etichetta della banda. Sostituisce l'elenco di righe di
-        testo, poco leggibile a colpo d'occhio."""
+        .profile-card del report HTML: nome del protocollo, qualità fisica
+        misurata, T-score grande nel colore della banda, lo scostamento in
+        punti T (solo nella sezione Comparazione) e infine l'etichetta della
+        banda di valutazione.
+
+        delta_map è opzionale: senza, la card è quella del report base e
+        l'altezza scende da 36 a 31 mm, altrimenti resterebbe un buco bianco
+        sotto la banda. Le coordinate sono assolute, quindi se cambi `h`
+        devi spostare anche tutti gli offset y0 + ... qui sotto."""
         if not cats:
             return
         n = len(cats)
-        gap, h = 4, 26
+        con_delta = bool(delta_map)
+        gap = 4
+        h = 36 if con_delta else 31
         w = (self.epw - gap * (n - 1)) / n
         self.ensure_space(h + 6)
         y0 = self.get_y()
@@ -3738,17 +4228,36 @@ class _ReportPDF(FPDF):
             self.set_line_width(0.2)
             self.rect(x, y0, w, h, style="DF")
 
+            # Nome del protocollo: piccolo e grigio, e' il "come"
             self.set_xy(x + 2, y0 + 2.5)
             self.set_font("Helvetica", "B", 6.5)
             self.set_text_color(120, 145, 160)
             self.multi_cell(w - 4, 3.2, _pdf_safe(cat), align="C")
 
-            self.set_xy(x, y0 + 11.5)
+            # Qualita' fisica: e' il "cosa", quindi in evidenza
+            self.set_xy(x + 2, y0 + 9.4)
+            self.set_font("Helvetica", "B", 9)
+            self.set_text_color(*_hex_to_rgb(TEXT_COLOR))
+            self.multi_cell(w - 4, 4, _pdf_safe(CATEGORY_QUALITY.get(cat, "")), align="C")
+
+            # T-score nel colore della banda
+            self.set_xy(x, y0 + 14.5)
             self.set_font("Helvetica", "B", 20)
             self.set_text_color(*_hex_to_rgb(colore))
             self.cell(w, 9, f"{t:.0f}", align="C")
 
-            self.set_xy(x + 2, y0 + 20.5)
+            # Scostamento in punti T: sta SOPRA la banda, che quindi scende di
+            # 5 mm. Senza delta la banda risale al suo posto originale.
+            d = (delta_map or {}).get(cat)
+            y_banda = y0 + 24
+            if d is not None:
+                self.set_xy(x + 2, y0 + 23.5)
+                self.set_font("Helvetica", "B", 8)
+                self.set_text_color(*_hex_to_rgb(colore_delta_t(d)))
+                self.multi_cell(w - 4, 3.6, _pdf_safe(f"{d:+.1f}"), align="C")
+                y_banda = y0 + 28.5
+
+            self.set_xy(x + 2, y_banda)
             self.set_font("Helvetica", "", 6.5)
             self.set_text_color(90, 90, 100)
             self.multi_cell(w - 4, 3.2, _pdf_safe(banda or "-"), align="C")
@@ -3776,7 +4285,8 @@ class _ReportPDF(FPDF):
         self.ln(1)
 
 
-def genera_report_pdf(nome, sesso, periodo, results, profilo, commento, thresholds):
+def genera_report_pdf(nome, sesso, periodo, results, profilo, commento, thresholds,
+                      comp=None):
     pdf = _ReportPDF()
     pdf.add_page()
 
@@ -3789,7 +4299,8 @@ def genera_report_pdf(nome, sesso, periodo, results, profilo, commento, threshol
     pdf.cell(0, 8, "FORCE PLATE TEST REPORT", new_x="LMARGIN", new_y="NEXT")
     pdf.set_x(15)
     pdf.set_font("Helvetica", "", 10.5)
-    pdf.cell(0, 6, _pdf_safe(f"Atleta: {nome}   Sesso: {sesso}   Data test: {periodo}"), new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 6, _pdf_safe(f"Atleta: {nome}   Sesso: {sesso}   Data test: {periodo}"),
+             new_x="LMARGIN", new_y="NEXT")
     pdf.set_y(32)
 
     pdf.body_text(
@@ -3868,7 +4379,12 @@ def genera_report_pdf(nome, sesso, periodo, results, profilo, commento, threshol
             pdf.descriptions_block([r_idx])
             pdf.add_page()
 
+    # --- Comparazione con lo storico (sezione opzionale) ---
+    comparazione_sezione_pdf(pdf, comp, nome)
+
     # --- Analisi ---
+    # add_page() perche' la sezione Comparazione lascia la pagina a metà.
+    pdf.add_page()
     pdf.section_title("Analisi")
     testo = commento.strip() if commento and commento.strip() else "Nessuna analisi inserita."
     pdf.body_text(testo)
@@ -3884,6 +4400,11 @@ with tab_report:
             "Scegli in che formato generare il report: **HTML interattivo** (grafici zoomabili, pensato per "
             "desktop/laptop) oppure **PDF statico** (più facilmente visualizzabile da qualsiasi dispositivo)."
         )
+        st.caption(
+            "Se hai usato la scheda 🔀 Comparazione in questa sessione, il report include anche "
+            "il confronto con lo storico: tabella, strisce delle metriche selezionate e profilo "
+            "di forza attuale vs storico."
+        )
         st.markdown("**Analisi del preparatore**")
         st.caption(
             "Scrivi qui il commento tecnico da includere nel report: punti di forza, aree di "
@@ -3898,7 +4419,8 @@ with tab_report:
         with col_html:
             if st.button("📄 Genera report HTML", type="primary", use_container_width=True):
                 html_bytes = genera_report_html(nome, sesso, periodo, results, profilo, commento,
-                                                st.session_state["idx_thr"])
+                                                st.session_state["idx_thr"],
+                                                comp=st.session_state.get("comp_export"))
                 st.download_button(
                     "⬇️ Scarica report (.html)", data=html_bytes,
                     file_name=f"Report_{nome.replace(' ', '_')}_{dt.date.today().isoformat()}.html",
@@ -3908,7 +4430,8 @@ with tab_report:
             if st.button("📕 Genera report PDF", use_container_width=True):
                 with st.spinner("Rendering grafici e impaginazione PDF..."):
                     pdf_bytes = genera_report_pdf(nome, sesso, periodo, results, profilo, commento,
-                                                  st.session_state["idx_thr"])
+                                                  st.session_state["idx_thr"],
+                                                  comp=st.session_state.get("comp_export"))
                 st.download_button(
                     "⬇️ Scarica report (.pdf)", data=pdf_bytes,
                     file_name=f"Report_{nome.replace(' ', '_')}_{dt.date.today().isoformat()}.pdf",
