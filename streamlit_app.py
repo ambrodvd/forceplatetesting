@@ -30,9 +30,11 @@ import pandas as pd
 import plotly.graph_objects as go
 import openpyxl
 
+import sys
 from importlib.metadata import distributions
 print("FPDF DISTS:", [(d.metadata["Name"], d.version) for d in distributions()
-                      if d.metadata["Name"] and "fpdf" in d.metadata["Name"].lower()])
+                      if d.metadata["Name"] and "fpdf" in d.metadata["Name"].lower()],
+      file=sys.stderr, flush=True)
 
 from fpdf import FPDF
 from fpdf.fonts import FontFace
