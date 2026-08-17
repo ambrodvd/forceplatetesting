@@ -27,6 +27,7 @@ from dataclasses import dataclass, field
 
 import streamlit as st
 import pandas as pd
+import os
 os.environ.setdefault("BROWSER_PATH", "/usr/bin/chromium")
 import plotly.graph_objects as go
 import openpyxl
