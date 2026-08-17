@@ -30,17 +30,30 @@ import pandas as pd
 import plotly.graph_objects as go
 import openpyxl
 import subprocess, sys, importlib
-try:
-    import fpdf, inspect
-    if "new_x" not in inspect.signature(fpdf.FPDF.cell).parameters:
-        raise ImportError("legacy fpdf detected")
-except Exception:
-    subprocess.run([sys.executable, "-m", "pip", "uninstall", "-y", "fpdf"], check=False)
-    subprocess.run([sys.executable, "-m", "pip", "install", "--force-reinstall",
-                    "--no-deps", "fpdf2==2.8.8"], check=False)
-    importlib.invalidate_caches()
-    for m in [k for k in sys.modules if k == "fpdf" or k.startswith("fpdf.")]:
+import sys, os, subprocess, importlib
+
+_DEPS = "/tmp/fpdf2_clean"
+_MARK = os.path.join(_DEPS, ".ok")
+
+if not os.path.exists(_MARK):
+    r = subprocess.run([sys.executable, "-m", "pip", "install", "--target", _DEPS,
+                        "--no-deps", "--upgrade", "fpdf2==2.8.8"],
+                       capture_output=True, text=True)
+    if r.returncode == 0:
+        open(_MARK, "w").close()
+    else:
+        print("FPDF2 SIDELOAD FAILED:", r.stderr[-2000:], file=sys.stderr, flush=True)
+
+if os.path.isdir(_DEPS):
+    sys.path.insert(0, _DEPS)
+    for m in [k for k in list(sys.modules) if k == "fpdf" or k.startswith("fpdf.")]:
         del sys.modules[m]
+    importlib.invalidate_caches()
+
+import fpdf, inspect
+print("FPDF FROM:", fpdf.__file__, "| new_x:",
+      "new_x" in inspect.signature(fpdf.FPDF.cell).parameters,
+      file=sys.stderr, flush=True)
 from fpdf import FPDF
 from fpdf.fonts import FontFace
 
