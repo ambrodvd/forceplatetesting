@@ -37,7 +37,10 @@ print("FPDF DISTS:", [(d.metadata["Name"], d.version) for d in distributions()
       file=sys.stderr, flush=True)
 
 from fpdf import FPDF
-from fpdf.fonts import FontFace
+try:
+    from fpdf.fonts import FontFace
+except ImportError:
+    FontFace = None
 
 
 # ============================================================================
