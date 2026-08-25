@@ -2435,6 +2435,51 @@ def te_cv_default(label):
     return FALLBACK_TE_CV
 
 
+# ---------------------------------------------------------------------------
+# I due metri dell'incertezza
+# ---------------------------------------------------------------------------
+# MODO_MISURA — errore standard della media di seduta: SD delle ripetizioni
+#   diviso radice di n. Misura SOLO l'errore strumentale e di esecuzione
+#   DENTRO la giornata. È il metro giusto quando si assume che fra un giorno
+#   e l'altro l'atleta SIA cambiato (fatica, adattamento): in quel caso la
+#   variabilità giorno-per-giorno è il segnale, non il rumore, e usarla come
+#   soglia renderebbe invisibile proprio ciò che si vuole misurare.
+#
+# MODO_GIORNI — TE between-day, dalle differenze fra sedute consecutive.
+#   Assume che fra le sedute l'atleta sia rimasto uguale: tutto ciò che si
+#   muove è rumore. È il metro giusto per chiedersi se è cambiata la CAPACITÀ
+#   DI BASE, dove la stanchezza del singolo giorno è effettivamente disturbo.
+#
+# Stesso dato, due domande diverse: il selettore in cima alla scheda decide.
+MODO_MISURA = "Errore di misura (entro seduta)"
+MODO_GIORNI = "Variabilità giorno-per-giorno"
+
+# Pavimento sull'errore di misura, in % del valore. Con 3 ripetizioni la SD è
+# una stima instabile: se per caso i salti coincidono l'errore crollerebbe a
+# zero e qualunque differenza risulterebbe significativa. Pedana e
+# posizionamento un errore ce l'hanno comunque.
+CV_MIN_MISURA = 1.0
+MIN_REP_MISURA = 3
+
+
+def se_entro_seduta(sd, n_rep, media, cv_min=CV_MIN_MISURA):
+    """Errore standard della media di una seduta, in unità native.
+    None se le ripetizioni sono troppo poche per stimarlo."""
+    try:
+        n_rep = int(n_rep)
+    except (TypeError, ValueError):
+        return None
+    if n_rep < MIN_REP_MISURA or media in (None, 0):
+        return None
+    try:
+        if sd is None or math.isnan(float(sd)):
+            return None
+    except (TypeError, ValueError):
+        return None
+    se = float(sd) / math.sqrt(n_rep)
+    return max(se, cv_min / 100.0 * abs(float(media)))
+
+
 def _sd_campionaria(values):
     n = len(values)
     if n < 2:
@@ -2662,7 +2707,8 @@ def athlete_te_table(all_long):
 # ----------------------------------------------------------------------------
 # Motore di confronto
 # ----------------------------------------------------------------------------
-def compare_to_history(cur_long, hist_long, athlete_te=None, pop_sd_map=None):
+def compare_to_history(cur_long, hist_long, athlete_te=None, pop_sd_map=None,
+                       modo=MODO_MISURA):
     """Confronta la sessione attuale con la MEDIA delle sedute precedenti, e
     riporta accanto il miglior valore storico (descrittivo)."""
     athlete_te = athlete_te or {}
@@ -2704,21 +2750,37 @@ def compare_to_history(cur_long, hist_long, athlete_te=None, pop_sd_map=None):
             else v == migliore)]
         sess_migliore = riga_migliore["session"].iloc[0] if len(riga_migliore) else "—"
 
-        if mid in athlete_te:
-            cv, _ = athlete_te[mid]
-            fonte_te = "atleta"
-        else:
-            cv, fonte_te = te_cv_default(etichetta), "letteratura"
-
         log_scale = mid in COMP_RATIO_IDS and m_cur > 0 and media_rif > 0
         if log_scale:
             delta = math.log(m_cur / media_rif)
-            te_abs = cv / 100.0
             mostra = lambda x: (math.exp(x) - 1) * 100.0
         else:
             delta = m_cur - media_rif
-            te_abs = cv / 100.0 * abs(media_rif)
             mostra = lambda x: x
+
+        # Incertezza della differenza, in unità native. Nel modo "misura" ogni
+        # seduta ha il proprio errore: quello della media di k sedute vale
+        # sqrt(somma dei quadrati)/k, non se/sqrt(k), perché le sedute possono
+        # avere numeri di ripetizioni diversi.
+        se_diff_abs, cv, fonte_te = None, None, None
+        if modo == MODO_MISURA:
+            se_cur = se_entro_seduta(cur.loc[mid, "sd"], cur.loc[mid, "n"], m_cur)
+            se_storiche = [x for x in (se_entro_seduta(r["sd"], r["n"], r["mean"])
+                                       for _, r in g.iterrows()) if x]
+            if se_cur and se_storiche:
+                se_rif = math.sqrt(sum(x * x for x in se_storiche)) / len(se_storiche)
+                se_diff_abs = math.sqrt(se_cur ** 2 + se_rif ** 2)
+                cv = se_cur / abs(m_cur) * 100.0 if m_cur else None
+                fonte_te = "misura"
+        if se_diff_abs is None:
+            # Fallback: TE dell'atleta se disponibile, altrimenti letteratura.
+            if mid in athlete_te:
+                cv, fonte_te = athlete_te[mid][0], "atleta"
+            else:
+                cv, fonte_te = te_cv_default(etichetta), "letteratura"
+            se_diff_abs = (cv / 100.0 * abs(media_rif)) * math.sqrt(1.0 + 1.0 / k)
+        if log_scale:
+            se_diff_abs = se_diff_abs / abs(media_rif)
 
         # SWC a tre livelli: norma di popolazione, poi variabilità storica
         # dell'atleta (per il monitoraggio individuale è anche più pertinente
@@ -2734,9 +2796,7 @@ def compare_to_history(cur_long, hist_long, athlete_te=None, pop_sd_map=None):
         else:
             swc, fonte_swc = None, "—"
 
-        # La media di k sedute è più precisa della singola: l'incertezza
-        # della differenza è TE*sqrt(1 + 1/k), non TE*sqrt(2).
-        margine = Z90 * te_abs * math.sqrt(1.0 + 1.0 / k)
+        margine = Z90 * se_diff_abs
         lo, hi = delta - margine, delta + margine
 
         if swc is None:
@@ -2872,6 +2932,312 @@ def build_swc_strip(riga, height=134):
         yaxis=dict(range=[-1, 1], showgrid=False, showticklabels=False, zeroline=False),
         height=height, margin=dict(t=64, b=50, l=20, r=20), showlegend=False,
         plot_bgcolor=BG_COLOR, paper_bgcolor=BG_COLOR, font=dict(color=TEXT_COLOR),
+    )
+    return fig
+
+
+# ----------------------------------------------------------------------------
+# Andamento storico di una metrica
+# ----------------------------------------------------------------------------
+# Grafico di controllo: una linea che unisce le sedute, banda ±SWC attorno al
+# riferimento, barra d'errore per seduta. Tre scelte di progetto che vale la
+# pena tenere a mente:
+#
+#  - ASSE X A SPAZIATURA UNIFORME. Le sedute sono equidistanti anche se nella
+#    realtà non lo sono: la geometria resta pulita. L'informazione temporale
+#    non si perde, sta nella data sotto ogni tick e nella barra dei periodi.
+#
+#  - BARRA DEI PERIODI sopra l'asse, larga quanto il tempo realmente
+#    trascorso. Il colore codifica SOLO il tempo, in grigi: i punti usano già
+#    il colore per l'attendibilità, e due scale cromatiche sullo stesso
+#    grafico si annullano a vicenda.
+#
+#  - RIFERIMENTO SCELTO DALL'ALLENATORE (checkbox per seduta). Le spunte
+#    definiscono COSA è il riferimento; TE e SWC restano calcolati su TUTTE le
+#    sedute caricate, perché misurano quanto oscilla l'atleta — una proprietà
+#    sua, non del confronto. Se dipendessero dalle spunte, numeratore e
+#    denominatore si muoverebbero insieme e nessuno capirebbe più cosa ha
+#    causato cosa.
+
+# Scala CONTINUA per la barra dei periodi: da chiaro (sedute ravvicinate) a
+# scuro (lungo intervallo). Toni caldi neutri di proposito — i blu sono già
+# usati dalla scala di ampiezza e verde/giallo/rosso dall'attendibilità:
+# una terza scala che riusasse quelle tinte renderebbe ambiguo il colore.
+# Gli ancoraggi sono in giorni; fra due ancoraggi si interpola linearmente.
+GAP_SCALA = [
+    (0, "#f2f1ea"),     # stessa settimana
+    (14, "#dcd6c2"),    # 2 settimane
+    (42, "#bdae8c"),    # 6 settimane
+    (90, "#9a8763"),    # 3 mesi
+    (180, "#77653f"),   # 6 mesi e oltre
+]
+
+
+def _lerp_hex(c1, c2, t):
+    """Interpolazione lineare fra due colori esadecimali."""
+    a = tuple(int(c1.lstrip("#")[i:i + 2], 16) for i in (0, 2, 4))
+    b = tuple(int(c2.lstrip("#")[i:i + 2], 16) for i in (0, 2, 4))
+    return "#" + "".join(f"{round(x + (y - x) * t):02x}" for x, y in zip(a, b))
+
+
+def _gap_colore(giorni):
+    """Colore della barra per un intervallo in giorni, su scala continua."""
+    if giorni is None:
+        return GAP_SCALA[0][1]
+    g = max(0.0, float(giorni))
+    if g >= GAP_SCALA[-1][0]:
+        return GAP_SCALA[-1][1]
+    for (g0, c0), (g1, c1) in zip(GAP_SCALA, GAP_SCALA[1:]):
+        if g <= g1:
+            t = 0.0 if g1 == g0 else (g - g0) / (g1 - g0)
+            return _lerp_hex(c0, c1, t)
+    return GAP_SCALA[-1][1]
+
+
+def _nn(v):
+    """None se il valore è mancante. Serve perché pandas trasforma i None
+    delle colonne numeriche in NaN, e `is not None` non li intercetta più."""
+    if v is None:
+        return None
+    try:
+        return None if pd.isna(v) else v
+    except (TypeError, ValueError):
+        return v
+
+
+def serie_storica(mid, all_long):
+    """Serie di una metrica su tutte le sedute (storico + attuale), ordinata.
+    Ritorna un DataFrame con session, data, mean, ordine."""
+    g = all_long[all_long["metric_id"] == mid]
+    if g.empty:
+        return pd.DataFrame()
+    g = (g.drop_duplicates("session")
+           .sort_values("ordine")[["session", "data", "mean", "sd", "n",
+                                   "metrica", "unit"]]
+           .reset_index(drop=True))
+    return g[g["mean"].apply(lambda v: isinstance(v, (int, float)) and not math.isnan(v))]
+
+
+def prepara_storico(serie, sel_mask, swc, te_cv, log_scale=False, modo=MODO_MISURA):
+    """Calcola riferimento, incertezza ed esito per ogni seduta.
+
+    sel_mask: lista di bool, quali sedute compongono il riferimento.
+    Ritorna (DataFrame arricchito, dict di metadati) oppure (df vuoto, {})."""
+    if serie.empty:
+        return pd.DataFrame(), {}
+    valori = list(serie["mean"])
+    scelti = [v for v, s in zip(valori, sel_mask) if s]
+    if not scelti:
+        return pd.DataFrame(), {}
+
+    k = len(scelti)
+    riferimento = sum(scelti) / k
+    if riferimento == 0:
+        return pd.DataFrame(), {}
+
+    # Incertezza. Nel modo "misura" ogni seduta ha il proprio errore, quindi
+    # la barra cambia da punto a punto: una seduta con salti molto simili è
+    # nota meglio di una con salti dispersi, e il grafico deve mostrarlo.
+    df = serie.copy().reset_index(drop=True)
+    se_rif, se_punti = None, None
+    if modo == MODO_MISURA:
+        se_ogni = [se_entro_seduta(r["sd"], r["n"], r["mean"]) for _, r in df.iterrows()]
+        se_scelti = [x for x, sel in zip(se_ogni, sel_mask) if sel and x]
+        if all(x for x in se_ogni) and se_scelti:
+            se_rif = math.sqrt(sum(x * x for x in se_scelti)) / len(se_scelti)
+            se_punti = [math.sqrt(x ** 2 + se_rif ** 2) for x in se_ogni]
+
+    if se_punti is None:
+        te_abs = (te_cv / 100.0) if log_scale else (te_cv / 100.0 * abs(riferimento))
+        margine_unico = Z90 * te_abs * math.sqrt(1.0 + 1.0 / k)
+        margini = [margine_unico] * len(df)
+    else:
+        fattore = (1.0 / abs(riferimento)) if log_scale else 1.0
+        margini = [Z90 * x * fattore for x in se_punti]
+    margine = sum(margini) / len(margini)  # valore medio, per le didascalie
+
+    df["riferimento"] = riferimento
+    df["nel_riferimento"] = list(sel_mask)
+    df["margine"] = margini
+
+    esiti, colori, delta_rif, delta_step, giorni = [], [], [], [], []
+    prec_val, prec_data = None, None
+    for _, r in df.iterrows():
+        v = r["mean"]
+        d = math.log(v / riferimento) if (log_scale and v > 0) else (v - riferimento)
+        delta_rif.append((math.exp(d) - 1) * 100.0 if log_scale else d)
+
+        marg_i = margini[len(esiti)]
+        lo, hi = d - marg_i, d + marg_i
+        if swc is None:
+            esito = ESITO_ND
+        elif lo > swc or hi < -swc:
+            esito = ESITO_REALE
+        elif lo > -swc and hi < swc:
+            esito = ESITO_STABILE
+        else:
+            esito = ESITO_INCERTO
+        esiti.append(esito)
+        colori.append(ESITO_COLORI.get(esito, "#8d8d8d"))
+
+        # Passo rispetto alla seduta precedente: qui gli estremi sono due
+        # sedute singole, quindi SE = TE*sqrt(2), il confronto più incerto.
+        if prec_val is None:
+            delta_step.append(None)
+        else:
+            ds = (math.log(v / prec_val) if (log_scale and v > 0 and prec_val > 0)
+                  else v - prec_val)
+            delta_step.append((math.exp(ds) - 1) * 100.0 if log_scale else ds)
+
+        data = r["data"]
+        giorni.append((data - prec_data).days
+                      if (data is not None and prec_data is not None) else None)
+        prec_val, prec_data = v, data
+
+    df["esito"] = esiti
+    df["colore"] = colori
+    df["delta_rif"] = delta_rif
+    df["delta_step"] = delta_step
+    df["giorni"] = giorni
+
+    meta = dict(riferimento=riferimento, k=k, margine=margine, swc=swc,
+                te_cv=te_cv, log=log_scale, modo=modo,
+                per_punto=se_punti is not None,
+                etichetta=str(serie["metrica"].iloc[0]),
+                unita=str(serie["unit"].iloc[0] or ""),
+                sessioni_rif=[s for s, m in zip(serie["session"], sel_mask) if m])
+    return df, meta
+
+
+def build_storico_chart(df, meta, height=480):
+    """Grafico di controllo dell'andamento storico."""
+    if df.empty or not meta:
+        return None
+
+    x = list(range(len(df)))
+    rif, swc, margine = meta["riferimento"], meta["swc"], meta["margine"]
+
+    def confine(mult):
+        """Bordo della banda in unità native (in scala log le soglie sono
+        moltiplicative e vanno convertite)."""
+        return rif * math.exp(mult * swc) if meta["log"] else rif + mult * swc
+
+    fig = go.Figure()
+
+    # Banda di rilevanza ±SWC attorno al riferimento
+    if swc:
+        lo_b, hi_b = confine(-1), confine(1)
+        fig.add_hrect(y0=min(lo_b, hi_b), y1=max(lo_b, hi_b),
+                      fillcolor="#8d8d8d", opacity=0.16, line_width=0,
+                      annotation_text="±SWC", annotation_position="top left",
+                      annotation_font=dict(size=9, color="#484343"))
+    fig.add_hline(y=rif, line_dash="dash", line_color=ACCENT, line_width=1.5)
+
+    # Linea + punti. Il colore del marcatore è l'attendibilità rispetto al
+    # riferimento; la linea resta neutra per non competere.
+    hover = []
+    for _, r in df.iterrows():
+        pezzi = [f"<b>{r['session']}</b>"]
+        pezzi.append(f"Valore: {fmt_valore(r['mean'])} {meta['unita']}".strip())
+        pezzi.append(f"vs riferimento: {fmt_valore(r['delta_rif'], segno=True)}"
+                     + ("%" if meta["log"] else ""))
+        ds, gg = _nn(r["delta_step"]), _nn(r["giorni"])
+        if ds is not None:
+            pezzi.append(f"vs seduta prec.: {fmt_valore(ds, segno=True)}"
+                         + ("%" if meta["log"] else ""))
+        if gg is not None:
+            pezzi.append(f"Giorni dalla precedente: {int(gg)}")
+        pezzi.append(f"Attendibilità: {r['esito']}")
+        if not r["nel_riferimento"]:
+            pezzi.append("<i>esclusa dal riferimento</i>")
+        hover.append("<br>".join(pezzi))
+
+    fig.add_trace(go.Scatter(
+        x=x, y=list(df["mean"]), mode="lines+markers",
+        line=dict(color="#b8c4ca", width=2),
+        marker=dict(size=13, color=list(df["colore"]),
+                    line=dict(width=2, color="white"),
+                    # Vuoto = fa parte del riferimento, pieno = ne è fuori.
+                    # Il punto "sotto esame" (di norma la seduta attuale) è
+                    # quello escluso, quindi è giusto che sia il più pieno.
+                    symbol=["circle-open" if s else "circle"
+                            for s in df["nel_riferimento"]]),
+        error_y=dict(type="data", array=list(df["margine"]), color="#8d8d8d",
+                     thickness=1.4, width=6),
+        text=hover, hovertemplate="%{text}<extra></extra>", showlegend=False,
+    ))
+
+    # Legenda: due tracce fittizie (nessun punto reale) che spiegano la
+    # differenza pieno/vuoto. Il colore qui e' neutro di proposito: nei punti
+    # veri il colore codifica l'attendibilita', non l'appartenenza.
+    for simbolo, testo in (("circle-open", "Seduta nel riferimento"),
+                           ("circle", "Seduta esclusa dal riferimento")):
+        fig.add_trace(go.Scatter(
+            x=[None], y=[None], mode="markers", name=testo,
+            marker=dict(size=11, color="#8d8d8d", symbol=simbolo,
+                        line=dict(width=2, color="#8d8d8d")),
+            hoverinfo="skip", showlegend=True,
+        ))
+
+    # Barra dei periodi: rettangoli in coordinate paper appena sotto l'asse,
+    # larghi quanto il tempo realmente trascorso fra due sedute.
+    giorni_validi = [g for g in (_nn(v) for v in df["giorni"]) if g is not None]
+    max_gap = max(giorni_validi) if giorni_validi else None
+    for i in range(1, len(df)):
+        g = _nn(df["giorni"].iloc[i])
+        colore = _gap_colore(g)
+        # La larghezza del rettangolo è proporzionale al gap, centrata nel
+        # segmento: un intervallo lungo si vede come una barra lunga.
+        frazione = (g / max_gap) if (g is not None and max_gap) else 1.0
+        centro = i - 0.5
+        semi = max(0.06, 0.5 * frazione)
+        fig.add_shape(type="rect", xref="x", yref="paper",
+                      x0=centro - semi, x1=centro + semi, y0=-0.33, y1=-0.26,
+                      fillcolor=colore, line_width=0)
+        if g is not None:
+            # Sopra i ~45 giorni il fondo diventa scuro: il testo passa a
+            # bianco, altrimenti sparisce.
+            fig.add_annotation(x=centro, y=-0.295, xref="x", yref="paper",
+                               text=f"{int(g)} g", showarrow=False, yanchor="middle",
+                               font=dict(size=9,
+                                         color="#ffffff" if g >= 45 else "#3d3d3d"))
+
+    # Il nome della seduta spesso E' gia' la data (l'etichetta viene dalla
+    # colonna "Data test" del CSV): in quel caso aggiungerla sotto la
+    # duplicherebbe. La seconda riga compare solo se dice qualcosa di nuovo.
+    etichette_x = []
+    for _, r in df.iterrows():
+        nome_s = str(r["session"])
+        d = _nn(r["data"])
+        if d is None:
+            etichette_x.append(nome_s)
+            continue
+        iso = d.strftime("%d/%m/%Y")
+        breve = d.strftime("%d/%m/%y")
+        if iso in nome_s or breve in nome_s:
+            etichette_x.append(iso)
+        else:
+            etichette_x.append(f"{nome_s}<br>{breve}")
+
+    titolo = f"<b>{meta['etichetta']}</b>"
+    if meta["unita"]:
+        titolo += f" ({meta['unita']})"
+    sotto = (f"riferimento: media di {meta['k']} sedute"
+             if meta["k"] > 1 else f"riferimento: {meta['sessioni_rif'][0]}")
+
+    fig.update_layout(
+        title=dict(text=f"{titolo}<br><span style='font-size:12px;opacity:0.7'>{sotto}</span>",
+                   x=0.5, xanchor="center", font=dict(size=15, color=TEXT_COLOR)),
+        xaxis=dict(tickmode="array", tickvals=x, ticktext=etichette_x,
+                   range=[-0.5, len(df) - 0.5], showgrid=False,
+                   tickfont=dict(size=10)),
+        yaxis=dict(title=dict(text=meta["unita"] or "", standoff=10),
+                   showgrid=True, gridcolor="#eef2f4", zeroline=False),
+        height=height, margin=dict(t=100, b=125, l=60, r=25),
+        plot_bgcolor=BG_COLOR, paper_bgcolor=BG_COLOR, font=dict(color=TEXT_COLOR),
+        showlegend=True,
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, x=0,
+                    font=dict(size=11)),
     )
     return fig
 
@@ -3121,8 +3487,11 @@ with tab_comparazione:
             "**🔍 Dettaglio Test → Esporta TUTTE le metriche grezze**."
         )
         st.caption(
-            "Il confronto statistico è contro la MEDIA delle sedute precedenti. È riportato anche il miglior "
-            "valore storico come riferimento."
+            "Il confronto statistico è contro la MEDIA delle sedute precedenti: la media di più "
+            "sedute è più precisa di una singola, quindi l'incertezza si stringe. Il miglior "
+            "valore storico è riportato solo come riferimento descrittivo — un record è quasi "
+            "sempre il giorno in cui l'atleta era in forma e il rumore ha aiutato, quindi "
+            "confrontarcisi statisticamente darebbe 'peggiorato' quasi sempre."
         )
 
         comp_files = st.file_uploader(
@@ -3159,6 +3528,19 @@ with tab_comparazione:
                         + ", ".join(senza_data)
                     )
 
+                modo_incertezza = st.radio(
+                    "Metro dell'incertezza", (MODO_MISURA, MODO_GIORNI),
+                    horizontal=True, key="comp_modo",
+                    help="**Errore di misura**: usa solo la dispersione fra le ripetizioni "
+                         "della stessa seduta. Assume che fra un giorno e l'altro l'atleta "
+                         "POSSA essere cambiato, quindi fatica e adattamento restano "
+                         "visibili. È il metro per il monitoraggio.  \n"
+                         "**Variabilità giorno-per-giorno**: usa lo scarto fra sedute "
+                         "consecutive. Assume che fra le sedute l'atleta sia rimasto uguale, "
+                         "quindi tratta anche la fatica come rumore. È il metro per chiedersi "
+                         "se è cambiata la capacità di base.",
+                )
+
                 all_long = pd.concat([hist_long, cur_long], ignore_index=True)
                 te_atleta = athlete_te_table(all_long)
                 n_sedute = len(storico)
@@ -3177,7 +3559,8 @@ with tab_comparazione:
                         "di letteratura, quindi gli intervalli sono più larghi del necessario."
                     )
 
-                res = compare_to_history(cur_long, hist_long, te_atleta, pop_sd_map)
+                res = compare_to_history(cur_long, hist_long, te_atleta, pop_sd_map,
+                                         modo=modo_incertezza)
 
                 if res.empty:
                     st.error(
@@ -3195,11 +3578,13 @@ with tab_comparazione:
                     default_sel = [r["_display"] for _, r in res.iterrows()
                                    if r["_mid"] in primarie_ids]
                     scelte = st.multiselect(
-                        "Metriche da mostrare", opzioni,
+                        "Metriche in analisi", opzioni,
                         default=default_sel or opzioni[: min(5, len(opzioni))],
                         key="comp_scelte",
-                        help="Sceglile PRIMA di guardare i dati: è ciò che distingue una "
-                             "decisione da un inseguimento del rumore.",
+                        help="L'unico elenco completo delle metriche disponibili. Tutto il "
+                             "resto della scheda — tabella, strisce, andamento storico — "
+                             "lavora su questa selezione. Sceglile PRIMA di guardare i dati: "
+                             "è ciò che distingue una decisione da un inseguimento del rumore.",
                     )
                     vista = res[res["_display"].isin(scelte)] if scelte else res
 
@@ -3249,7 +3634,9 @@ with tab_comparazione:
                     st.caption(
                         "Il rombo pieno azzurro è il test attuale con la sua barra di "
                         "incertezza; il rombo vuoto arancione è la media delle sedute "
-                        "precedenti."
+                        "precedenti. Le fasce "
+                        "colorate sono l'entità dello scostamento (trascurabile, piccolo, moderato, "
+                        "grande), simmetriche sopra e sotto la media."
                     )
                     strip_opzioni = [r["_display"] for _, r in vista.iterrows()
                                      if r["_swc"] is not None]
@@ -3266,6 +3653,112 @@ with tab_comparazione:
                         fig_strip = build_swc_strip(riga)
                         if fig_strip:
                             st.plotly_chart(fig_strip, use_container_width=True)
+
+                    # --- Andamento storico -----------------------------------
+                    storico_export = []
+                    st.markdown("---")
+                    st.markdown("#### Andamento storico")
+                    st.caption(
+                        "Ogni punto è una seduta, con la sua barra di incertezza. La banda grigia "
+                        "è la zona di rilevanza (±SWC) attorno al riferimento; la linea tratteggiata "
+                        "arancione è il riferimento stesso. La barra grigia sotto l'asse è il tempo "
+                        "trascorso fra una seduta e l'altra: più è larga, più tempo è passato."
+                    )
+
+                    # Le opzioni vengono da `vista`, non da `res`: l'elenco
+                    # completo sta solo in "Metriche in analisi" sopra.
+                    display_to_mid = {r["_display"]: r["_mid"] for _, r in vista.iterrows()}
+                    storico_opzioni = list(display_to_mid)
+                    default_storico = [d for d in storico_opzioni
+                                       if display_to_mid[d] in primarie_ids]
+                    scelte_storico = st.multiselect(
+                        "Metriche da seguire nel tempo", storico_opzioni,
+                        default=default_storico or storico_opzioni[: min(2, len(storico_opzioni))],
+                        key="comp_storico",
+                        help="Sottoinsieme delle metriche in analisi: un grafico per ciascuna.",
+                    )
+
+                    # Le sedute sono le stesse per tutte le metriche, quindi le
+                    # checkbox del riferimento stanno FUORI dal ciclo: una sola
+                    # scelta, valida per ogni grafico.
+                    sedute_ordinate = (all_long.drop_duplicates("session")
+                                       .sort_values("ordine")["session"].tolist())
+                    if scelte_storico and sedute_ordinate:
+                        st.markdown("**Sedute che compongono il riferimento**")
+                        st.caption(
+                            "Di default tutte le precedenti, cioè la media dell'atleta. "
+                            "Deselezionandone qualcuna cambia solo il riferimento: il rumore "
+                            "della misura e la soglia di rilevanza restano calcolati su tutte "
+                            "le sedute caricate."
+                        )
+                        chk_cols = st.columns(min(len(sedute_ordinate), 6))
+                        sel_per_seduta = {}
+                        for i, nome_seduta in enumerate(sedute_ordinate):
+                            e_attuale = nome_seduta == "Attuale"
+                            sel_per_seduta[nome_seduta] = chk_cols[i % len(chk_cols)].checkbox(
+                                str(nome_seduta)[:12], value=not e_attuale,
+                                key=f"rif_seduta_{i}",
+                                help="Seduta attuale: normalmente esclusa dal riferimento, "
+                                     "altrimenti si confronterebbe con sé stessa."
+                                     if e_attuale else None,
+                            )
+
+                        if not any(sel_per_seduta.values()):
+                            st.warning(
+                                "⚠️ Nessuna seduta selezionata: senza riferimento non c'è "
+                                "confronto da calcolare. Spuntane almeno una."
+                            )
+                        else:
+                            for scelta_st in scelte_storico:
+                                mid_st = display_to_mid[scelta_st]
+                                serie_st = serie_storica(mid_st, all_long)
+                                if len(serie_st) < 2:
+                                    st.info(f"**{scelta_st}** — servono almeno due sedute "
+                                            "con questa metrica per disegnare un andamento.")
+                                    continue
+
+                                # La maschera va riallineata alla serie: una
+                                # metrica puo' mancare in qualche seduta.
+                                mask_st = [bool(sel_per_seduta.get(sess, False))
+                                           for sess in serie_st["session"]]
+                                if not any(mask_st):
+                                    st.info(f"**{scelta_st}** — nessuna delle sedute spuntate "
+                                            "contiene questa metrica.")
+                                    continue
+
+                                riga_res = res[res["_mid"] == mid_st]
+                                swc_st = riga_res["_swc"].iloc[0] if len(riga_res) else None
+                                log_st = bool(riga_res["_log"].iloc[0]) if len(riga_res) else False
+                                te_st = (te_atleta[mid_st][0] if mid_st in te_atleta
+                                         else te_cv_default(serie_st["metrica"].iloc[0]))
+
+                                df_st, meta_st = prepara_storico(serie_st, mask_st, swc_st,
+                                                                 te_st, log_st,
+                                                                 modo=modo_incertezza)
+                                fig_st = build_storico_chart(df_st, meta_st)
+                                if not fig_st:
+                                    continue
+                                st.plotly_chart(fig_st, use_container_width=True)
+                                # Per il report salviamo df e meta gia' calcolati:
+                                # la figura viene ricostruita al momento
+                                # dell'export dalla stessa build_storico_chart.
+                                storico_export.append(dict(
+                                    display=scelta_st, df=df_st.copy(), meta=meta_st,
+                                    senza_swc=swc_st is None,
+                                ))
+                                if swc_st is None:
+                                    st.warning(
+                                        f"⚠️ **{scelta_st}** non ha una soglia di rilevanza: "
+                                        "la linea si vede, ma i punti non possono ricevere "
+                                        "un'attendibilità."
+                                    )
+                                st.caption(
+                                    f"Riferimento: {', '.join(map(str, meta_st['sessioni_rif']))}"
+                                    f" · metro: {meta_st['modo'].lower()}"
+                                    + (" (barra propria per ogni seduta)"
+                                       if meta_st["per_punto"] else "")
+                                    + f" · incertezza media ±{fmt_valore(meta_st['margine'])}"
+                                )
 
                     # --- Profili di forza (T-score) e indici -----------------
                     st.markdown("---")
@@ -3321,22 +3814,22 @@ with tab_comparazione:
                                 f"<div style='font-size:11px;letter-spacing:0.5px;"
                                 f"opacity:0.65'>{cat}</div>"
                                 f"<div style='font-size:17px;font-weight:600;"
-                                f"color:{TEXT_COLOR};margin:2px 0 4px 0'>"
-                                f"{CATEGORY_QUALITY.get(cat, '')}</div>"
-                                f"<div style='font-size:30px;font-weight:700;"
-                                f"color:{colore}'>{t:.0f}</div>"
+                                f"color:{TEXT_COLOR}'>{CATEGORY_QUALITY.get(cat, '')}</div>"
+                                f"<div style='font-size:28px;color:{colore}'>{t:.0f}</div>"
+                                f"<div style='font-size:13px;opacity:0.75'>{banda}</div>"
                             )
                             if d is not None:
-                                html_card += (
-                                    f"<div style='font-size:15px;font-weight:600;"
-                                    f"color:{colore_delta_t(d)}'>{d:+.1f}</div>"
-                                )
-                            html_card += (
-                                f"<div style='font-size:13px;opacity:0.75;"
-                                f"margin-top:4px'>{banda}</div>"
-                            )
-                            with col.container(border=True):
-                                st.markdown(html_card, unsafe_allow_html=True)
+                                col_d = colore_delta_t(d)
+                                html_card += (f"<div style='font-size:15px;font-weight:600;"
+                                              f"color:{col_d}'>{d:+.1f} punti T</div>")
+                            col.markdown(html_card, unsafe_allow_html=True)
+
+                        st.caption(
+                            "Il T-score è già orientato alla prestazione (per le metriche dove meno "
+                            "è meglio lo scarto viene invertito), quindi qui un valore più alto è "
+                            "sempre migliore. 1 soglia di rilevanza = 2 punti di T-score, perché "
+                            "T = 50 + 10·z e la soglia vale 0,2 deviazioni standard."
+                        )
 
                         if not prof_res.empty:
                             prof_df = prof_res[[
@@ -3368,9 +3861,11 @@ with tab_comparazione:
                         if _metric_id("indici", k) in set(cur_long["metric_id"])
                     ]
                     if idx_disponibili:
-                        st.markdown("#### Indici di profilo")
+                        st.markdown("#### Indici di profilo: si è spostato di zona?")
                         st.caption(
-                            "Il rombo è il test attuale, il cerchio vuoto la media delle sedute precedenti."
+                            "DSI ed EUR non hanno un verso migliore: quello che conta è se "
+                            "l'atleta ha cambiato zona di profilo. Il rombo è il test attuale, "
+                            "il cerchio vuoto la media delle sedute precedenti."
                         )
                         for key in idx_disponibili:
                             mid = _metric_id("indici", key)
@@ -3409,6 +3904,8 @@ with tab_comparazione:
                         prof_serie=prof_serie, prof_cats=list(prof_cats),
                         strip=[d for d in strip_scelte],
                         indici=idx_export,
+                        storico=storico_export,
+                        modo=modo_incertezza,
                     )
 
                     st.download_button(
@@ -3555,7 +4052,6 @@ def _metric_table_html(cat_results):
         <tbody>{''.join(rows_html)}</tbody>
     </table>"""
 
-
 # ============================================================================
 # PARTE 6ter — SEZIONE COMPARAZIONE NEI REPORT
 # ============================================================================
@@ -3594,7 +4090,7 @@ def _delta_t_html(delta):
     if delta is None or (isinstance(delta, float) and math.isnan(delta)):
         return ""
     return (f'<div class="profile-card-delta" style="color:{colore_delta_t(delta)}">'
-            f'{delta:+.1f}</div>')
+            f'{delta:+.1f} punti T</div>')
 
 
 def _comp_esito_colore(esito):
@@ -3705,7 +4201,8 @@ def comparazione_sections_html(comp, nome_atleta, next_id):
         <p class="intro-text">Il test è confrontato con la <b>media di
         {comp.get('n_sedute', 0)} sedute precedenti</b> (esclusa l'attuale).
         <b>Cambiamento</b> dice direzione ed entità dello scostamento;
-        <b>Attendibilità</b> è un indice statistico per valutare quanto è credibile che un cambiamento ci sia stato davvero</p>
+        <b>Attendibilità</b> dice quanto è credibile che un cambiamento ci sia
+        stato davvero, non se sia un bene: quel giudizio resta al preparatore.</p>
         <div class="profile-cards">{cards}</div>
         {_comp_table_html(vista)}
     </section>"""]
@@ -3722,8 +4219,34 @@ def comparazione_sections_html(comp, nome_atleta, next_id):
             <h2>Scostamento dalla media, metrica per metrica</h2>
             <p class="intro-text">Il rombo pieno azzurro è il test attuale con la
             sua barra di incertezza; il rombo vuoto arancione è la media delle
-            sedute precedenti.</p>
+            sedute precedenti. Le fasce colorate sono l'entità dello scostamento
+            (trascurabile, piccolo, moderato, grande), simmetriche sopra e sotto
+            la media.</p>
             {''.join(strisce)}
+        </section>""")
+
+    # Andamento storico: una figura per metrica seguita nel tempo
+    storico = comp.get("storico") or []
+    blocchi_st = []
+    for voce in storico:
+        fig = build_storico_chart(voce["df"], voce["meta"])
+        if fig is None:
+            continue
+        meta_v = voce["meta"]
+        nota = (f"Riferimento: {', '.join(map(str, meta_v['sessioni_rif']))}"
+                f" · rumore della misura {meta_v['te_cv']:.1f}%"
+                f" · incertezza ±{fmt_valore(meta_v['margine'])}")
+        blocchi_st.append(f"{_fig_div(fig, next_id('comp_storico'))}"
+                          f'<p class="muted">{nota}</p>')
+    if blocchi_st:
+        sezioni.append(f"""<section>
+            <h2>Andamento storico</h2>
+            <p class="intro-text">Ogni punto è una seduta, con la sua barra di
+            incertezza. La banda grigia è la zona di rilevanza (±SWC) attorno al
+            riferimento; la linea tratteggiata arancione è il riferimento stesso.
+            La barra sotto l'asse è il tempo trascorso fra una seduta e l'altra:
+            più larga e più scura, più tempo è passato.</p>
+            {''.join(blocchi_st)}
         </section>""")
 
     # Profilo di forza: radar sovrapposto + tabella per categoria
@@ -3738,8 +4261,8 @@ def comparazione_sections_html(comp, nome_atleta, next_id):
                     <div class="profile-card-cat">{c}</div>
                     <div class="profile-card-qualita">{CATEGORY_QUALITY.get(c, '')}</div>
                     <div class="profile-card-t" style="color:{banda_da_tscore(attuale[c])[1]}">{attuale[c]:.0f}</div>
-                    {_delta_t_html(delta_map.get(c))}
                     <div class="profile-card-banda">{banda_da_tscore(attuale[c])[0]}</div>
+                    {_delta_t_html(delta_map.get(c))}
                 </div>"""
             for c in cats if c in attuale
         )
@@ -3747,6 +4270,9 @@ def comparazione_sections_html(comp, nome_atleta, next_id):
             <h2>Profilo di forza: attuale vs storico</h2>
             {_fig_div(radar, next_id('comp_radar')) if radar else ''}
             <div class="profile-cards">{cards}</div>
+            <p class="intro-text">Il T-score è già orientato alla prestazione,
+            quindi qui un valore più alto è sempre migliore. 1 soglia di
+            rilevanza = 2 punti di T-score.</p>
             {_prof_table_html(prof)}
         </section>""")
 
@@ -3774,7 +4300,9 @@ def comparazione_sections_html(comp, nome_atleta, next_id):
             )
         if blocchi:
             sezioni.append(f"""<section>
-                <h2>Indici di profilo</h2>
+                <h2>Indici di profilo: si è spostato di zona?</h2>
+                <p class="intro-text">DSI ed EUR non hanno un verso migliore:
+                quello che conta è se l'atleta ha cambiato zona di profilo.</p>
                 {''.join(blocchi)}
             </section>""")
 
@@ -3852,13 +4380,15 @@ def comparazione_sezione_pdf(pdf, comp, nome_atleta):
     vista = comp.get("vista")
     if vista is None or vista.empty:
         return
+
+    pdf.add_page()
     pdf.section_title("Comparazione con lo storico")
     pdf.body_text(
         f"Il test e confrontato con la media di {comp.get('n_sedute', 0)} sedute "
         "precedenti (esclusa l'attuale). La colonna Cambiamento indica direzione "
         "(+ in aumento, - in diminuzione) ed entita dello scostamento; "
-        "Attendibilita' e' un indice statistico per valutare quanto e' credibile "
-        "che un cambiamento ci sia stato davvero"
+        "Attendibilita indica quanto e credibile che un cambiamento ci sia stato "
+        "davvero, non se sia un bene: quel giudizio resta al preparatore."
     )
     conteggi = vista["Attendibilità"].value_counts()
     pdf.body_text("   ".join(
@@ -3877,12 +4407,39 @@ def comparazione_sezione_pdf(pdf, comp, nome_atleta):
         pdf.subsection_title("Scostamento dalla media, metrica per metrica")
         pdf.body_text(
             "Rombo pieno = test attuale con barra di incertezza; rombo vuoto = "
-            "media delle sedute precedenti.", size=9)
+            "media delle sedute precedenti. Le fasce colorate sono l'entita "
+            "dello scostamento.", size=9)
         for _, riga in strisce.iterrows():
             fig = build_swc_strip(riga)
             if fig is not None:
                 pdf.chart_image(fig, width_px=900, height_px=fig.layout.height,
                                 content_width_mm=165)
+
+    # Andamento storico: una figura per metrica. height_px deve coincidere
+    # con l'altezza della figura, altrimenti kaleido sposta la barra dei
+    # periodi (che vive in coordinate paper sotto l'area di plot).
+    storico = comp.get("storico") or []
+    if storico:
+        pdf.add_page()
+        pdf.section_title("Andamento storico")
+        pdf.body_text(
+            "Ogni punto e' una seduta con la sua barra di incertezza. La banda "
+            "grigia e' la zona di rilevanza (+/- SWC) attorno al riferimento, la "
+            "linea tratteggiata e' il riferimento stesso. La barra sotto l'asse "
+            "e' il tempo trascorso fra una seduta e l'altra: piu' larga e piu' "
+            "scura, piu' tempo e' passato.", size=9)
+        for voce in storico:
+            fig = build_storico_chart(voce["df"], voce["meta"])
+            if fig is None:
+                continue
+            pdf.chart_image(fig, width_px=1000, height_px=fig.layout.height,
+                            content_width_mm=175)
+            meta_v = voce["meta"]
+            pdf.body_text(
+                f"Riferimento: {', '.join(map(str, meta_v['sessioni_rif']))}"
+                f"   rumore della misura {meta_v['te_cv']:.1f}%"
+                f"   incertezza +/-{fmt_valore(meta_v['margine'])}", size=8)
+            pdf.ln(1)
 
     prof, serie, cats = comp.get("prof"), comp.get("prof_serie"), comp.get("prof_cats")
     if serie and cats:
@@ -3922,6 +4479,9 @@ def comparazione_sezione_pdf(pdf, comp, nome_atleta):
             pdf.chart_image(fig, width_px=900, height_px=fig.layout.height,
                             content_width_mm=150)
 
+# ============================================================================
+# PARTE 6 XXX — REPORT HTML
+# ============================================================================
 
 def genera_report_html(nome, sesso, periodo, results, profilo, commento, thresholds,
                        comp=None):
@@ -4046,7 +4606,7 @@ def genera_report_html(nome, sesso, periodo, results, profilo, commento, thresho
     .profile-card-qualita {{ font-size: 17px; font-weight: 600; color: var(--text); margin: 2px 0 4px 0; }}
     .profile-card-t {{ font-size: 30px; font-weight: 700; }}
     .profile-card-banda {{ font-size: 13px; }}
-    .profile-card-delta {{ font-size: 15px; font-weight: 600; }}
+    .profile-card-delta {{ font-size: 15px; font-weight: 600; margin-top: 4px; }}
     .muted {{ color: #667; font-size: 13px; }}
     .index-value {{ font-size: 16px; margin: 6px 0 14px 0; }}
     .metric-help {{ margin: 14px 0 4px 0; font-size: 14px; }}
@@ -4085,13 +4645,15 @@ def genera_report_html(nome, sesso, periodo, results, profilo, commento, thresho
             che confronta la prestazione dell'atleta rispetto a un gruppo di riferimento, esprimendo la
             distanza dalla media in deviazioni standard. Punteggi tra 0 e 50 indicano valori inferiori
             alla media, mentre punteggi tra 50 e 100 indicano valori superiori alla media.
+            DSI ed EUR fanno eccezione: essendo rapporti tra due test, non vengono letti come
+            "più alto = meglio" ma per zona di profilo, confrontando la posizione dell'atleta con
+            le soglie di riferimento indicate accanto a ciascun grafico.
         </p>
         {''.join(sections)}
     </div>
 </body>
 </html>"""
     return html.encode("utf-8")
-
 
 # ============================================================================
 # PARTE 6bis — REPORT SCARICABILE (PDF statico)
