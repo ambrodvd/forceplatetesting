@@ -2281,7 +2281,7 @@ with tab_profilo:
                 st.plotly_chart(fig_wedge, use_container_width=True)
                 st.caption(caption)
 
-# ============================================================================
+## ============================================================================
 # PARTE 5bis — COMPARAZIONE TRA SESSIONI
 # ============================================================================
 # Confronta il test attualmente caricato con lo storico dell'atleta, caricato
@@ -2311,7 +2311,6 @@ with tab_profilo:
 
 Z90 = 1.645
 SWC_FACTOR = 0.2
-MIN_SESSIONS_TE_ATLETA = 4  # servono almeno 3 differenze consecutive
 
 # CV% between-day di letteratura, usati finché non ci sono abbastanza
 # sessioni per stimare il TE sull'atleta stesso. Il primo pattern che
@@ -2436,35 +2435,34 @@ def te_cv_default(label):
 
 
 # ---------------------------------------------------------------------------
-# I due metri dell'incertezza
+# L'incertezza: errore entro seduta
 # ---------------------------------------------------------------------------
-# MODO_MISURA — errore standard della media di seduta: SD delle ripetizioni
-#   diviso radice di n. Misura SOLO l'errore strumentale e di esecuzione
-#   DENTRO la giornata. È il metro giusto quando si assume che fra un giorno
-#   e l'altro l'atleta SIA cambiato (fatica, adattamento): in quel caso la
-#   variabilità giorno-per-giorno è il segnale, non il rumore, e usarla come
-#   soglia renderebbe invisibile proprio ciò che si vuole misurare.
+# L'incertezza di una media di seduta è la SD delle ripetizioni diviso radice
+# di n: misura SOLO l'errore strumentale e di esecuzione DENTRO la giornata.
 #
-# MODO_GIORNI — TE between-day, dalle differenze fra sedute consecutive.
-#   Assume che fra le sedute l'atleta sia rimasto uguale: tutto ciò che si
-#   muove è rumore. È il metro giusto per chiedersi se è cambiata la CAPACITÀ
-#   DI BASE, dove la stanchezza del singolo giorno è effettivamente disturbo.
+# La scelta è deliberata. Fra un giorno e l'altro NON si assume che l'atleta
+# sia rimasto uguale: fatica e adattamento sono cambiamenti reali, non rumore.
+# Usare la variabilità giorno-per-giorno come soglia renderebbe invisibile
+# proprio ciò che il monitoraggio deve vedere — e penalizzerebbe l'atleta che
+# risponde di più al carico, perché produrrebbe soglie più larghe.
 #
-# Stesso dato, due domande diverse: il selettore in cima alla scheda decide.
-MODO_MISURA = "Errore di misura (entro seduta)"
-MODO_GIORNI = "Variabilità giorno-per-giorno"
-
-# Pavimento sull'errore di misura, in % del valore. Con 3 ripetizioni la SD è
-# una stima instabile: se per caso i salti coincidono l'errore crollerebbe a
-# zero e qualunque differenza risulterebbe significativa. Pedana e
-# posizionamento un errore ce l'hanno comunque.
-CV_MIN_MISURA = 1.0
+# La soglia di rilevanza resta 0,2 x SD di POPOLAZIONE: una quantità esterna
+# all'atleta, che non dipende da come è andata la sua ultima settimana.
+# Servono almeno 3 ripetizioni: sotto, la SD non è stimabile e si ricade sul
+# CV di letteratura.
 MIN_REP_MISURA = 3
 
 
-def se_entro_seduta(sd, n_rep, media, cv_min=CV_MIN_MISURA):
-    """Errore standard della media di una seduta, in unità native.
-    None se le ripetizioni sono troppo poche per stimarlo."""
+def se_entro_seduta(sd, n_rep, media):
+    """Errore standard della media di una seduta: SD delle ripetizioni diviso
+    radice di n. Nessun pavimento: si usa ciò che si misura.
+
+    Il limite noto è che questa stima NON vede la componente fra giorni
+    (riposizionamento sulla pedana, riscaldamento, ora del test), quindi
+    sottostima l'errore reale. La correzione arriverà dal CV entro seduta
+    calcolato sull'archivio di laboratorio, che sostituirà la SD della singola
+    seduta con una costante per metrica, molto più stabile di una stima
+    ricavata da 3 salti."""
     try:
         n_rep = int(n_rep)
     except (TypeError, ValueError):
@@ -2477,15 +2475,7 @@ def se_entro_seduta(sd, n_rep, media, cv_min=CV_MIN_MISURA):
     except (TypeError, ValueError):
         return None
     se = float(sd) / math.sqrt(n_rep)
-    return max(se, cv_min / 100.0 * abs(float(media)))
-
-
-def _sd_campionaria(values):
-    n = len(values)
-    if n < 2:
-        return None
-    m = sum(values) / n
-    return math.sqrt(sum((v - m) ** 2 for v in values) / (n - 1))
+    return se if se > 0 else None
 
 
 def fmt_valore(v, segno=False):
@@ -2676,42 +2666,12 @@ def ordina_sessioni(long_frames):
 # ----------------------------------------------------------------------------
 # Typical Error dall'atleta
 # ----------------------------------------------------------------------------
-def athlete_te_table(all_long):
-    """TE individuale per metrica: SD delle differenze tra sessioni
-    consecutive / sqrt(2). Molto più preciso dei valori di letteratura,
-    perché ogni atleta ha la propria stabilità."""
-    te = {}
-    if all_long is None or all_long.empty:
-        return te
-    for mid, g in all_long.groupby("metric_id"):
-        vals = [v for v in g.sort_values("ordine")["mean"].tolist()
-                if isinstance(v, (int, float)) and not math.isnan(v)]
-        if len(vals) < MIN_SESSIONS_TE_ATLETA:
-            continue
-        if mid in COMP_RATIO_IDS and all(v > 0 for v in vals):
-            vals = [math.log(v) for v in vals]
-            base = 1.0  # in scala log il TE è già una frazione -> CV%
-        else:
-            base = sum(abs(v) for v in vals) / len(vals)
-            if base == 0:
-                continue
-        sd_diff = _sd_campionaria([b - a for a, b in zip(vals, vals[1:])])
-        if not sd_diff:
-            continue
-        cv = (sd_diff / math.sqrt(2)) / base * 100.0
-        if cv > 0 and not math.isinf(cv):
-            te[mid] = (cv, len(vals))
-    return te
-
-
 # ----------------------------------------------------------------------------
 # Motore di confronto
 # ----------------------------------------------------------------------------
-def compare_to_history(cur_long, hist_long, athlete_te=None, pop_sd_map=None,
-                       modo=MODO_MISURA):
+def compare_to_history(cur_long, hist_long, pop_sd_map=None):
     """Confronta la sessione attuale con la MEDIA delle sedute precedenti, e
     riporta accanto il miglior valore storico (descrittivo)."""
-    athlete_te = athlete_te or {}
     pop_sd_map = pop_sd_map or {}
     if cur_long.empty or hist_long.empty:
         return pd.DataFrame()
@@ -2762,37 +2722,29 @@ def compare_to_history(cur_long, hist_long, athlete_te=None, pop_sd_map=None,
         # seduta ha il proprio errore: quello della media di k sedute vale
         # sqrt(somma dei quadrati)/k, non se/sqrt(k), perché le sedute possono
         # avere numeri di ripetizioni diversi.
-        se_diff_abs, cv, fonte_te = None, None, None
-        if modo == MODO_MISURA:
-            se_cur = se_entro_seduta(cur.loc[mid, "sd"], cur.loc[mid, "n"], m_cur)
-            se_storiche = [x for x in (se_entro_seduta(r["sd"], r["n"], r["mean"])
-                                       for _, r in g.iterrows()) if x]
-            if se_cur and se_storiche:
-                se_rif = math.sqrt(sum(x * x for x in se_storiche)) / len(se_storiche)
-                se_diff_abs = math.sqrt(se_cur ** 2 + se_rif ** 2)
-                cv = se_cur / abs(m_cur) * 100.0 if m_cur else None
-                fonte_te = "misura"
-        if se_diff_abs is None:
-            # Fallback: TE dell'atleta se disponibile, altrimenti letteratura.
-            if mid in athlete_te:
-                cv, fonte_te = athlete_te[mid][0], "atleta"
-            else:
-                cv, fonte_te = te_cv_default(etichetta), "letteratura"
+        se_cur = se_entro_seduta(cur.loc[mid, "sd"], cur.loc[mid, "n"], m_cur)
+        se_storiche = [x for x in (se_entro_seduta(r["sd"], r["n"], r["mean"])
+                                   for _, r in g.iterrows()) if x]
+        if se_cur and se_storiche:
+            se_rif = math.sqrt(sum(x * x for x in se_storiche)) / len(se_storiche)
+            se_diff_abs = math.sqrt(se_cur ** 2 + se_rif ** 2)
+            cv, fonte_te = (se_cur / abs(m_cur) * 100.0 if m_cur else None), "misura"
+        else:
+            # Meno di 3 ripetizioni, oppure indici come DSI/EUR che sono
+            # rapporti fra test e non hanno ripetizioni proprie.
+            cv, fonte_te = te_cv_default(etichetta), "letteratura"
             se_diff_abs = (cv / 100.0 * abs(media_rif)) * math.sqrt(1.0 + 1.0 / k)
         if log_scale:
             se_diff_abs = se_diff_abs / abs(media_rif)
 
-        # SWC a tre livelli: norma di popolazione, poi variabilità storica
-        # dell'atleta (per il monitoraggio individuale è anche più pertinente
-        # della popolazione), poi niente -> non valutabile.
+        # SWC: unicamente 0,2 x SD di popolazione. Niente surrogati ricavati
+        # dallo storico dell'atleta: senza norma la metrica resta non
+        # valutabile, e lo dice apertamente invece di dare un giudizio
+        # costruito su una soglia inventata.
         pop_sd = pop_sd_map.get(mid)
-        sd_storica = _sd_campionaria(storiche) if k >= MIN_SESSIONS_TE_ATLETA else None
         if pop_sd:
             swc = SWC_FACTOR * (pop_sd / abs(media_rif) if log_scale else pop_sd)
             fonte_swc = "norma"
-        elif sd_storica:
-            swc = SWC_FACTOR * (sd_storica / abs(media_rif) if log_scale else sd_storica)
-            fonte_swc = "atleta"
         else:
             swc, fonte_swc = None, "—"
 
@@ -3018,7 +2970,7 @@ def serie_storica(mid, all_long):
     return g[g["mean"].apply(lambda v: isinstance(v, (int, float)) and not math.isnan(v))]
 
 
-def prepara_storico(serie, sel_mask, swc, te_cv, log_scale=False, modo=MODO_MISURA):
+def prepara_storico(serie, sel_mask, swc, te_cv, log_scale=False):
     """Calcola riferimento, incertezza ed esito per ogni seduta.
 
     sel_mask: lista di bool, quali sedute compongono il riferimento.
@@ -3040,12 +2992,11 @@ def prepara_storico(serie, sel_mask, swc, te_cv, log_scale=False, modo=MODO_MISU
     # nota meglio di una con salti dispersi, e il grafico deve mostrarlo.
     df = serie.copy().reset_index(drop=True)
     se_rif, se_punti = None, None
-    if modo == MODO_MISURA:
-        se_ogni = [se_entro_seduta(r["sd"], r["n"], r["mean"]) for _, r in df.iterrows()]
-        se_scelti = [x for x, sel in zip(se_ogni, sel_mask) if sel and x]
-        if all(x for x in se_ogni) and se_scelti:
-            se_rif = math.sqrt(sum(x * x for x in se_scelti)) / len(se_scelti)
-            se_punti = [math.sqrt(x ** 2 + se_rif ** 2) for x in se_ogni]
+    se_ogni = [se_entro_seduta(r["sd"], r["n"], r["mean"]) for _, r in df.iterrows()]
+    se_scelti = [x for x, sel in zip(se_ogni, sel_mask) if sel and x]
+    if all(x for x in se_ogni) and se_scelti:
+        se_rif = math.sqrt(sum(x * x for x in se_scelti)) / len(se_scelti)
+        se_punti = [math.sqrt(x ** 2 + se_rif ** 2) for x in se_ogni]
 
     if se_punti is None:
         te_abs = (te_cv / 100.0) if log_scale else (te_cv / 100.0 * abs(riferimento))
@@ -3101,8 +3052,7 @@ def prepara_storico(serie, sel_mask, swc, te_cv, log_scale=False, modo=MODO_MISU
     df["giorni"] = giorni
 
     meta = dict(riferimento=riferimento, k=k, margine=margine, swc=swc,
-                te_cv=te_cv, log=log_scale, modo=modo,
-                per_punto=se_punti is not None,
+                te_cv=te_cv, log=log_scale, per_punto=se_punti is not None,
                 etichetta=str(serie["metrica"].iloc[0]),
                 unita=str(serie["unit"].iloc[0] or ""),
                 sessioni_rif=[s for s, m in zip(serie["session"], sel_mask) if m])
@@ -3305,13 +3255,14 @@ def profili_per_sessione(long_df, specs):
     return profili, t_metrica
 
 
-def confronta_profili(prof_cur, prof_hist, t_hist, hist_long, specs, athlete_te):
+def confronta_profili(prof_cur, prof_hist, t_hist, hist_long, specs):
     """Confronta il profilo attuale con la media dei profili precedenti.
 
-    L'incertezza in punti T viene ricavata dal TE delle metriche che compongono
-    la categoria: TE_T = (TE assoluto / SD popolazione) * 10. Non viene divisa
-    per la radice del numero di metriche, perché le metriche di una stessa
-    categoria sono correlate fra loro: la stima resta prudente."""
+    L'incertezza in punti T viene ricavata dall'errore entro seduta delle
+    metriche che compongono la categoria: SE_T = (SE assoluto / SD popolazione)
+    * 10. Non viene divisa per la radice del numero di metriche, perché le
+    metriche di una stessa categoria sono correlate fra loro: la stima resta
+    prudente."""
     if not prof_cur or not prof_hist:
         return pd.DataFrame()
 
@@ -3327,9 +3278,12 @@ def confronta_profili(prof_cur, prof_hist, t_hist, hist_long, specs, athlete_te)
         media = medie_metrica.get(mid)
         if media is None or not sd_pop:
             continue
-        cv = athlete_te[mid][0] if mid in athlete_te else te_cv_default(mid)
-        te_punti = (cv / 100.0 * abs(media)) / sd_pop * 10.0
-        te_per_cat.setdefault(categoria, []).append(te_punti)
+        righe = hist_long[hist_long["metric_id"] == mid]
+        se_list = [x for x in (se_entro_seduta(r["sd"], r["n"], r["mean"])
+                               for _, r in righe.iterrows()) if x]
+        se_abs = (sum(se_list) / len(se_list) if se_list
+                  else te_cv_default(mid) / 100.0 * abs(media))
+        te_per_cat.setdefault(categoria, []).append(se_abs / sd_pop * 10.0)
 
     rows = []
     for categoria in CATEGORIES:
@@ -3528,39 +3482,18 @@ with tab_comparazione:
                         + ", ".join(senza_data)
                     )
 
-                modo_incertezza = st.radio(
-                    "Metro dell'incertezza", (MODO_MISURA, MODO_GIORNI),
-                    horizontal=True, key="comp_modo",
-                    help="**Errore di misura**: usa solo la dispersione fra le ripetizioni "
-                         "della stessa seduta. Assume che fra un giorno e l'altro l'atleta "
-                         "POSSA essere cambiato, quindi fatica e adattamento restano "
-                         "visibili. È il metro per il monitoraggio.  \n"
-                         "**Variabilità giorno-per-giorno**: usa lo scarto fra sedute "
-                         "consecutive. Assume che fra le sedute l'atleta sia rimasto uguale, "
-                         "quindi tratta anche la fatica come rumore. È il metro per chiedersi "
-                         "se è cambiata la capacità di base.",
-                )
-
                 all_long = pd.concat([hist_long, cur_long], ignore_index=True)
-                te_atleta = athlete_te_table(all_long)
                 n_sedute = len(storico)
 
-                if te_atleta:
-                    st.success(
-                        f"✅ {n_sedute} sedute di riferimento: rumore della misura stimato "
-                        f"sull'atleta per {len(te_atleta)} metriche. Le altre usano valori "
-                        "di letteratura."
-                    )
-                else:
-                    st.info(
-                        f"ℹ️ {n_sedute} sedute di riferimento. Da {MIN_SESSIONS_TE_ATLETA} in su "
-                        "l'app stima il rumore sull'atleta stesso e ricava una soglia di "
-                        "rilevanza anche per le metriche prive di norme; per ora usa valori "
-                        "di letteratura, quindi gli intervalli sono più larghi del necessario."
-                    )
+                st.caption(
+                    f"{n_sedute} sedute di riferimento. L'incertezza di ogni seduta è la "
+                    "dispersione fra le sue ripetizioni (dev.std diviso radice di n): misura "
+                    "l'errore DENTRO la giornata, non la variabilità fra giorni diversi — "
+                    "quella, per un atleta che si allena, è cambiamento reale e non rumore. "
+                    "La soglia di rilevanza è sempre 0,2 × dev.std di popolazione."
+                )
 
-                res = compare_to_history(cur_long, hist_long, te_atleta, pop_sd_map,
-                                         modo=modo_incertezza)
+                res = compare_to_history(cur_long, hist_long, pop_sd_map)
 
                 if res.empty:
                     st.error(
@@ -3623,10 +3556,9 @@ with tab_comparazione:
                           if r["Attendibilità"] == ESITO_ND]
                     if nd:
                         st.warning(
-                            f"⚠️ {len(nd)} metriche non valutabili: manca sia una norma di "
-                            f"popolazione sia lo storico necessario ({MIN_SESSIONS_TE_ATLETA} "
-                            "sedute) per ricavare una soglia di rilevanza dall'atleta. Il "
-                            "valore si vede comunque, ma non si può dire se lo scostamento conti."
+                            f"⚠️ {len(nd)} metriche non valutabili: manca la norma di "
+                            "popolazione, quindi non esiste una soglia di rilevanza. Il valore "
+                            "si vede comunque, ma non si può dire se lo scostamento conti."
                         )
 
                     # --- Strisce per metrica ---
@@ -3729,12 +3661,10 @@ with tab_comparazione:
                                 riga_res = res[res["_mid"] == mid_st]
                                 swc_st = riga_res["_swc"].iloc[0] if len(riga_res) else None
                                 log_st = bool(riga_res["_log"].iloc[0]) if len(riga_res) else False
-                                te_st = (te_atleta[mid_st][0] if mid_st in te_atleta
-                                         else te_cv_default(serie_st["metrica"].iloc[0]))
+                                te_st = te_cv_default(serie_st["metrica"].iloc[0])
 
                                 df_st, meta_st = prepara_storico(serie_st, mask_st, swc_st,
-                                                                 te_st, log_st,
-                                                                 modo=modo_incertezza)
+                                                                 te_st, log_st)
                                 fig_st = build_storico_chart(df_st, meta_st)
                                 if not fig_st:
                                     continue
@@ -3754,8 +3684,7 @@ with tab_comparazione:
                                     )
                                 st.caption(
                                     f"Riferimento: {', '.join(map(str, meta_st['sessioni_rif']))}"
-                                    f" · metro: {meta_st['modo'].lower()}"
-                                    + (" (barra propria per ogni seduta)"
+                                    + (" · barra propria per ogni seduta"
                                        if meta_st["per_punto"] else "")
                                     + f" · incertezza media ±{fmt_valore(meta_st['margine'])}"
                                 )
@@ -3792,7 +3721,7 @@ with tab_comparazione:
                         # confronta_profili() viene chiamata PRIMA del radar
                         # perche' le card sotto il grafico usano il Delta T.
                         prof_res = confronta_profili(prof_cur, prof_hist, _t_hist, hist_long,
-                                                     specs, te_atleta)
+                                                     specs)
                         delta_per_cat = ({r["Categoria"]: r["Delta T"]
                                           for _, r in prof_res.iterrows()}
                                          if not prof_res.empty else {})
@@ -3905,7 +3834,6 @@ with tab_comparazione:
                         strip=[d for d in strip_scelte],
                         indici=idx_export,
                         storico=storico_export,
-                        modo=modo_incertezza,
                     )
 
                     st.download_button(
@@ -3930,9 +3858,9 @@ with tab_comparazione:
   dato mancante: sapere che l'atleta è fermo è un'informazione.
 - **{ESITO_INCERTO}** — l'intervallo scavalca la soglia: i dati non bastano per
   decidere. Con poche sedute è l'esito più frequente, ed è la risposta onesta.
-- **{ESITO_ND}** — manca una soglia di rilevanza: né norma di popolazione né
-  {MIN_SESSIONS_TE_ATLETA} sedute da cui ricavarla. Il valore resta leggibile, il
-  giudizio no.
+- **{ESITO_ND}** — manca la norma di popolazione, quindi non esiste una soglia
+  di rilevanza. Il valore resta leggibile, il giudizio no: sparirà quando le
+  norme di laboratorio copriranno anche questa metrica.
 
 **Cambiamento — quanto si è spostato?** Scala di Hopkins in multipli della soglia:
 trascurabile (sotto 1), piccolo (1-3), moderato (3-6), grande (6-10), molto grande
@@ -3950,11 +3878,16 @@ stesso, e lo scostamento risulterebbe artificialmente più piccolo.
 segnalerebbe un peggioramento quasi sempre, per un difetto del metodo e non
 dell'atleta. Usalo come riferimento pratico ("è al 92% del suo record").
 
-**La soglia di rilevanza (SWC)** vale 0,2 deviazioni standard e viene presa, in
-ordine: dalle norme di popolazione della scheda ⚙️ Costanti; se mancano, dalla
-variabilità storica dell'atleta stesso (da {MIN_SESSIONS_TE_ATLETA} sedute in su)
-— che per il monitoraggio individuale è anche più pertinente della popolazione;
-se mancano entrambe, l'esito è {ESITO_ND}.
+**La soglia di rilevanza (SWC)** vale sempre 0,2 × deviazione standard di
+popolazione, presa dalle norme della scheda ⚙️ Costanti. Non viene mai ricavata
+dallo storico dell'atleta: una soglia che dipendesse dalla sua ultima settimana
+si allargherebbe proprio quando lui migliora. Senza norma, l'esito è {ESITO_ND}.
+
+**L'incertezza** di ogni seduta è la dispersione fra le sue ripetizioni
+(dev.std ÷ radice di n). Misura l'errore dentro la giornata; la variabilità fra
+giorni diversi non ci entra, perché per un atleta che si allena quella è
+cambiamento reale, non rumore. Sotto le 3 ripetizioni — e per DSI ed EUR, che
+sono rapporti fra test — si ricade su valori di letteratura.
 
 **Indici di simmetria** — confrontati in valore assoluto: il segno indica il lato
 dominante, non la qualità, quindi passare da -2% a +6% è un aumento dello
@@ -4051,437 +3984,6 @@ def _metric_table_html(cat_results):
         <thead><tr><th>Metrica</th><th>Unità</th><th>Media</th><th>Media Pop.</th><th>N</th><th>T-score</th><th>Valutazione</th></tr></thead>
         <tbody>{''.join(rows_html)}</tbody>
     </table>"""
-
-# ============================================================================
-# PARTE 6ter — SEZIONE COMPARAZIONE NEI REPORT
-# ============================================================================
-# I risultati della scheda 🔀 Comparazione vengono salvati in
-# st.session_state["comp_export"] dalla PARTE 5bis. Qui vengono trasformati
-# in HTML e in PDF. Se la chiave non esiste (comparazione non eseguita in
-# questa sessione) le funzioni restituiscono contenuto vuoto e il report
-# resta identico a prima: la sezione è opzionale, non obbligatoria.
-#
-# Le FIGURE non vengono salvate nello stato ma ricostruite qui dalle stesse
-# funzioni build_swc_strip / build_profili_radar / build_indice_zone_strip
-# usate nella UI live: un solo posto dove cambiare la grafica.
-
-# Emoji -> testo per il PDF: i font core di fpdf2 sono Latin-1, quindi ogni
-# emoji verrebbe scartata da _pdf_safe lasciando l'etichetta mutila
-# ("🟢 Alta" -> " Alta"). Le frecce diventano segni ASCII, i pallini del
-# semaforo sparisc­ono perché nel PDF il colore lo dà il riempimento cella.
-_PDF_COMP_REPLACEMENTS = {
-    "\U0001F7E2": "", "\U0001F7E1": "", "\U0001F534": "",
-    "\u26A0\uFE0F": "", "\u26A0": "", "\u2753": "",
-    "\U0001F53A": "+", "\U0001F53B": "-", "\u25AA": "=",
-}
-
-
-def _pdf_comp(text):
-    """_pdf_safe + traduzione delle emoji di Comparazione."""
-    t = str(text if text is not None else "")
-    for old, new in _PDF_COMP_REPLACEMENTS.items():
-        t = t.replace(old, new)
-    return _pdf_safe(t.strip())
-
-
-def _delta_t_html(delta):
-    """Riga compatta col solo scostamento in punti T. Entita' e attendibilita'
-    restano in tabella: nella card toglierebbero risalto al T-score."""
-    if delta is None or (isinstance(delta, float) and math.isnan(delta)):
-        return ""
-    return (f'<div class="profile-card-delta" style="color:{colore_delta_t(delta)}">'
-            f'{delta:+.1f} punti T</div>')
-
-
-def _comp_esito_colore(esito):
-    """Colore associato a un'etichetta di attendibilità, con fallback grigio."""
-    return ESITO_COLORI.get(str(esito), "#8d8d8d")
-
-
-def _fmt(valore, decimali=3, segno=False, suffisso=""):
-    """Wrapper su fmt_valore della PARTE 5bis: stessa resa numerica in UI e
-    nei report. `decimali` e' rispettato solo per le percentuali, dove serve
-    un numero fisso di cifre."""
-    if valore is None or (isinstance(valore, float) and math.isnan(valore)):
-        return "—"
-    if suffisso == "%" and isinstance(valore, (int, float)):
-        return (f"{valore:+.{decimali}f}" if segno else f"{valore:.{decimali}f}") + suffisso
-    return fmt_valore(valore, segno=segno) + suffisso
-
-
-# ----------------------------------------------------------------------------
-# HTML
-# ----------------------------------------------------------------------------
-COMP_HTML_COLS = [
-    ("Test", 0, False), ("Metrica", 0, False), ("Unità", 0, False),
-    ("Media rif.", 3, False), ("Attuale", 3, False),
-    ("Delta", 3, True), ("Delta %", 1, True),
-    ("Cambiamento", 0, False), ("Attendibilità", 0, False),
-    ("Migliore", 3, False), ("% del migliore", 0, False),
-    ("Seduta migliore", 0, False),
-]
-
-
-def _comp_table_html(vista):
-    """Tabella della Comparazione: stesse colonne e stesso ordine della UI."""
-    if vista is None or vista.empty:
-        return ""
-    thead = "".join(f"<th>{c}</th>" for c, _d, _s in COMP_HTML_COLS)
-    righe = []
-    for _, r in vista.iterrows():
-        celle = []
-        for col, dec, segno in COMP_HTML_COLS:
-            v = r.get(col)
-            if col == "Attendibilità":
-                celle.append(f'<td style="color:{_comp_esito_colore(v)};'
-                             f'font-weight:600">{v}</td>')
-            elif col == "Delta %":
-                celle.append(f"<td>{_fmt(v, 1, True, '%')}</td>")
-            elif col == "% del migliore":
-                celle.append(f"<td>{_fmt(v, 0, False, '%')}</td>")
-            elif dec:
-                celle.append(f"<td>{_fmt(v, dec, segno)}</td>")
-            else:
-                celle.append(f"<td>{v if v not in (None, '') else '—'}</td>")
-        righe.append("<tr>" + "".join(celle) + "</tr>")
-    return (f'<table class="report-table"><thead><tr>{thead}</tr></thead>'
-            f'<tbody>{"".join(righe)}</tbody></table>')
-
-
-PROF_HTML_COLS = [
-    ("Categoria", 0), ("T medio rif.", 1), ("T attuale", 1), ("Delta T", 1),
-    ("Cambiamento", 0), ("Attendibilità", 0), ("Valutazione attuale", 0),
-    ("T migliore", 1), ("Seduta migliore", 0), ("N sedute", 0),
-]
-
-
-def _prof_table_html(prof):
-    if prof is None or prof.empty:
-        return ""
-    thead = "".join(f"<th>{c}</th>" for c, _d in PROF_HTML_COLS)
-    righe = []
-    for _, r in prof.iterrows():
-        celle = []
-        for col, dec in PROF_HTML_COLS:
-            v = r.get(col)
-            if col == "Attendibilità":
-                celle.append(f'<td style="color:{_comp_esito_colore(v)};'
-                             f'font-weight:600">{v}</td>')
-            elif col == "Delta T":
-                celle.append(f"<td>{v:+.1f}</td>" if isinstance(v, (int, float)) else "<td>—</td>")
-            elif dec:
-                celle.append(f"<td>{v:.{dec}f}</td>" if isinstance(v, (int, float)) else "<td>—</td>")
-            else:
-                celle.append(f"<td>{v if v not in (None, '') else '—'}</td>")
-        righe.append("<tr>" + "".join(celle) + "</tr>")
-    return (f'<table class="report-table"><thead><tr>{thead}</tr></thead>'
-            f'<tbody>{"".join(righe)}</tbody></table>')
-
-
-def comparazione_sections_html(comp, nome_atleta, next_id):
-    """Sezioni HTML della Comparazione. Lista vuota se comp è None."""
-    if not comp:
-        return []
-    vista = comp.get("vista")
-    if vista is None or vista.empty:
-        return []
-
-    conteggi = vista["Attendibilità"].value_counts()
-    cards = "".join(
-        f"""<div class="profile-card">
-                <div class="profile-card-cat">{etichetta}</div>
-                <div class="profile-card-t" style="color:{_comp_esito_colore(etichetta)}">
-                    {int(conteggi.get(etichetta, 0))}</div>
-            </div>"""
-        for etichetta in (ESITO_REALE, ESITO_INCERTO, ESITO_STABILE, ESITO_ND)
-    )
-
-    sezioni = [f"""<section>
-        <h2>Comparazione con lo storico</h2>
-        <p class="intro-text">Il test è confrontato con la <b>media di
-        {comp.get('n_sedute', 0)} sedute precedenti</b> (esclusa l'attuale).
-        <b>Cambiamento</b> dice direzione ed entità dello scostamento;
-        <b>Attendibilità</b> dice quanto è credibile che un cambiamento ci sia
-        stato davvero, non se sia un bene: quel giudizio resta al preparatore.</p>
-        <div class="profile-cards">{cards}</div>
-        {_comp_table_html(vista)}
-    </section>"""]
-
-    # Strisce per le metriche scelte nella UI
-    scelte = comp.get("strip") or []
-    strisce = []
-    for _, riga in vista[vista["_display"].isin(scelte)].iterrows():
-        fig = build_swc_strip(riga)
-        if fig is not None:
-            strisce.append(_fig_div(fig, next_id("comp_strip")))
-    if strisce:
-        sezioni.append(f"""<section>
-            <h2>Scostamento dalla media, metrica per metrica</h2>
-            <p class="intro-text">Il rombo pieno azzurro è il test attuale con la
-            sua barra di incertezza; il rombo vuoto arancione è la media delle
-            sedute precedenti. Le fasce colorate sono l'entità dello scostamento
-            (trascurabile, piccolo, moderato, grande), simmetriche sopra e sotto
-            la media.</p>
-            {''.join(strisce)}
-        </section>""")
-
-    # Andamento storico: una figura per metrica seguita nel tempo
-    storico = comp.get("storico") or []
-    blocchi_st = []
-    for voce in storico:
-        fig = build_storico_chart(voce["df"], voce["meta"])
-        if fig is None:
-            continue
-        meta_v = voce["meta"]
-        nota = (f"Riferimento: {', '.join(map(str, meta_v['sessioni_rif']))}"
-                f" · rumore della misura {meta_v['te_cv']:.1f}%"
-                f" · incertezza ±{fmt_valore(meta_v['margine'])}")
-        blocchi_st.append(f"{_fig_div(fig, next_id('comp_storico'))}"
-                          f'<p class="muted">{nota}</p>')
-    if blocchi_st:
-        sezioni.append(f"""<section>
-            <h2>Andamento storico</h2>
-            <p class="intro-text">Ogni punto è una seduta, con la sua barra di
-            incertezza. La banda grigia è la zona di rilevanza (±SWC) attorno al
-            riferimento; la linea tratteggiata arancione è il riferimento stesso.
-            La barra sotto l'asse è il tempo trascorso fra una seduta e l'altra:
-            più larga e più scura, più tempo è passato.</p>
-            {''.join(blocchi_st)}
-        </section>""")
-
-    # Profilo di forza: radar sovrapposto + tabella per categoria
-    prof, serie, cats = comp.get("prof"), comp.get("prof_serie"), comp.get("prof_cats")
-    if serie and cats:
-        radar = build_profili_radar(cats, serie, nome_atleta)
-        attuale = serie.get(f"{nome_atleta} — attuale", {})
-        delta_map = ({r["Categoria"]: r["Delta T"] for _, r in prof.iterrows()}
-                     if prof is not None and not prof.empty else {})
-        cards = "".join(
-            f"""<div class="profile-card">
-                    <div class="profile-card-cat">{c}</div>
-                    <div class="profile-card-qualita">{CATEGORY_QUALITY.get(c, '')}</div>
-                    <div class="profile-card-t" style="color:{banda_da_tscore(attuale[c])[1]}">{attuale[c]:.0f}</div>
-                    <div class="profile-card-banda">{banda_da_tscore(attuale[c])[0]}</div>
-                    {_delta_t_html(delta_map.get(c))}
-                </div>"""
-            for c in cats if c in attuale
-        )
-        sezioni.append(f"""<section>
-            <h2>Profilo di forza: attuale vs storico</h2>
-            {_fig_div(radar, next_id('comp_radar')) if radar else ''}
-            <div class="profile-cards">{cards}</div>
-            <p class="intro-text">Il T-score è già orientato alla prestazione,
-            quindi qui un valore più alto è sempre migliore. 1 soglia di
-            rilevanza = 2 punti di T-score.</p>
-            {_prof_table_html(prof)}
-        </section>""")
-
-    # Indici di profilo
-    indici = comp.get("indici") or []
-    if indici:
-        blocchi = []
-        for voce in indici:
-            fig = build_indice_zone_strip(
-                voce["key"], voce["attuale"], voce["riferimento"], *voce["thr"])
-            if fig is None:
-                continue
-            if voce["zona_att"] and voce["zona_rif"] and voce["zona_att"] != voce["zona_rif"]:
-                nota = (f"cambio di zona: da <i>{voce['zona_rif']}</i> "
-                        f"a <i>{voce['zona_att']}</i>")
-            elif voce["zona_att"]:
-                nota = f"zona invariata: <i>{voce['zona_att']}</i>"
-            else:
-                nota = ""
-            blocchi.append(
-                f"<h3>{voce['key'].upper()}</h3>"
-                f'<p class="index-value"><b>{_fmt(voce["attuale"], 3)}</b>'
-                f' <span class="muted">— {nota}</span></p>'
-                f"{_fig_div(fig, next_id('comp_idx'))}"
-            )
-        if blocchi:
-            sezioni.append(f"""<section>
-                <h2>Indici di profilo: si è spostato di zona?</h2>
-                <p class="intro-text">DSI ed EUR non hanno un verso migliore:
-                quello che conta è se l'atleta ha cambiato zona di profilo.</p>
-                {''.join(blocchi)}
-            </section>""")
-
-    return sezioni
-
-
-# ----------------------------------------------------------------------------
-# PDF
-# ----------------------------------------------------------------------------
-# Larghezze in mm: somma 180 = larghezza utile con margini 15/15. "Test" e le
-# colonne di coda della tabella HTML sono omesse per stare in A4 verticale.
-COMP_PDF_COLS = [
-    ("Metrica", 40, lambda r: _pdf_comp(r.get("Metrica"))),
-    ("UdM", 11, lambda r: _pdf_comp(r.get("Unità"))),
-    ("Media rif.", 17, lambda r: _fmt(r.get("Media rif."), 3)),
-    ("Attuale", 17, lambda r: _fmt(r.get("Attuale"), 3)),
-    ("Delta", 17, lambda r: _fmt(r.get("Delta"), 3, True)),
-    ("Cambiam.", 22, lambda r: _pdf_comp(r.get("Cambiamento"))),
-    ("Attendib.", 25, lambda r: _pdf_comp(r.get("Attendibilità"))),
-    ("Migliore", 17, lambda r: _fmt(r.get("Migliore"), 3)),
-    ("% migl.", 14, lambda r: _fmt(r.get("% del migliore"), 0, False, "%")),
-]
-
-PROF_PDF_COLS = [
-    ("Categoria", 48, lambda r: _pdf_comp(r.get("Categoria"))),
-    ("T rif.", 15, lambda r: f"{r.get('T medio rif.'):.1f}"),
-    ("T att.", 15, lambda r: f"{r.get('T attuale'):.1f}"),
-    ("Delta T", 17, lambda r: f"{r.get('Delta T'):+.1f}"),
-    ("Cambiam.", 22, lambda r: _pdf_comp(r.get("Cambiamento"))),
-    ("Attendib.", 25, lambda r: _pdf_comp(r.get("Attendibilità"))),
-    ("Valutazione", 38, lambda r: _pdf_comp(r.get("Valutazione attuale"))),
-]
-
-
-def _pdf_comp_table(pdf, df, colonne, col_esito="Attendibilità"):
-    """Tabella PDF generica per la Comparazione. La cella di attendibilità
-    viene riempita col colore del semaforo, perché nel PDF le emoji non
-    esistono e il colore è l'unico segnale visivo che resta."""
-    if df is None or df.empty:
-        return
-    pdf.set_x(pdf.l_margin)
-    pdf.set_font("Helvetica", "", 8)
-    pdf.set_draw_color(200, 200, 200)
-    pdf.set_line_width(0.2)
-    pdf.set_fill_color(255, 255, 255)
-    pdf.set_text_color(30, 30, 30)
-    pdf.ensure_space(12)
-    with pdf.table(
-        col_widths=[w for _h, w, _f in colonne], text_align="LEFT", line_height=4.6,
-        headings_style=FontFace(emphasis="BOLD", color=(255, 255, 255),
-                                fill_color=_hex_to_rgb(TEXT_COLOR)),
-    ) as table:
-        riga = table.row()
-        for intestazione, _w, _f in colonne:
-            riga.cell(intestazione)
-        for _, r in df.iterrows():
-            riga = table.row()
-            for intestazione, _w, estrai in colonne:
-                try:
-                    testo = estrai(r)
-                except (TypeError, ValueError):
-                    testo = "-"
-                stile = None
-                if intestazione.startswith("Attendib"):
-                    stile = FontFace(color=(255, 255, 255),
-                                     fill_color=_hex_to_rgb(_comp_esito_colore(r.get(col_esito))))
-                riga.cell(testo, style=stile)
-    pdf.set_x(pdf.l_margin)
-
-
-def comparazione_sezione_pdf(pdf, comp, nome_atleta):
-    """Aggiunge al PDF la sezione Comparazione. No-op se comp è None."""
-    if not comp:
-        return
-    vista = comp.get("vista")
-    if vista is None or vista.empty:
-        return
-
-    pdf.add_page()
-    pdf.section_title("Comparazione con lo storico")
-    pdf.body_text(
-        f"Il test e confrontato con la media di {comp.get('n_sedute', 0)} sedute "
-        "precedenti (esclusa l'attuale). La colonna Cambiamento indica direzione "
-        "(+ in aumento, - in diminuzione) ed entita dello scostamento; "
-        "Attendibilita indica quanto e credibile che un cambiamento ci sia stato "
-        "davvero, non se sia un bene: quel giudizio resta al preparatore."
-    )
-    conteggi = vista["Attendibilità"].value_counts()
-    pdf.body_text("   ".join(
-        f"{_pdf_comp(e)}: {int(conteggi.get(e, 0))}"
-        for e in (ESITO_REALE, ESITO_INCERTO, ESITO_STABILE, ESITO_ND)
-    ), size=9)
-    pdf.ln(1)
-    _pdf_comp_table(pdf, vista, COMP_PDF_COLS)
-
-    # Strisce: height_px DEVE coincidere con l'altezza della figura, altrimenti
-    # kaleido rende la fascia con uno spessore diverso da quello previsto.
-    scelte = comp.get("strip") or []
-    strisce = vista[vista["_display"].isin(scelte)]
-    if not strisce.empty:
-        pdf.ln(2)
-        pdf.subsection_title("Scostamento dalla media, metrica per metrica")
-        pdf.body_text(
-            "Rombo pieno = test attuale con barra di incertezza; rombo vuoto = "
-            "media delle sedute precedenti. Le fasce colorate sono l'entita "
-            "dello scostamento.", size=9)
-        for _, riga in strisce.iterrows():
-            fig = build_swc_strip(riga)
-            if fig is not None:
-                pdf.chart_image(fig, width_px=900, height_px=fig.layout.height,
-                                content_width_mm=165)
-
-    # Andamento storico: una figura per metrica. height_px deve coincidere
-    # con l'altezza della figura, altrimenti kaleido sposta la barra dei
-    # periodi (che vive in coordinate paper sotto l'area di plot).
-    storico = comp.get("storico") or []
-    if storico:
-        pdf.add_page()
-        pdf.section_title("Andamento storico")
-        pdf.body_text(
-            "Ogni punto e' una seduta con la sua barra di incertezza. La banda "
-            "grigia e' la zona di rilevanza (+/- SWC) attorno al riferimento, la "
-            "linea tratteggiata e' il riferimento stesso. La barra sotto l'asse "
-            "e' il tempo trascorso fra una seduta e l'altra: piu' larga e piu' "
-            "scura, piu' tempo e' passato.", size=9)
-        for voce in storico:
-            fig = build_storico_chart(voce["df"], voce["meta"])
-            if fig is None:
-                continue
-            pdf.chart_image(fig, width_px=1000, height_px=fig.layout.height,
-                            content_width_mm=175)
-            meta_v = voce["meta"]
-            pdf.body_text(
-                f"Riferimento: {', '.join(map(str, meta_v['sessioni_rif']))}"
-                f"   rumore della misura {meta_v['te_cv']:.1f}%"
-                f"   incertezza +/-{fmt_valore(meta_v['margine'])}", size=8)
-            pdf.ln(1)
-
-    prof, serie, cats = comp.get("prof"), comp.get("prof_serie"), comp.get("prof_cats")
-    if serie and cats:
-        pdf.add_page()
-        pdf.section_title("Profilo di forza: attuale vs storico")
-        radar = build_profili_radar(cats, serie, nome_atleta)
-        if radar:
-            pdf.chart_image(radar, width_px=1000, height_px=620, content_width_mm=150)
-        attuale = serie.get(f"{nome_atleta} — attuale", {})
-        if attuale:
-            delta_map = ({r["Categoria"]: r["Delta T"] for _, r in prof.iterrows()}
-                         if prof is not None and not prof.empty else {})
-            pdf.profile_cards([c for c in cats if c in attuale], attuale, delta_map)
-        pdf.body_text(
-            "Il T-score e gia orientato alla prestazione, quindi qui un valore "
-            "piu alto e sempre migliore. 1 soglia di rilevanza = 2 punti di T-score.",
-            size=9)
-        _pdf_comp_table(pdf, prof, PROF_PDF_COLS)
-
-    indici = comp.get("indici") or []
-    if indici:
-        pdf.ln(3)
-        pdf.subsection_title("Indici di profilo: si e spostato di zona?")
-        for voce in indici:
-            fig = build_indice_zone_strip(
-                voce["key"], voce["attuale"], voce["riferimento"], *voce["thr"])
-            if fig is None:
-                continue
-            if voce["zona_att"] and voce["zona_rif"] and voce["zona_att"] != voce["zona_rif"]:
-                nota = f"cambio di zona: da {voce['zona_rif']} a {voce['zona_att']}"
-            elif voce["zona_att"]:
-                nota = f"zona invariata: {voce['zona_att']}"
-            else:
-                nota = ""
-            pdf.body_text(f"{voce['key'].upper()}: {_fmt(voce['attuale'], 3)}   {nota}",
-                          size=9)
-            pdf.chart_image(fig, width_px=900, height_px=fig.layout.height,
-                            content_width_mm=150)
-
-# ============================================================================
-# PARTE 6 XXX — REPORT HTML
-# ============================================================================
 
 def genera_report_html(nome, sesso, periodo, results, profilo, commento, thresholds,
                        comp=None):
@@ -4654,6 +4156,450 @@ def genera_report_html(nome, sesso, periodo, results, profilo, commento, thresho
 </body>
 </html>"""
     return html.encode("utf-8")
+
+# ============================================================================
+# PARTE 6ter — SEZIONE COMPARAZIONE NEI REPORT
+# ============================================================================
+# I risultati della scheda 🔀 Comparazione vengono salvati in
+# st.session_state["comp_export"] dalla PARTE 5bis. Qui vengono trasformati
+# in HTML e in PDF. Se la chiave non esiste (comparazione non eseguita in
+# questa sessione) le funzioni restituiscono contenuto vuoto e il report
+# resta identico a prima: la sezione è opzionale, non obbligatoria.
+#
+# Le FIGURE non vengono salvate nello stato ma ricostruite qui dalle stesse
+# funzioni build_swc_strip / build_profili_radar / build_indice_zone_strip
+# usate nella UI live: un solo posto dove cambiare la grafica.
+
+# Emoji -> testo per il PDF: i font core di fpdf2 sono Latin-1, quindi ogni
+# emoji verrebbe scartata da _pdf_safe lasciando l'etichetta mutila
+# ("🟢 Alta" -> " Alta"). Le frecce diventano segni ASCII, i pallini del
+# semaforo sparisc­ono perché nel PDF il colore lo dà il riempimento cella.
+_PDF_COMP_REPLACEMENTS = {
+    "\U0001F7E2": "", "\U0001F7E1": "", "\U0001F534": "",
+    "\u26A0\uFE0F": "", "\u26A0": "", "\u2753": "",
+    "\U0001F53A": "+", "\U0001F53B": "-", "\u25AA": "=",
+}
+
+
+def _pdf_comp(text):
+    """_pdf_safe + traduzione delle emoji di Comparazione."""
+    t = str(text if text is not None else "")
+    for old, new in _PDF_COMP_REPLACEMENTS.items():
+        t = t.replace(old, new)
+    return _pdf_safe(t.strip())
+
+
+def _delta_t_html(delta):
+    """Riga compatta col solo scostamento in punti T. Entita' e attendibilita'
+    restano in tabella: nella card toglierebbero risalto al T-score."""
+    if delta is None or (isinstance(delta, float) and math.isnan(delta)):
+        return ""
+    return (f'<div class="profile-card-delta" style="color:{colore_delta_t(delta)}">'
+            f'{delta:+.1f} punti T</div>')
+
+
+def _comp_esito_colore(esito):
+    """Colore associato a un'etichetta di attendibilità, con fallback grigio."""
+    return ESITO_COLORI.get(str(esito), "#8d8d8d")
+
+
+def _fmt(valore, decimali=3, segno=False, suffisso=""):
+    """Wrapper su fmt_valore della PARTE 5bis: stessa resa numerica in UI e
+    nei report. `decimali` e' rispettato solo per le percentuali, dove serve
+    un numero fisso di cifre."""
+    if valore is None or (isinstance(valore, float) and math.isnan(valore)):
+        return "—"
+    if suffisso == "%" and isinstance(valore, (int, float)):
+        return (f"{valore:+.{decimali}f}" if segno else f"{valore:.{decimali}f}") + suffisso
+    return fmt_valore(valore, segno=segno) + suffisso
+
+
+# ----------------------------------------------------------------------------
+# HTML
+# ----------------------------------------------------------------------------
+COMP_HTML_COLS = [
+    ("Test", 0, False), ("Metrica", 0, False), ("Unità", 0, False),
+    ("Media rif.", 3, False), ("Attuale", 3, False),
+    ("Delta", 3, True), ("Delta %", 1, True),
+    ("Cambiamento", 0, False), ("Attendibilità", 0, False),
+    ("Migliore", 3, False), ("% del migliore", 0, False),
+    ("Seduta migliore", 0, False), ("N sedute", 0, False),
+]
+
+
+def _comp_table_html(vista):
+    """Tabella della Comparazione: stesse colonne e stesso ordine della UI."""
+    if vista is None or vista.empty:
+        return ""
+    thead = "".join(f"<th>{c}</th>" for c, _d, _s in COMP_HTML_COLS)
+    righe = []
+    for _, r in vista.iterrows():
+        celle = []
+        for col, dec, segno in COMP_HTML_COLS:
+            v = r.get(col)
+            if col == "Attendibilità":
+                celle.append(f'<td style="color:{_comp_esito_colore(v)};'
+                             f'font-weight:600">{v}</td>')
+            elif col == "Delta %":
+                celle.append(f"<td>{_fmt(v, 1, True, '%')}</td>")
+            elif col == "% del migliore":
+                celle.append(f"<td>{_fmt(v, 0, False, '%')}</td>")
+            elif dec:
+                celle.append(f"<td>{_fmt(v, dec, segno)}</td>")
+            else:
+                celle.append(f"<td>{v if v not in (None, '') else '—'}</td>")
+        righe.append("<tr>" + "".join(celle) + "</tr>")
+    return (f'<table class="report-table"><thead><tr>{thead}</tr></thead>'
+            f'<tbody>{"".join(righe)}</tbody></table>')
+
+
+PROF_HTML_COLS = [
+    ("Categoria", 0), ("T medio rif.", 1), ("T attuale", 1), ("Delta T", 1),
+    ("Cambiamento", 0), ("Attendibilità", 0), ("Valutazione attuale", 0),
+    ("T migliore", 1), ("Seduta migliore", 0), ("N sedute", 0),
+]
+
+
+def _prof_table_html(prof):
+    if prof is None or prof.empty:
+        return ""
+    thead = "".join(f"<th>{c}</th>" for c, _d in PROF_HTML_COLS)
+    righe = []
+    for _, r in prof.iterrows():
+        celle = []
+        for col, dec in PROF_HTML_COLS:
+            v = r.get(col)
+            if col == "Attendibilità":
+                celle.append(f'<td style="color:{_comp_esito_colore(v)};'
+                             f'font-weight:600">{v}</td>')
+            elif col == "Delta T":
+                celle.append(f"<td>{v:+.1f}</td>" if isinstance(v, (int, float)) else "<td>—</td>")
+            elif dec:
+                celle.append(f"<td>{v:.{dec}f}</td>" if isinstance(v, (int, float)) else "<td>—</td>")
+            else:
+                celle.append(f"<td>{v if v not in (None, '') else '—'}</td>")
+        righe.append("<tr>" + "".join(celle) + "</tr>")
+    return (f'<table class="report-table"><thead><tr>{thead}</tr></thead>'
+            f'<tbody>{"".join(righe)}</tbody></table>')
+
+
+def comparazione_sections_html(comp, nome_atleta, next_id):
+    """Sezioni HTML della Comparazione. Lista vuota se comp è None."""
+    if not comp:
+        return []
+    vista = comp.get("vista")
+    if vista is None or vista.empty:
+        return []
+
+    conteggi = vista["Attendibilità"].value_counts()
+    cards = "".join(
+        f"""<div class="profile-card">
+                <div class="profile-card-cat">{etichetta}</div>
+                <div class="profile-card-t" style="color:{_comp_esito_colore(etichetta)}">
+                    {int(conteggi.get(etichetta, 0))}</div>
+            </div>"""
+        for etichetta in (ESITO_REALE, ESITO_INCERTO, ESITO_STABILE, ESITO_ND)
+    )
+
+    sezioni = [f"""<section>
+        <h2>Comparazione con lo storico</h2>
+        <p class="intro-text">Il test è confrontato con la <b>media di
+        {comp.get('n_sedute', 0)} sedute precedenti</b> (esclusa l'attuale).
+        <b>Cambiamento</b> dice direzione ed entità dello scostamento;
+        <b>Attendibilità</b> dice quanto è credibile che un cambiamento ci sia
+        stato davvero, non se sia un bene: quel giudizio resta al preparatore.</p>
+        <p class="muted">Soglia di rilevanza (SWC) = 0,2 × dev.std di popolazione.
+        Incertezza di ogni seduta = dispersione fra le sue ripetizioni
+        (dev.std ÷ radice di n), intervallo di confidenza al 90%. La variabilità
+        fra giorni diversi non entra nell'incertezza: per un atleta che si
+        allena è cambiamento reale, non rumore.</p>
+        <div class="profile-cards">{cards}</div>
+        {_comp_table_html(vista)}
+    </section>"""]
+
+    # Strisce per le metriche scelte nella UI
+    scelte = comp.get("strip") or []
+    strisce = []
+    for _, riga in vista[vista["_display"].isin(scelte)].iterrows():
+        fig = build_swc_strip(riga)
+        if fig is not None:
+            strisce.append(_fig_div(fig, next_id("comp_strip")))
+    if strisce:
+        sezioni.append(f"""<section>
+            <h2>Scostamento dalla media, metrica per metrica</h2>
+            <p class="intro-text">Il rombo pieno azzurro è il test attuale con la
+            sua barra di incertezza; il rombo vuoto arancione è la media delle
+            sedute precedenti. Le fasce colorate sono l'entità dello scostamento
+            (trascurabile, piccolo, moderato, grande), simmetriche sopra e sotto
+            la media.</p>
+            {''.join(strisce)}
+        </section>""")
+
+    # Andamento storico: una figura per metrica seguita nel tempo
+    storico = comp.get("storico") or []
+    blocchi_st = []
+    for voce in storico:
+        fig = build_storico_chart(voce["df"], voce["meta"])
+        if fig is None:
+            continue
+        meta_v = voce["meta"]
+        nota = (f"Riferimento: {', '.join(map(str, meta_v['sessioni_rif']))}"
+                + (" · barra propria per ogni seduta" if meta_v.get("per_punto")
+                   else " · incertezza da valori di letteratura")
+                + f" · incertezza media ±{fmt_valore(meta_v['margine'])}"
+                + (f" · soglia ±{fmt_valore(meta_v['swc'])}" if meta_v.get("swc") else ""))
+        blocchi_st.append(f"{_fig_div(fig, next_id('comp_storico'))}"
+                          f'<p class="muted">{nota}</p>')
+    if blocchi_st:
+        sezioni.append(f"""<section>
+            <h2>Andamento storico</h2>
+            <p class="intro-text">Ogni punto è una seduta, con la sua barra di
+            incertezza. La banda grigia è la zona di rilevanza (±SWC) attorno al
+            riferimento; la linea tratteggiata arancione è il riferimento stesso.
+            La barra sotto l'asse è il tempo trascorso fra una seduta e l'altra:
+            più larga e più scura, più tempo è passato.</p>
+            {''.join(blocchi_st)}
+        </section>""")
+
+    # Profilo di forza: radar sovrapposto + tabella per categoria
+    prof, serie, cats = comp.get("prof"), comp.get("prof_serie"), comp.get("prof_cats")
+    if serie and cats:
+        radar = build_profili_radar(cats, serie, nome_atleta)
+        attuale = serie.get(f"{nome_atleta} — attuale", {})
+        delta_map = ({r["Categoria"]: r["Delta T"] for _, r in prof.iterrows()}
+                     if prof is not None and not prof.empty else {})
+        cards = "".join(
+            f"""<div class="profile-card">
+                    <div class="profile-card-cat">{c}</div>
+                    <div class="profile-card-qualita">{CATEGORY_QUALITY.get(c, '')}</div>
+                    <div class="profile-card-t" style="color:{banda_da_tscore(attuale[c])[1]}">{attuale[c]:.0f}</div>
+                    <div class="profile-card-banda">{banda_da_tscore(attuale[c])[0]}</div>
+                    {_delta_t_html(delta_map.get(c))}
+                </div>"""
+            for c in cats if c in attuale
+        )
+        sezioni.append(f"""<section>
+            <h2>Profilo di forza: attuale vs storico</h2>
+            {_fig_div(radar, next_id('comp_radar')) if radar else ''}
+            <div class="profile-cards">{cards}</div>
+            <p class="intro-text">Il T-score è già orientato alla prestazione,
+            quindi qui un valore più alto è sempre migliore. La soglia di
+            rilevanza vale <b>2 punti di T-score</b>: da T = 50 + 10·z e
+            SWC = 0,2 deviazioni standard segue che 0,2 z = 2 punti T.</p>
+            {_prof_table_html(prof)}
+        </section>""")
+
+    # Indici di profilo
+    indici = comp.get("indici") or []
+    if indici:
+        blocchi = []
+        for voce in indici:
+            fig = build_indice_zone_strip(
+                voce["key"], voce["attuale"], voce["riferimento"], *voce["thr"])
+            if fig is None:
+                continue
+            if voce["zona_att"] and voce["zona_rif"] and voce["zona_att"] != voce["zona_rif"]:
+                nota = (f"cambio di zona: da <i>{voce['zona_rif']}</i> "
+                        f"a <i>{voce['zona_att']}</i>")
+            elif voce["zona_att"]:
+                nota = f"zona invariata: <i>{voce['zona_att']}</i>"
+            else:
+                nota = ""
+            blocchi.append(
+                f"<h3>{voce['key'].upper()}</h3>"
+                f'<p class="index-value"><b>{_fmt(voce["attuale"], 3)}</b>'
+                f' <span class="muted">— {nota}</span></p>'
+                f"{_fig_div(fig, next_id('comp_idx'))}"
+            )
+        if blocchi:
+            sezioni.append(f"""<section>
+                <h2>Indici di profilo: si è spostato di zona?</h2>
+                <p class="intro-text">DSI ed EUR non hanno un verso migliore:
+                quello che conta è se l'atleta ha cambiato zona di profilo.</p>
+                {''.join(blocchi)}
+            </section>""")
+
+    return sezioni
+
+
+# ----------------------------------------------------------------------------
+# PDF
+# ----------------------------------------------------------------------------
+# Larghezze in mm: somma 180 = larghezza utile con margini 15/15. "Test" e le
+# colonne di coda della tabella HTML sono omesse per stare in A4 verticale.
+COMP_PDF_COLS = [
+    ("Metrica", 40, lambda r: _pdf_comp(r.get("Metrica"))),
+    ("UdM", 11, lambda r: _pdf_comp(r.get("Unità"))),
+    ("Media rif.", 17, lambda r: _fmt(r.get("Media rif."), 3)),
+    ("Attuale", 17, lambda r: _fmt(r.get("Attuale"), 3)),
+    ("Delta", 17, lambda r: _fmt(r.get("Delta"), 3, True)),
+    ("Cambiam.", 22, lambda r: _pdf_comp(r.get("Cambiamento"))),
+    ("Attendib.", 25, lambda r: _pdf_comp(r.get("Attendibilità"))),
+    ("Migliore", 17, lambda r: _fmt(r.get("Migliore"), 3)),
+    ("% migl.", 14, lambda r: _fmt(r.get("% del migliore"), 0, False, "%")),
+]
+
+PROF_PDF_COLS = [
+    ("Categoria", 48, lambda r: _pdf_comp(r.get("Categoria"))),
+    ("T rif.", 15, lambda r: f"{r.get('T medio rif.'):.1f}"),
+    ("T att.", 15, lambda r: f"{r.get('T attuale'):.1f}"),
+    ("Delta T", 17, lambda r: f"{r.get('Delta T'):+.1f}"),
+    ("Cambiam.", 22, lambda r: _pdf_comp(r.get("Cambiamento"))),
+    ("Attendib.", 25, lambda r: _pdf_comp(r.get("Attendibilità"))),
+    ("Valutazione", 38, lambda r: _pdf_comp(r.get("Valutazione attuale"))),
+]
+
+
+def _pdf_comp_table(pdf, df, colonne, col_esito="Attendibilità"):
+    """Tabella PDF generica per la Comparazione. La cella di attendibilità
+    viene riempita col colore del semaforo, perché nel PDF le emoji non
+    esistono e il colore è l'unico segnale visivo che resta."""
+    if df is None or df.empty:
+        return
+    pdf.set_x(pdf.l_margin)
+    pdf.set_font("Helvetica", "", 8)
+    pdf.set_draw_color(200, 200, 200)
+    pdf.set_line_width(0.2)
+    pdf.set_fill_color(255, 255, 255)
+    pdf.set_text_color(30, 30, 30)
+    pdf.ensure_space(12)
+    with pdf.table(
+        col_widths=[w for _h, w, _f in colonne], text_align="LEFT", line_height=4.6,
+        headings_style=FontFace(emphasis="BOLD", color=(255, 255, 255),
+                                fill_color=_hex_to_rgb(TEXT_COLOR)),
+    ) as table:
+        riga = table.row()
+        for intestazione, _w, _f in colonne:
+            riga.cell(intestazione)
+        for _, r in df.iterrows():
+            riga = table.row()
+            for intestazione, _w, estrai in colonne:
+                try:
+                    testo = estrai(r)
+                except (TypeError, ValueError):
+                    testo = "-"
+                stile = None
+                if intestazione.startswith("Attendib"):
+                    stile = FontFace(color=(255, 255, 255),
+                                     fill_color=_hex_to_rgb(_comp_esito_colore(r.get(col_esito))))
+                riga.cell(testo, style=stile)
+    pdf.set_x(pdf.l_margin)
+
+
+def comparazione_sezione_pdf(pdf, comp, nome_atleta):
+    """Aggiunge al PDF la sezione Comparazione. No-op se comp è None."""
+    if not comp:
+        return
+    vista = comp.get("vista")
+    if vista is None or vista.empty:
+        return
+
+    pdf.add_page()
+    pdf.section_title("Comparazione con lo storico")
+    pdf.body_text(
+        f"Il test e confrontato con la media di {comp.get('n_sedute', 0)} sedute "
+        "precedenti (esclusa l'attuale). La colonna Cambiamento indica direzione "
+        "(+ in aumento, - in diminuzione) ed entita dello scostamento; "
+        "Attendibilita indica quanto e credibile che un cambiamento ci sia stato "
+        "davvero, non se sia un bene: quel giudizio resta al preparatore."
+    )
+    pdf.body_text(
+        "Soglia di rilevanza (SWC) = 0,2 x dev.std di popolazione. Incertezza di "
+        "ogni seduta = dispersione fra le sue ripetizioni (dev.std diviso radice "
+        "di n), intervallo di confidenza al 90%. La variabilita fra giorni diversi "
+        "non entra nell'incertezza: per un atleta che si allena e cambiamento "
+        "reale, non rumore.", size=8)
+    conteggi = vista["Attendibilità"].value_counts()
+    pdf.body_text("   ".join(
+        f"{_pdf_comp(e)}: {int(conteggi.get(e, 0))}"
+        for e in (ESITO_REALE, ESITO_INCERTO, ESITO_STABILE, ESITO_ND)
+    ), size=9)
+    pdf.ln(1)
+    _pdf_comp_table(pdf, vista, COMP_PDF_COLS)
+
+    # Strisce: height_px DEVE coincidere con l'altezza della figura, altrimenti
+    # kaleido rende la fascia con uno spessore diverso da quello previsto.
+    scelte = comp.get("strip") or []
+    strisce = vista[vista["_display"].isin(scelte)]
+    if not strisce.empty:
+        pdf.ln(2)
+        pdf.subsection_title("Scostamento dalla media, metrica per metrica")
+        pdf.body_text(
+            "Rombo pieno = test attuale con barra di incertezza; rombo vuoto = "
+            "media delle sedute precedenti. Le fasce colorate sono l'entita "
+            "dello scostamento.", size=9)
+        for _, riga in strisce.iterrows():
+            fig = build_swc_strip(riga)
+            if fig is not None:
+                pdf.chart_image(fig, width_px=900, height_px=fig.layout.height,
+                                content_width_mm=165)
+
+    # Andamento storico: una figura per metrica. height_px deve coincidere
+    # con l'altezza della figura, altrimenti kaleido sposta la barra dei
+    # periodi (che vive in coordinate paper sotto l'area di plot).
+    storico = comp.get("storico") or []
+    if storico:
+        pdf.add_page()
+        pdf.section_title("Andamento storico")
+        pdf.body_text(
+            "Ogni punto e' una seduta con la sua barra di incertezza. La banda "
+            "grigia e' la zona di rilevanza (+/- SWC) attorno al riferimento, la "
+            "linea tratteggiata e' il riferimento stesso. La barra sotto l'asse "
+            "e' il tempo trascorso fra una seduta e l'altra: piu' larga e piu' "
+            "scura, piu' tempo e' passato.", size=9)
+        for voce in storico:
+            fig = build_storico_chart(voce["df"], voce["meta"])
+            if fig is None:
+                continue
+            pdf.chart_image(fig, width_px=1000, height_px=fig.layout.height,
+                            content_width_mm=175)
+            meta_v = voce["meta"]
+            pdf.body_text(
+                f"Riferimento: {', '.join(map(str, meta_v['sessioni_rif']))}"
+                + ("   barra propria per ogni seduta" if meta_v.get("per_punto")
+                   else "   incertezza da valori di letteratura")
+                + f"   incertezza media +/-{fmt_valore(meta_v['margine'])}"
+                + (f"   soglia +/-{fmt_valore(meta_v['swc'])}"
+                   if meta_v.get("swc") else ""), size=8)
+            pdf.ln(1)
+
+    prof, serie, cats = comp.get("prof"), comp.get("prof_serie"), comp.get("prof_cats")
+    if serie and cats:
+        pdf.add_page()
+        pdf.section_title("Profilo di forza: attuale vs storico")
+        radar = build_profili_radar(cats, serie, nome_atleta)
+        if radar:
+            pdf.chart_image(radar, width_px=1000, height_px=620, content_width_mm=150)
+        attuale = serie.get(f"{nome_atleta} — attuale", {})
+        if attuale:
+            delta_map = ({r["Categoria"]: r["Delta T"] for _, r in prof.iterrows()}
+                         if prof is not None and not prof.empty else {})
+            pdf.profile_cards([c for c in cats if c in attuale], attuale, delta_map)
+        pdf.body_text(
+            "Il T-score e gia orientato alla prestazione, quindi qui un valore "
+            "piu alto e sempre migliore. 1 soglia di rilevanza = 2 punti di T-score.",
+            size=9)
+        _pdf_comp_table(pdf, prof, PROF_PDF_COLS)
+
+    indici = comp.get("indici") or []
+    if indici:
+        pdf.ln(3)
+        pdf.subsection_title("Indici di profilo: si e spostato di zona?")
+        for voce in indici:
+            fig = build_indice_zone_strip(
+                voce["key"], voce["attuale"], voce["riferimento"], *voce["thr"])
+            if fig is None:
+                continue
+            if voce["zona_att"] and voce["zona_rif"] and voce["zona_att"] != voce["zona_rif"]:
+                nota = f"cambio di zona: da {voce['zona_rif']} a {voce['zona_att']}"
+            elif voce["zona_att"]:
+                nota = f"zona invariata: {voce['zona_att']}"
+            else:
+                nota = ""
+            pdf.body_text(f"{voce['key'].upper()}: {_fmt(voce['attuale'], 3)}   {nota}",
+                          size=9)
+            pdf.chart_image(fig, width_px=900, height_px=fig.layout.height,
+                            content_width_mm=150)
 
 # ============================================================================
 # PARTE 6bis — REPORT SCARICABILE (PDF statico)
