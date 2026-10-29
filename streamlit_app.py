@@ -1189,8 +1189,8 @@ TEAM_POP = {
 }
 # Set di norme selezionabili dalla barra laterale. Il primo è il default.
 NORM_SETS = {
-    "Letteratura": LITERATURE_POP,
     "Team DU Coaching": TEAM_POP,
+    "Letteratura": LITERATURE_POP,   
 }
 
 
