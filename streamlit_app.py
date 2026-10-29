@@ -158,939 +158,1035 @@ LITERATURE_POP = {
 # (oggi non lette dall'app). Per le donne (n=0) i valori curati sono quelli
 # di letteratura.
 TEAM_POP = {
-    "imtp_peak_force":                                            dict(mean_m=2146.257931,   sd_m=182.276624,     mean_f=1575.0,          sd_f=386.145544),  # M n=4, F n=0 default
-    "imtp_rel_peak_force":                                        dict(mean_m=26.48734115,   sd_m=1.997631649,    mean_f=34.56,           sd_f=5.27),  # M n=4, F n=0 default
-    "sj_mean_power":                                              dict(mean_m=1382.882082,   sd_m=196.774579,     mean_f=823.0,           sd_f=240.2447942),  # M n=4, F n=0 default
-    "sj_height":                                                  dict(mean_m=27.95214366,   sd_m=0.533049856,    mean_f=19.35,           sd_f=5.51),  # M n=4, F n=0 default
-    "sj_contraction_time":                                        dict(mean_m=0.4217881944,  sd_m=0.06355486796,  mean_f=0.46,            sd_f=0.137032268),  # M n=4, F n=0 default
-    "cmj_height":                                                 dict(mean_m=27.95835639,   sd_m=2.532185829,    mean_f=20.91,           sd_f=5.84),  # M n=4, F n=0 default
-    "mrsi_cmj":                                                   dict(mean_m=0.2492358865,  sd_m=0.02864232375,  mean_f=0.308,           sd_f=0.093831019),  # M n=4, F n=0 default
-    "dsi":                                                        dict(mean_m=0.7655286287,  sd_m=0.07106957678,  mean_f=0.7,             sd_f=0.074074074),  # M n=4, F n=0 default
-    "eur":                                                        dict(mean_m=1.001578441,   sd_m=0.1070318064,   mean_f=1.090563116,     sd_f=0.02656191),  # M n=4, F n=0 default
-    "cmj_re_rebound_height":                                      dict(mean_m=21.83361168,   sd_m=4.331593803,    mean_f=38.5,            sd_f=5.5996817),  # M n=4, F n=0 default
-    "cmj_re_contact_time":                                        dict(mean_m=0.2096354167,  sd_m=0.03730161753,  mean_f=0.25,            sd_f=0.148005087),  # M n=4, F n=0 default
-    "cmj_re_rebound_impulse":                                     dict(mean_m=166.5101215,   sd_m=15.59301529,    mean_f=541.5,           sd_f=53.82161458),  # M n=4, F n=0 default
-    "mrsi_cmj_re":                                                dict(mean_m=1.153966688,   sd_m=0.5896827574,   mean_f=1.37,            sd_f=0.331705729),  # M n=4, F n=0 default
+    "imtp_peak_force":                                            dict(mean_m=2162.050497,   sd_m=187.1258932,    mean_f=1575.0,          sd_f=386.145544),  # M n=3, F n=0 default
+    "imtp_rel_peak_force":                                        dict(mean_m=27.28493086,   sd_m=0.5046443763,   mean_f=34.56,           sd_f=5.27),  # M n=3, F n=0 default
+    "sj_mean_power":                                              dict(mean_m=1025.70804,    sd_m=260.0398012,    mean_f=742.0900714,     sd_f=202.6636875),  # M n=27, F n=7
+    "sj_height":                                                  dict(mean_m=21.93888329,   sd_m=4.949861273,    mean_f=15.73722381,     sd_f=3.870400084),  # M n=27, F n=7
+    "sj_contraction_time":                                        dict(mean_m=0.5386239352,  sd_m=0.2871596477,   mean_f=0.4117931667,    sd_f=0.09942743726),  # M n=27, F n=7
+    "cmj_height":                                                 dict(mean_m=25.84610516,   sd_m=4.423413661,    mean_f=18.37357143,     sd_f=3.892073811),  # M n=29, F n=7
+    "mrsi_cmj":                                                   dict(mean_m=0.2423121312,  sd_m=0.07914031445,  mean_f=0.1827452381,    sd_f=0.0580066611),  # M n=29, F n=7
+    "dsi":                                                        dict(mean_m=0.7442202762,  sd_m=0.03847254661,  mean_f=0.7,             sd_f=0.074074074),  # M n=3, F n=0 default
+    "eur":                                                        dict(mean_m=1.195112981,   sd_m=0.1799391346,   mean_f=1.177256461,     sd_f=0.08579380295),  # M n=27, F n=7
+    "cmj_re_rebound_height":                                      dict(mean_m=18.21779109,   sd_m=5.562508602,    mean_f=38.5,            sd_f=5.5996817),  # M n=6, F n=0 default
+    "cmj_re_contact_time":                                        dict(mean_m=0.2273584028,  sd_m=0.04543635166,  mean_f=0.25,            sd_f=0.148005087),  # M n=6, F n=0 default
+    "cmj_re_rebound_impulse":                                     dict(mean_m=147.2672436,   sd_m=29.24540556,    mean_f=541.5,           sd_f=53.82161458),  # M n=6, F n=0 default
+    "mrsi_cmj_re":                                                dict(mean_m=0.9546057997,  sd_m=0.5532670785,   mean_f=1.37,            sd_f=0.331705729),  # M n=6, F n=0 default
 
     # ======================================================================
-    # ALTRE METRICHE — chiave 'tipo di test::variabile'.
+    # ALTRE METRICHE — derivate (chiave di METRICS), poi grezze
+    # con chiave 'tipo di test::variabile'.
     # None = troppe poche sedute per quel sesso (nessun default).
     # ======================================================================
-    "cmj::avg braking force sym. index":                          dict(mean_m=0.7434377044,  sd_m=5.810987184,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::avg braking power sym. index":                          dict(mean_m=0.8143369209,  sd_m=6.371901918,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::avg eccentric force":                                   dict(mean_m=793.8869584,   sd_m=58.47357249,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::avg eccentric force sym. index":                        dict(mean_m=-0.6592886184, sd_m=3.879323184,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::avg eccentric power":                                   dict(mean_m=538.0675163,   sd_m=151.4037008,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::avg eccentric power sym. index":                        dict(mean_m=4.788696955,   sd_m=1.902757173,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::avg eccentric velocity":                                dict(mean_m=-0.6714440092, sd_m=0.1492850826,   mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::avg landing rfd":                                       dict(mean_m=170620.9009,   sd_m=157740.6371,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::avg landing rfd sym. index":                            dict(mean_m=-23.93171889,  sd_m=16.07797982,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::avg propulsive force sym. index":                       dict(mean_m=-1.222550695,  sd_m=1.500541058,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::avg propulsive power sym. index":                       dict(mean_m=-1.833439582,  sd_m=1.558879956,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::avg. braking force":                                    dict(mean_m=952.6257861,   sd_m=84.37198233,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::avg. braking power":                                    dict(mean_m=-800.0871052,  sd_m=173.6535217,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::avg. braking velocity":                                 dict(mean_m=-0.9236309609, sd_m=0.1438515314,   mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::avg. propulsive force":                                 dict(mean_m=1282.243356,   sd_m=34.29397312,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::avg. propulsive power":                                 dict(mean_m=1557.552832,   sd_m=119.9205642,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::avg. propulsive velocity":                              dict(mean_m=1.305250104,   sd_m=0.07362198398,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::avg. rfd":                                              dict(mean_m=1478.883733,   sd_m=419.2732777,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::avg. rfd sym. index":                                   dict(mean_m=2.897441685,   sd_m=10.72276524,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::body mass":                                             dict(mean_m=80.95394296,   sd_m=5.978991536,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::body weight":                                           dict(mean_m=793.8869848,   sd_m=58.63387734,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::body weight sd":                                        dict(mean_m=6.992318216,   sd_m=0.05639131388,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::braking duration":                                      dict(mean_m=0.3636284722,  sd_m=0.04898449114,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::braking end time":                                      dict(mean_m=1.273524306,   sd_m=0.2703808802,   mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::braking impulse":                                       dict(mean_m=58.00848776,   sd_m=11.27012819,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::braking impulse sym. index":                            dict(mean_m=0.7437886272,  sd_m=5.816265696,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::braking rfd":                                           dict(mean_m=3854.469793,   sd_m=884.9791909,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::braking rfd sym. index":                                dict(mean_m=0.155879402,   sd_m=5.692794798,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::braking work":                                          dict(mean_m=-305.2285705,  sd_m=90.65500465,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::braking work sym. index":                               dict(mean_m=0.8143369209,  sd_m=6.371901918,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::contact time":                                          dict(mean_m=0.978125,      sd_m=0.1323464879,   mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::decel rfd":                                             dict(mean_m=3755.451295,   sd_m=1174.664972,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::decel rfd sym. index":                                  dict(mean_m=-0.5056706057, sd_m=8.638336201,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::displacement depth":                                    dict(mean_m=40.23606847,   sd_m=8.157043211,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::eccentric impulse":                                     dict(mean_m=0.4091965478,  sd_m=0.1798785624,   mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::eccentric impulse sym. index":                          dict(mean_m=3.626777725,   sd_m=1.257000845,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::eccentric rfd":                                         dict(mean_m=1515.995935,   sd_m=416.4663152,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::eccentric rfd sym. index":                              dict(mean_m=6.097823126,   sd_m=12.4580149,     mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::eccentric work":                                        dict(mean_m=321.6585504,   sd_m=85.18231029,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::eccentric work sym. index":                             dict(mean_m=4.788696955,   sd_m=1.902757173,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::flight threshold":                                      dict(mean_m=3.968603538,   sd_m=0.4736106393,   mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::flight time":                                           dict(mean_m=0.4769097222,  sd_m=0.02160883039,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::force at min displacement":                             dict(mean_m=1571.773795,   sd_m=165.1213404,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::force peak power":                                      dict(mean_m=1418.839145,   sd_m=21.37919873,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::initiation threshold":                                  dict(mean_m=773.8869848,   sd_m=58.63387734,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::jump height ni":                                        dict(mean_m=23.35086738,   sd_m=3.53748787,     mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::jump momentum":                                         dict(mean_m=172.2149857,   sd_m=8.472698559,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::jump start time":                                       dict(mean_m=0.6530381944,  sd_m=0.1194129396,   mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::jump threshold time":                                   dict(mean_m=0.6530381944,  sd_m=0.1194129396,   mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::landing peak force time":                               dict(mean_m=2.147395833,   sd_m=0.2518623566,   mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::landing rfd 0-20ms":                                    dict(mean_m=166446.9335,   sd_m=131898.1078,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::landing rfd 0-20ms sym. index":                         dict(mean_m=-17.401816,    sd_m=27.90036097,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::landing rfd 0-40ms":                                    dict(mean_m=56973.29095,   sd_m=15600.79845,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::landing rfd 0-40ms sym. index":                         dict(mean_m=-12.92423937,  sd_m=6.884541861,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::landing rfd 0-60ms":                                    dict(mean_m=27511.12731,   sd_m=6907.937486,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::landing rfd 0-60ms sym. index":                         dict(mean_m=-3.992616853,  sd_m=11.5940904,     mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::landing rfd 0-80ms":                                    dict(mean_m=20052.35055,   sd_m=2223.582195,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::landing rfd 0-80ms sym. index":                         dict(mean_m=-0.8453572451, sd_m=14.25638729,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::landing time":                                          dict(mean_m=2.108072917,   sd_m=0.2298291797,   mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::left avg braking force":                                dict(mean_m=479.4041247,   sd_m=47.43247261,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::left avg braking power":                                dict(mean_m=-403.8972205,  sd_m=99.76137117,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::left avg eccentric force":                              dict(mean_m=393.8727377,   sd_m=24.49631079,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::left avg eccentric power":                              dict(mean_m=271.6230145,   sd_m=84.09917108,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::left avg landing rfd":                                  dict(mean_m=68760.60912,   sd_m=63568.00178,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::left avg propulsive force":                             dict(mean_m=633.1451174,   sd_m=10.96851741,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::left avg propulsive power":                             dict(mean_m=764.3490873,   sd_m=53.15311281,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::left avg rfd":                                          dict(mean_m=770.020275,    sd_m=242.5801222,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::left braking impulse":                                  dict(mean_m=175.0408345,   sd_m=31.64679684,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::left braking rfd":                                      dict(mean_m=2007.498968,   sd_m=455.5548941,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::left braking work":                                     dict(mean_m=-154.5296789,  sd_m=50.83654454,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::left decel rfd":                                        dict(mean_m=1853.447295,   sd_m=584.8845116,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::left eccentric impulse":                                dict(mean_m=242.5090419,   sd_m=48.18909699,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::left eccentric rfd":                                    dict(mean_m=809.2873162,   sd_m=233.8458586,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::left eccentric work":                                   dict(mean_m=162.2183912,   sd_m=46.61156514,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::left landing rfd 0-20ms":                               dict(mean_m=75676.50989,   sd_m=61757.16739,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::left landing rfd 0-40ms":                               dict(mean_m=25136.11389,   sd_m=8296.907859,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::left landing rfd 0-60ms":                               dict(mean_m=13268.43903,   sd_m=3779.208309,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::left landing rfd 0-80ms":                               dict(mean_m=9829.091325,   sd_m=651.3039022,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::left net impulse":                                      dict(mean_m=96.74444806,   sd_m=17.75965143,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::left p1 impulse":                                       dict(mean_m=123.0025321,   sd_m=17.12159022,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::left p2 impulse":                                       dict(mean_m=103.6645021,   sd_m=14.84018234,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::left peak braking force":                               dict(mean_m=797.6889917,   sd_m=86.58368468,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::left peak braking power":                               dict(mean_m=-668.3288756,  sd_m=179.8902096,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::left peak eccentric force":                             dict(mean_m=797.6889917,   sd_m=86.58368468,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::left peak eccentric power":                             dict(mean_m=668.3288756,   sd_m=179.8902096,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::left peak force":                                       dict(mean_m=821.4070333,   sd_m=64.75529845,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::left peak landing force":                               dict(mean_m=1932.67485,    sd_m=947.8287145,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::left peak propulsive force":                            dict(mean_m=811.6509083,   sd_m=55.03839166,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::left peak propulsive power":                            dict(mean_m=1490.092553,   sd_m=32.59759444,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::left propulsive impulse":                               dict(mean_m=226.6670343,   sd_m=31.84575234,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::left propulsive rfd":                                   dict(mean_m=204.7860859,   sd_m=177.7061528,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::left propulsive work":                                  dict(mean_m=272.9430658,   sd_m=38.09470493,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::left time to peak braking force":                       dict(mean_m=0.3495659722,  sd_m=0.0443479267,   mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::left time to peak braking power":                       dict(mean_m=0.1939236111,  sd_m=0.02307482601,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::left time to peak eccentric force":                     dict(mean_m=0.6064236111,  sd_m=0.1607236371,   mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::left time to peak eccentric power":                     dict(mean_m=0.45078125,    sd_m=0.1416420909,   mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::left time to peak force":                               dict(mean_m=0.6900173611,  sd_m=0.21285173,     mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::left time to peak landing force":                       dict(mean_m=0.1077256944,  sd_m=0.159896336,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::left time to peak power":                               dict(mean_m=0.90546875,    sd_m=0.1355422539,   mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::left time to peak propulsive force":                    dict(mean_m=0.08064236111, sd_m=0.08233017686,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::left time to peak propulsive power":                    dict(mean_m=0.2849826389,  sd_m=0.04193525987,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::min braking velocity":                                  dict(mean_m=-1.281075915,  sd_m=0.1979211602,   mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::min eccentric velocity":                                dict(mean_m=-1.281075915,  sd_m=0.1979211602,   mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::min unweight force":                                    dict(mean_m=224.2457537,   sd_m=103.3759168,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::net impulse":                                           dict(mean_m=172.2149857,   sd_m=8.472698559,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::net impulse sym. index":                                dict(mean_m=12.62526746,   sd_m=19.97251149,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::p1 avg force":                                          dict(mean_m=1389.406803,   sd_m=66.78237158,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::p1 avg power":                                          dict(mean_m=956.7010084,   sd_m=107.3924942,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::p1 avg velocity":                                       dict(mean_m=0.7127726666,  sd_m=0.05339050773,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::p1 duration":                                           dict(mean_m=0.1791666667,  sd_m=0.02394742774,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::p1 impulse":                                            dict(mean_m=105.3710836,   sd_m=11.17991083,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::p1 impulse sym. index":                                 dict(mean_m=-0.8834720146, sd_m=2.654936477,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::p1 p2 duration ratio":                                  dict(mean_m=1.003909111,   sd_m=0.001852369331, mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::p1 p2 force ratio":                                     dict(mean_m=1.185079964,   sd_m=0.06096490323,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::p1 p2 power ratio":                                     dict(mean_m=0.4439950883,  sd_m=0.04620703406,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::p1 p2 velocity ratio":                                  dict(mean_m=0.3762082458,  sd_m=0.0349140895,   mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::p1 peak force":                                         dict(mean_m=1599.939704,   sd_m=153.5226995,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::p1 peak power":                                         dict(mean_m=1688.710987,   sd_m=268.7830365,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::p1 peak velocity":                                      dict(mean_m=1.296770543,   sd_m=0.1076320353,   mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::p2 avg force":                                          dict(mean_m=1174.872895,   sd_m=24.16214567,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::p2 avg power":                                          dict(mean_m=2161.546371,   sd_m=168.7351576,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::p2 avg velocity":                                       dict(mean_m=1.899892911,   sd_m=0.1279683755,   mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::p2 duration":                                           dict(mean_m=0.1784722222,  sd_m=0.02393735662,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::p2 impulse":                                            dict(mean_m=67.25309865,   sd_m=5.805062238,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::p2 impulse sym. index":                                 dict(mean_m=-1.506995479,  sd_m=2.20377328,     mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::p2 peak force":                                         dict(mean_m=1483.002212,   sd_m=31.38025857,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::p2 peak power":                                         dict(mean_m=2991.000609,   sd_m=121.9902276,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::p2 peak velocity":                                      dict(mean_m=2.305477061,   sd_m=0.124908616,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::peak braking force":                                    dict(mean_m=1591.134195,   sd_m=181.0576954,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::peak braking force sym. index":                         dict(mean_m=0.3565956448,  sd_m=4.762871905,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::peak braking power":                                    dict(mean_m=-1297.501359,  sd_m=291.0911369,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::peak braking power sym. index":                         dict(mean_m=1.2935099,     sd_m=5.467624478,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::peak eccentric force":                                  dict(mean_m=1591.134195,   sd_m=181.0576954,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::peak eccentric force sym. index":                       dict(mean_m=0.3565956448,  sd_m=4.762871905,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::peak eccentric power":                                  dict(mean_m=1297.501359,   sd_m=291.0911369,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::peak eccentric power sym. index":                       dict(mean_m=4.630833001,   sd_m=1.879624663,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::peak force":                                            dict(mean_m=1653.210737,   sd_m=131.0622617,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::peak force sym. index":                                 dict(mean_m=-0.7785256753, sd_m=1.672947076,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::peak force time":                                       dict(mean_m=1.473263889,   sd_m=0.227631467,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::peak landing force":                                    dict(mean_m=4303.393795,   sd_m=2078.843467,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::peak landing force sym. index":                         dict(mean_m=-12.93531875,  sd_m=8.90410095,     mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::peak power":                                            dict(mean_m=2991.000609,   sd_m=121.9902276,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::peak propulsive force":                                 dict(mean_m=1636.543095,   sd_m=113.8826864,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::peak propulsive force sym. index":                      dict(mean_m=-0.8959883961, sd_m=1.686451738,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::peak propulsive power":                                 dict(mean_m=2991.000609,   sd_m=121.9902276,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::peak propulsive power sym. index":                      dict(mean_m=-0.4628829644, sd_m=2.768105583,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::peak propulsive velocity":                              dict(mean_m=2.305477061,   sd_m=0.124908616,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::peak velocity":                                         dict(mean_m=2.305477061,   sd_m=0.124908616,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::propulsive duration":                                   dict(mean_m=0.3576388889,  sd_m=0.04788394616,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::propulsive impulse":                                    dict(mean_m=172.6241823,   sd_m=8.504291685,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::propulsive impulse sym. index":                         dict(mean_m=-1.222407941,  sd_m=1.498088168,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::propulsive rfd":                                        dict(mean_m=523.2100671,   sd_m=365.884225,     mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::propulsive rfd sym. index":                             dict(mean_m=-25.08257011,  sd_m=23.01983777,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::propulsive work":                                       dict(mean_m=555.2660643,   sd_m=71.01991534,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::propulsive work sym. index":                            dict(mean_m=-1.833439582,  sd_m=1.558879956,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::rel. avg. propulsive force":                            dict(mean_m=15.90177836,   sd_m=1.20192499,     mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::rel. min unweight force":                               dict(mean_m=0.2880174986,  sd_m=0.1396099718,   mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::rel. propulsive impulse":                               dict(mean_m=2.139005909,   sd_m=0.1576893496,   mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::relative force at min displacement":                    dict(mean_m=1.976457141,   sd_m=0.0687777414,   mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::relative peak force":                                   dict(mean_m=2.082302904,   sd_m=0.06182907834,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::relative peak landing force":                           dict(mean_m=5.309517737,   sd_m=2.255877207,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::relative peak power":                                   dict(mean_m=37.14779989,   sd_m=3.828227776,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::right avg braking force":                               dict(mean_m=473.2216614,   sd_m=51.58367774,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::right avg braking power":                               dict(mean_m=-396.1898847,  sd_m=78.9360964,     mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::right avg eccentric force":                             dict(mean_m=400.0142207,   sd_m=39.21721498,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::right avg eccentric power":                             dict(mean_m=266.4445018,   sd_m=69.15074589,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::right avg landing rfd":                                 dict(mean_m=110614.5526,   sd_m=103509.5279,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::right avg propulsive force":                            dict(mean_m=649.0982384,   sd_m=25.74635936,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::right avg propulsive power":                            dict(mean_m=793.2037443,   sd_m=68.53240636,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::right avg rfd":                                         dict(mean_m=712.1366678,   sd_m=198.0906642,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::right braking impulse":                                 dict(mean_m=171.8213339,   sd_m=25.85351584,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::right braking rfd":                                     dict(mean_m=2031.208145,   sd_m=559.714474,     mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::right braking work":                                    dict(mean_m=-150.6988916,  sd_m=41.05564226,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::right decel rfd":                                       dict(mean_m=1902.003999,   sd_m=624.4332641,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::right eccentric impulse":                               dict(mean_m=246.8023616,   sd_m=58.64525559,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::right eccentric rfd":                                   dict(mean_m=709.3747187,   sd_m=206.1668467,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::right eccentric work":                                  dict(mean_m=159.4401592,   sd_m=39.97030852,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::right landing rfd 0-20ms":                              dict(mean_m=90770.42358,   sd_m=71567.77147,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::right landing rfd 0-40ms":                              dict(mean_m=31837.17705,   sd_m=7519.586324,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::right landing rfd 0-60ms":                              dict(mean_m=14242.68828,   sd_m=3896.463253,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::right landing rfd 0-80ms":                              dict(mean_m=10223.25922,   sd_m=2619.185315,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::right net impulse":                                     dict(mean_m=75.47053765,   sd_m=18.78347073,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::right p1 impulse":                                      dict(mean_m=125.6617049,   sd_m=20.48641192,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::right p2 impulse":                                      dict(mean_m=106.3313376,   sd_m=10.46703071,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::right peak braking force":                              dict(mean_m=794.5994204,   sd_m=106.3236646,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::right peak braking power":                              dict(mean_m=-639.1271934,  sd_m=116.1489275,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::right peak eccentric force":                            dict(mean_m=794.5994204,   sd_m=106.3236646,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::right peak eccentric power":                            dict(mean_m=639.1271934,   sd_m=116.1489275,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::right peak force":                                      dict(mean_m=834.8534204,   sd_m=67.71846089,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::right peak landing force":                              dict(mean_m=2511.937304,   sd_m=1245.546024,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::right peak propulsive force":                           dict(mean_m=827.1172454,   sd_m=60.04014786,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::right peak propulsive power":                           dict(mean_m=1506.480173,   sd_m=98.07905399,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::right propulsive impulse":                              dict(mean_m=231.9930426,   sd_m=30.22846244,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::right propulsive rfd":                                  dict(mean_m=405.2862591,   sd_m=247.7431462,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::right propulsive work":                                 dict(mean_m=282.3229985,   sd_m=33.21540228,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::right time to peak braking force":                      dict(mean_m=0.3522569444,  sd_m=0.04553203082,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::right time to peak braking power":                      dict(mean_m=0.1875868056,  sd_m=0.03523050999,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::right time to peak eccentric force":                    dict(mean_m=0.6091145833,  sd_m=0.1593093938,   mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::right time to peak eccentric power":                    dict(mean_m=0.4444444444,  sd_m=0.1446471268,   mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::right time to peak force":                              dict(mean_m=0.67890625,    sd_m=0.1903876522,   mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::right time to peak landing force":                      dict(mean_m=0.03880208333, sd_m=0.03021082764,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::right time to peak power":                              dict(mean_m=0.9102430556,  sd_m=0.1331854106,   mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::right time to peak propulsive force":                   dict(mean_m=0.06901041667, sd_m=0.07944050623,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::right time to peak propulsive power":                   dict(mean_m=0.2897569444,  sd_m=0.0423445057,   mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::rsi":                                                   dict(mean_m=0.5131130202,  sd_m=0.07153526531,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::takeoff time":                                          dict(mean_m=1.631163194,   sd_m=0.2499288374,   mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::takeoff velocity":                                      dict(mean_m=2.134042515,   sd_m=0.1590572326,   mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::time to peak braking force":                            dict(mean_m=0.35078125,    sd_m=0.04488208198,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::time to peak braking force sym. index":                 dict(mean_m=-0.3715492589, sd_m=0.5878713469,   mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::time to peak braking power":                            dict(mean_m=0.1930555556,  sd_m=0.02573039277,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::time to peak braking power sym. index":                 dict(mean_m=1.748663815,   sd_m=3.617361443,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::time to peak eccentric force":                          dict(mean_m=0.6076388889,  sd_m=0.1600858883,   mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::time to peak eccentric force sym. index":               dict(mean_m=-0.2458676394, sd_m=0.4013345698,   mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::time to peak eccentric power":                          dict(mean_m=0.4499131944,  sd_m=0.1414135058,   mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::time to peak eccentric power sym. index":               dict(mean_m=1.710932308,   sd_m=1.081145701,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::time to peak force":                                    dict(mean_m=0.6815104167,  sd_m=0.1960954984,   mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::time to peak landing force":                            dict(mean_m=0.03932291667, sd_m=0.02888056187,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::time to peak landing force sym. index":                 dict(mean_m=11.28453049,   sd_m=9.758173765,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::time to peak power":                                    dict(mean_m=0.9077256944,  sd_m=0.1340506766,   mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::time to peak power sym. index":                         dict(mean_m=-0.2884007603, sd_m=0.1705674226,   mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::time to peak propulsive force":                         dict(mean_m=0.07161458333, sd_m=0.07764972459,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::time to peak propulsive force sym. index":              dict(mean_m=-6.616179335,  sd_m=34.34825461,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::time to peak propulsive power":                         dict(mean_m=0.2872395833,  sd_m=0.04116731546,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::time to peak propulsive power sym. index":              dict(mean_m=-0.8431718267, sd_m=0.4932999191,   mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::time to peak si":                                       dict(mean_m=0.9177948454,  sd_m=2.36474958,     mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::time to takeoff":                                       dict(mean_m=0.978125,      sd_m=0.1323464879,   mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::unweighted duration":                                   dict(mean_m=0.2568576389,  sd_m=0.1507790594,   mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmj::velocity peak power":                                   dict(mean_m=2.108770026,   sd_m=0.1089669565,   mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::avg braking force sym. index":                         dict(mean_m=0.5023011719,  sd_m=3.547798403,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::avg braking power sym. index":                         dict(mean_m=0.6712297066,  sd_m=3.407219799,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::avg eccentric force":                                  dict(mean_m=794.9870104,   sd_m=58.943665,      mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::avg eccentric force sym. index":                       dict(mean_m=-1.738056494,  sd_m=3.47542925,     mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::avg eccentric power":                                  dict(mean_m=548.7759972,   sd_m=131.9862822,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::avg eccentric power sym. index":                       dict(mean_m=3.562001456,   sd_m=1.053289769,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::avg eccentric velocity":                               dict(mean_m=-0.6844093367, sd_m=0.1188502878,   mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::avg landing rfd":                                      dict(mean_m=39557.02158,   sd_m=13783.66045,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::avg landing rfd sym. index":                           dict(mean_m=-25.00900826,  sd_m=13.96914851,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::avg propulsive force sym. index":                      dict(mean_m=-0.60931744,   sd_m=2.587022718,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::avg propulsive power sym. index":                      dict(mean_m=-1.401410984,  sd_m=2.318692229,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::avg. braking force":                                   dict(mean_m=911.4834528,   sd_m=78.58720549,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::avg. braking power":                                   dict(mean_m=-771.5539836,  sd_m=177.5414193,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::avg. braking velocity":                                dict(mean_m=-0.9172662016, sd_m=0.1426984683,   mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::avg. propulsive force":                                dict(mean_m=1252.071766,   sd_m=64.67176574,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::avg. propulsive power":                                dict(mean_m=1425.107555,   sd_m=216.1833098,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::avg. propulsive velocity":                             dict(mean_m=1.219843887,   sd_m=0.1298312833,   mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::avg. rfd":                                             dict(mean_m=1361.964828,   sd_m=195.7530238,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::avg. rfd sym. index":                                  dict(mean_m=9.075596067,   sd_m=9.33673881,     mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::body mass":                                            dict(mean_m=81.0625689,    sd_m=6.005846622,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::body weight":                                          dict(mean_m=794.9522413,   sd_m=58.89723578,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::body weight sd":                                       dict(mean_m=7.119616598,   sd_m=0.02553883062,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::braking duration":                                     dict(mean_m=0.4099826389,  sd_m=0.02910925649,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::braking end time":                                     dict(mean_m=1.223090278,   sd_m=0.07785343749,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::braking impulse":                                      dict(mean_m=46.48994495,   sd_m=14.7453275,     mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::braking impulse sym. index":                           dict(mean_m=0.5056483022,  sd_m=3.546781778,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::braking rfd":                                          dict(mean_m=3176.770649,   sd_m=317.9117842,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::braking rfd sym. index":                               dict(mean_m=2.513417516,   sd_m=5.53713312,     mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::braking work":                                         dict(mean_m=-317.2570785,  sd_m=84.8430521,     mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::braking work sym. index":                              dict(mean_m=0.6712297066,  sd_m=3.407219799,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::contact time":                                         dict(mean_m=0.9513020833,  sd_m=0.07328301653,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::decel rfd":                                            dict(mean_m=3256.388567,   sd_m=206.2926866,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::decel rfd sym. index":                                 dict(mean_m=0.7664136962,  sd_m=4.956391272,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::displacement depth":                                   dict(mean_m=41.21570357,   sd_m=8.206357794,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::eccentric impulse":                                    dict(mean_m=0.3637445025,  sd_m=0.1511673802,   mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::eccentric impulse sym. index":                         dict(mean_m=3.402480084,   sd_m=0.8295545372,   mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::eccentric rfd":                                        dict(mean_m=1384.903521,   sd_m=181.1135527,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::eccentric rfd sym. index":                             dict(mean_m=5.904997078,   sd_m=10.22826165,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::eccentric work":                                       dict(mean_m=330.2706324,   sd_m=87.72773479,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::eccentric work sym. index":                            dict(mean_m=3.562001456,   sd_m=1.053289769,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::flight threshold":                                     dict(mean_m=4.07405532,    sd_m=0.6779236472,   mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::flight time":                                          dict(mean_m=0.4471354167,  sd_m=0.01970594456,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::force at min displacement":                            dict(mean_m=1540.528558,   sd_m=173.7962607,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::force peak power":                                     dict(mean_m=1409.307175,   sd_m=35.02195061,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::initiation threshold":                                 dict(mean_m=774.9522413,   sd_m=58.89723578,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::jump height ft":                                       dict(mean_m=24.55968738,   sd_m=2.16876305,     mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::jump height ni":                                       dict(mean_m=20.00840245,   sd_m=4.527150823,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::jump momentum":                                        dict(mean_m=159.2703225,   sd_m=19.5771491,     mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::jump start time":                                      dict(mean_m=0.62421875,    sd_m=0.05389844486,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::jump threshold time":                                  dict(mean_m=0.62421875,    sd_m=0.05389844486,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::landing peak force time":                              dict(mean_m=2.084548611,   sd_m=0.1014619932,   mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::landing rfd 0-20ms":                                   dict(mean_m=59029.38484,   sd_m=14571.39679,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::landing rfd 0-20ms sym. index":                        dict(mean_m=0.1557634022,  sd_m=22.69186007,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::landing rfd 0-40ms":                                   dict(mean_m=81556.36863,   sd_m=34563.02796,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::landing rfd 0-40ms sym. index":                        dict(mean_m=-4.140377283,  sd_m=11.2303534,     mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::landing rfd 0-60ms":                                   dict(mean_m=69281.1309,    sd_m=11464.93738,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::landing rfd 0-60ms sym. index":                        dict(mean_m=-5.153140469,  sd_m=7.576463552,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::landing rfd 0-80ms":                                   dict(mean_m=48084.98171,   sd_m=9292.99494,     mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::landing rfd 0-80ms sym. index":                        dict(mean_m=-1.763572082,  sd_m=7.480868545,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::landing time":                                         dict(mean_m=2.02265625,    sd_m=0.1102867914,   mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::left avg braking force":                               dict(mean_m=458.0544835,   sd_m=40.72988532,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::left avg braking power":                               dict(mean_m=-388.7497161,  sd_m=89.95247092,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::left avg eccentric force":                             dict(mean_m=389.9956721,   sd_m=20.28785278,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::left avg eccentric power":                             dict(mean_m=274.405728,    sd_m=64.29132482,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::left avg landing rfd":                                 dict(mean_m=13138.75701,   sd_m=7115.613896,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::left avg propulsive force":                            dict(mean_m=621.793081,    sd_m=23.42844349,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::left avg propulsive power":                            dict(mean_m=701.7497212,   sd_m=95.9601024,     mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::left avg rfd":                                         dict(mean_m=739.1058759,   sd_m=153.5112201,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::left braking impulse":                                 dict(mean_m=187.4064255,   sd_m=23.99082365,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::left braking rfd":                                     dict(mean_m=1763.298025,   sd_m=286.0697514,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::left braking work":                                    dict(mean_m=-159.7183419,  sd_m=42.34745613,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::left decel rfd":                                       dict(mean_m=1637.436468,   sd_m=127.2716561,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::left eccentric impulse":                               dict(mean_m=233.4380361,   sd_m=17.55880333,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::left eccentric rfd":                                   dict(mean_m=743.9531849,   sd_m=160.7812204,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::left eccentric work":                                  dict(mean_m=165.1385448,   sd_m=42.49330941,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::left landing rfd 0-20ms":                              dict(mean_m=28879.304,     sd_m=10095.68028,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::left landing rfd 0-40ms":                              dict(mean_m=38447.77368,   sd_m=15068.64122,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::left landing rfd 0-60ms":                              dict(mean_m=32691.42759,   sd_m=6037.821795,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::left landing rfd 0-80ms":                              dict(mean_m=23776.60457,   sd_m=6263.495391,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::left net impulse":                                     dict(mean_m=90.76093775,   sd_m=22.29709463,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::left p1 impulse":                                      dict(mean_m=120.6113286,   sd_m=23.3825092,     mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::left p2 impulse":                                      dict(mean_m=99.36316591,   sd_m=16.38276567,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::left peak braking force":                              dict(mean_m=790.100996,    sd_m=97.90727862,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::left peak braking power":                              dict(mean_m=-691.0462558,  sd_m=159.9973061,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::left peak eccentric force":                            dict(mean_m=790.100996,    sd_m=97.90727862,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::left peak eccentric power":                            dict(mean_m=691.0462558,   sd_m=159.9973061,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::left peak force":                                      dict(mean_m=811.4847543,   sd_m=67.95757215,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::left peak landing force":                              dict(mean_m=2497.654988,   sd_m=483.4843621,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::left peak propulsive force":                           dict(mean_m=798.157971,    sd_m=68.13748674,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::left peak propulsive power":                           dict(mean_m=1369.892699,   sd_m=144.214415,     mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::left propulsive impulse":                              dict(mean_m=219.9744945,   sd_m=39.72272453,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::left propulsive rfd":                                  dict(mean_m=164.3345423,   sd_m=246.5973205,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::left propulsive work":                                 dict(mean_m=248.916811,    sd_m=55.5992407,     mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::left rebound avg braking force":                       dict(mean_m=1282.066591,   sd_m=163.5812836,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::left rebound avg braking power":                       dict(mean_m=-1380.714985,  sd_m=81.2898448,     mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::left rebound avg propulsive force":                    dict(mean_m=1095.090527,   sd_m=243.3567032,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::left rebound avg propulsive power":                    dict(mean_m=1377.160389,   sd_m=429.8903852,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::left rebound braking impulse":                         dict(mean_m=107.0997118,   sd_m=12.77953387,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::left rebound braking rfd":                             dict(mean_m=38525.63464,   sd_m=13397.77071,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::left rebound braking work":                            dict(mean_m=-117.7708322,  sd_m=27.21438461,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::left rebound p1 impulse":                              dict(mean_m=101.5313565,   sd_m=7.432741291,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::left rebound p2 impulse":                              dict(mean_m=32.16621102,   sd_m=5.488339792,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::left rebound peak braking force":                      dict(mean_m=2205.671454,   sd_m=384.7527426,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::left rebound peak braking power":                      dict(mean_m=-2758.01379,   sd_m=284.271922,     mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::left rebound peak propulsive force":                   dict(mean_m=1900.452846,   sd_m=557.7292644,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::left rebound peak propulsive power":                   dict(mean_m=2608.078856,   sd_m=920.1957201,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::left rebound propulsive impulse":                      dict(mean_m=133.6975676,   sd_m=7.34774894,     mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::left rebound propulsive rfd":                          dict(mean_m=3568.061769,   sd_m=4243.049132,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::left rebound propulsive work":                         dict(mean_m=168.7612872,   sd_m=17.14493261,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::left rebound time to peak braking force":              dict(mean_m=0.06102430556, sd_m=0.01377375602,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::left rebound time to peak braking power":              dict(mean_m=0.04453125,    sd_m=0.009016084842, mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::left rebound time to peak propulsive force":           dict(mean_m=0.01032986111, sd_m=0.00889492254,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::left rebound time to peak propulsive power":           dict(mean_m=0.059375,      sd_m=0.01085127313,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::left time to peak braking force":                      dict(mean_m=0.3911458333,  sd_m=0.03638771821,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::left time to peak braking power":                      dict(mean_m=0.2508680556,  sd_m=0.02917837618,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::left time to peak eccentric force":                    dict(mean_m=0.5800347222,  sd_m=0.04081547622,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::left time to peak eccentric power":                    dict(mean_m=0.4397569444,  sd_m=0.01956908629,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::left time to peak force":                              dict(mean_m=0.6322048611,  sd_m=0.07935142052,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::left time to peak landing force":                      dict(mean_m=0.4105034722,  sd_m=0.165072764,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::left time to peak power":                              dict(mean_m=0.8779513889,  sd_m=0.06532485743,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::left time to peak propulsive force":                   dict(mean_m=0.06866319444, sd_m=0.0790871184,   mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::left time to peak propulsive power":                   dict(mean_m=0.2790798611,  sd_m=0.04725827106,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::min braking velocity":                                 dict(mean_m=-1.295214315,  sd_m=0.1907362026,   mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::min eccentric velocity":                               dict(mean_m=-1.295214315,  sd_m=0.1907362026,   mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::min unweight force":                                   dict(mean_m=260.0077501,   sd_m=39.3213223,     mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::net impulse":                                          dict(mean_m=159.2703225,   sd_m=19.5771491,     mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::net impulse sym. index":                               dict(mean_m=14.48783279,   sd_m=22.83777048,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::p1 avg force":                                         dict(mean_m=1356.431968,   sd_m=93.2563322,     mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::p1 avg power":                                         dict(mean_m=874.1118159,   sd_m=162.461599,     mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::p1 avg velocity":                                      dict(mean_m=0.6609344032,  sd_m=0.08619908541,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::p1 duration":                                          dict(mean_m=0.1767361111,  sd_m=0.02777054304,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::p1 impulse":                                           dict(mean_m=98.59817837,   sd_m=16.17049046,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::p1 impulse sym. index":                                dict(mean_m=0.3490083922,  sd_m=3.170214566,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::p1 p2 duration ratio":                                 dict(mean_m=1.00625808,    sd_m=0.003796257814, mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::p1 p2 force ratio":                                    dict(mean_m=1.181977564,   sd_m=0.05177326309,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::p1 p2 power ratio":                                    dict(mean_m=0.4376649892,  sd_m=0.04418995769,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::p1 p2 velocity ratio":                                 dict(mean_m=0.3699384957,  sd_m=0.03573550147,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::p1 peak force":                                        dict(mean_m=1562.816867,   sd_m=155.0342718,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::p1 peak power":                                        dict(mean_m=1580.91968,    sd_m=324.5765866,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::p1 peak velocity":                                     dict(mean_m=1.208869847,   sd_m=0.1621178104,   mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::p2 avg force":                                         dict(mean_m=1147.425415,   sd_m=39.72451056,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::p2 avg power":                                         dict(mean_m=1980.723078,   sd_m=283.7034214,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::p2 avg velocity":                                      dict(mean_m=1.782324221,   sd_m=0.1934421751,   mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::p2 duration":                                          dict(mean_m=0.1756944444,  sd_m=0.02816284034,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::p2 impulse":                                           dict(mean_m=61.03588859,   sd_m=5.443164767,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::p2 impulse sym. index":                                dict(mean_m=-1.701028681,  sd_m=1.936098428,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::p2 peak force":                                        dict(mean_m=1476.733058,   sd_m=36.12494516,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::p2 peak power":                                        dict(mean_m=2786.746275,   sd_m=331.3543136,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::p2 peak velocity":                                     dict(mean_m=2.152968702,   sd_m=0.2063106707,   mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::peak braking force":                                   dict(mean_m=1568.925025,   sd_m=170.8218762,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::peak braking force sym. index":                        dict(mean_m=0.4864050434,  sd_m=3.51500267,     mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::peak braking power":                                   dict(mean_m=-1327.010403,  sd_m=271.6113847,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::peak braking power sym. index":                        dict(mean_m=3.287180977,   sd_m=3.802616444,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::peak eccentric force":                                 dict(mean_m=1568.925025,   sd_m=170.8218762,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::peak eccentric force sym. index":                      dict(mean_m=0.4864050434,  sd_m=3.51500267,     mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::peak eccentric power":                                 dict(mean_m=1327.010403,   sd_m=271.6113847,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::peak eccentric power sym. index":                      dict(mean_m=4.494157969,   sd_m=1.391891658,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::peak force":                                           dict(mean_m=1614.152783,   sd_m=123.2461172,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::peak force sym. index":                                dict(mean_m=0.0828223674,  sd_m=2.574957477,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::peak force time":                                      dict(mean_m=1.421527778,   sd_m=0.1944188144,   mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::peak landing force":                                   dict(mean_m=4862.939175,   sd_m=734.1338543,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::peak landing force sym. index":                        dict(mean_m=-1.374757234,  sd_m=6.187796876,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::peak power":                                           dict(mean_m=2786.746275,   sd_m=331.3543136,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::peak propulsive force":                                dict(mean_m=1598.121842,   sd_m=114.6552258,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::peak propulsive force sym. index":                     dict(mean_m=-0.3180216303, sd_m=2.446831418,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::peak propulsive power":                                dict(mean_m=2786.746275,   sd_m=331.3543136,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::peak propulsive power sym. index":                     dict(mean_m=-1.790018693,  sd_m=1.688909257,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::peak propulsive velocity":                             dict(mean_m=2.152968702,   sd_m=0.2063106707,   mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::peak velocity":                                        dict(mean_m=2.152968702,   sd_m=0.2063106707,   mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::propulsive duration":                                  dict(mean_m=0.3524305556,  sd_m=0.05593260361,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::propulsive impulse":                                   dict(mean_m=159.634067,    sd_m=19.46806973,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::propulsive impulse sym. index":                        dict(mean_m=-0.6104134997, sd_m=2.584771542,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::propulsive rfd":                                       dict(mean_m=298.3022908,   sd_m=364.4531591,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::propulsive rfd sym. index":                            dict(mean_m=-17.40630636,  sd_m=46.90357391,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::propulsive work":                                      dict(mean_m=504.6326489,   sd_m=111.6991686,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::propulsive work sym. index":                           dict(mean_m=-1.401410984,  sd_m=2.318692229,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::rebound avg braking force":                            dict(mean_m=2716.522272,   sd_m=366.581259,     mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::rebound avg braking force symmetry index":             dict(mean_m=-5.166088735,  sd_m=9.122216538,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::rebound avg braking power":                            dict(mean_m=-2934.173732,  sd_m=288.031365,     mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::rebound avg braking power symmetry index":             dict(mean_m=-5.67957282,   sd_m=10.97319731,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::rebound avg braking velocity":                         dict(mean_m=-1.37009533,   sd_m=0.1240268144,   mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::rebound avg propulsive force":                         dict(mean_m=2172.547803,   sd_m=411.5653036,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::rebound avg propulsive force symmetry index":          dict(mean_m=0.3278729473,  sd_m=3.299381612,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::rebound avg propulsive power":                         dict(mean_m=2726.736454,   sd_m=818.6878355,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::rebound avg propulsive power symmetry index":          dict(mean_m=0.5646249484,  sd_m=3.463286949,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::rebound avg propulsive velocity":                      dict(mean_m=1.567091051,   sd_m=0.2168948958,   mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::rebound braking impulse":                              dict(mean_m=159.3667445,   sd_m=19.55667497,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::rebound braking impulse symmetry index":               dict(mean_m=-5.178398949,  sd_m=9.157873125,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::rebound braking rfd":                                  dict(mean_m=81703.46762,   sd_m=29194.19012,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::rebound braking rfd symmetry index":                   dict(mean_m=-5.537561163,  sd_m=7.304231162,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::rebound braking work":                                 dict(mean_m=-249.7805891,  sd_m=62.90130881,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::rebound braking work symmetry index":                  dict(mean_m=-5.67957282,   sd_m=10.97319731,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::rebound flight time":                                  dict(mean_m=0.4203125,     sd_m=0.04240994074,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::rebound force at min displacement":                    dict(mean_m=3771.585775,   sd_m=970.1379316,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::rebound jump momentum":                                dict(mean_m=166.6065435,   sd_m=15.60499832,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::rebound min braking velocity":                         dict(mean_m=-2.039147512,  sd_m=0.2206836897,   mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::rebound p1 avg force":                                 dict(mean_m=3300.357323,   sd_m=745.5309579,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::rebound p1 avg power":                                 dict(mean_m=3239.292962,   sd_m=1203.198328,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::rebound p1 avg velocity":                              dict(mean_m=1.005913429,   sd_m=0.1604087459,   mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::rebound p1 duration":                                  dict(mean_m=0.06284722222, sd_m=0.01089931238,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::rebound p1 impulse":                                   dict(mean_m=151.8268377,   sd_m=15.46100935,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::rebound p1 impulse symmetry index":                    dict(mean_m=0.5777282927,  sd_m=4.448005446,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::rebound p1 p2 duration ratio":                         dict(mean_m=1.013594511,   sd_m=0.005749232611, mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::rebound p1 p2 force ratio":                            dict(mean_m=3.245467522,   sd_m=0.5875989982,   mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::rebound p1 p2 power ratio":                            dict(mean_m=1.489328782,   sd_m=0.3050970933,   mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::rebound p1 p2 velocity ratio":                         dict(mean_m=0.4731859558,  sd_m=0.02927657862,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::rebound p1 peak force":                                dict(mean_m=3839.372058,   sd_m=930.7363157,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::rebound p1 peak power":                                dict(mean_m=5089.59767,    sd_m=1613.767985,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::rebound p1 peak velocity":                             dict(mean_m=1.883206849,   sd_m=0.2601678024,   mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::rebound p2 avg force":                                 dict(mean_m=1038.048603,   sd_m=140.4361243,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::rebound p2 avg power":                                 dict(mean_m=2248.680173,   sd_m=533.4969231,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::rebound p2 avg velocity":                              dict(mean_m=2.140906153,   sd_m=0.2822096268,   mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::rebound p2 duration":                                  dict(mean_m=0.06197916667, sd_m=0.0105565454,   mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::rebound p2 impulse":                                   dict(mean_m=14.6832838,    sd_m=9.667219311,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::rebound p2 impulse symmetry index":                    dict(mean_m=-0.326252138,  sd_m=7.136469011,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::rebound p2 peak force":                                dict(mean_m=2581.682642,   sd_m=467.8444487,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::rebound p2 peak power":                                dict(mean_m=5020.685765,   sd_m=1614.136219,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::rebound p2 peak velocity":                             dict(mean_m=2.238850813,   sd_m=0.2802111592,   mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::rebound peak braking force":                           dict(mean_m=4619.177158,   sd_m=703.4641784,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::rebound peak braking force symmetry index":            dict(mean_m=-4.888056795,  sd_m=6.842101425,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::rebound peak braking power":                           dict(mean_m=-5803.802046,  sd_m=1066.449931,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::rebound peak braking power symmetry index":            dict(mean_m=-5.571325761,  sd_m=9.779379659,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::rebound peak propulsive force":                        dict(mean_m=3839.372058,   sd_m=930.7363157,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::rebound peak propulsive force symmetry index":         dict(mean_m=-2.290811658,  sd_m=6.006455701,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::rebound peak propulsive power":                        dict(mean_m=5121.700258,   sd_m=1641.518872,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::rebound peak propulsive power symmetry index":         dict(mean_m=0.9219713909,  sd_m=4.070107598,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::rebound peak propulsive velocity":                     dict(mean_m=2.238850813,   sd_m=0.2802111592,   mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::rebound propulsive impulse symmetry index":            dict(mean_m=0.3535410331,  sd_m=3.302366448,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::rebound propulsive rfd":                               dict(mean_m=4795.546354,   sd_m=6161.325778,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::rebound propulsive rfd symmetry index":                dict(mean_m=19.04135144,   sd_m=16.65804609,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::rebound propulsive work":                              dict(mean_m=334.6270735,   sd_m=28.01467894,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::rebound propulsive work symmetry index":               dict(mean_m=0.5646249484,  sd_m=3.463286949,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::rebound relative force at min displacement":           dict(mean_m=4.781615578,   sd_m=1.430925155,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::rebound rsi":                                          dict(mean_m=2.071028678,   sd_m=0.5104448139,   mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::rebound time to peak braking force":                   dict(mean_m=0.06076388889, sd_m=0.01425726748,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::rebound time to peak braking force symmetry index":    dict(mean_m=0.685636173,   sd_m=2.565604063,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::rebound time to peak braking power":                   dict(mean_m=0.04592013889, sd_m=0.006747049872, mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::rebound time to peak braking power symmetry index":    dict(mean_m=3.891449248,   sd_m=3.237907723,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::rebound time to peak propulsive force":                dict(mean_m=0.005729166667, sd_m=0.008712902694, mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::rebound time to peak propulsive force symmetry index": dict(mean_m=20.97883598,   sd_m=15.73564899,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::rebound time to peak propulsive power":                dict(mean_m=0.06006944444, sd_m=0.01125128593,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::rebound time to peak propulsive power symmetry index": dict(mean_m=-1.286443072,  sd_m=2.21499978,     mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::rebound time to takeoff":                              dict(mean_m=0.2096354167,  sd_m=0.03730161753,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::rel. avg. propulsive force":                           dict(mean_m=15.49724893,   sd_m=1.226476046,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::rel. min unweight force":                              dict(mean_m=0.3304485437,  sd_m=0.06982651496,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::rel. propulsive impulse":                              dict(mean_m=1.970235306,   sd_m=0.2186775747,   mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::relative force at min displacement":                   dict(mean_m=1.933783097,   sd_m=0.07791445757,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::relative peak force":                                  dict(mean_m=2.030404114,   sd_m=0.03235947972,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::relative peak landing force":                          dict(mean_m=6.115137614,   sd_m=0.8092475823,   mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::relative peak power":                                  dict(mean_m=34.45137781,   sd_m=4.322104444,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::right avg braking force":                              dict(mean_m=453.4289693,   sd_m=43.39838428,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::right avg braking power":                              dict(mean_m=-382.8042675,  sd_m=88.98120685,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::right avg eccentric force":                            dict(mean_m=404.9913383,   sd_m=41.24766619,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::right avg eccentric power":                            dict(mean_m=274.3702692,   sd_m=68.58702411,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::right avg landing rfd":                                dict(mean_m=25276.46867,   sd_m=6734.023111,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::right avg propulsive force":                           dict(mean_m=630.2786849,   sd_m=45.83577113,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::right avg propulsive power":                           dict(mean_m=723.357834,    sd_m=121.847646,     mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::right avg rfd":                                        dict(mean_m=607.7890094,   sd_m=94.97116045,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::right braking impulse":                                dict(mean_m=186.0650412,   sd_m=28.09980633,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::right braking rfd":                                    dict(mean_m=1662.090091,   sd_m=118.5600667,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::right braking work":                                   dict(mean_m=-157.5387367,  sd_m=42.92774879,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::right decel rfd":                                      dict(mean_m=1618.952098,   sd_m=133.0157751,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::right eccentric impulse":                              dict(mean_m=242.7546189,   sd_m=32.18384195,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::right eccentric rfd":                                  dict(mean_m=647.8980644,   sd_m=34.69591358,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::right eccentric work":                                 dict(mean_m=165.1320876,   sd_m=45.67748923,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::right landing rfd 0-20ms":                             dict(mean_m=30150.08084,   sd_m=7616.04208,     mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::right landing rfd 0-40ms":                             dict(mean_m=43108.59495,   sd_m=20348.92609,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::right landing rfd 0-60ms":                             dict(mean_m=36589.70331,   sd_m=6696.431622,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::right landing rfd 0-80ms":                             dict(mean_m=24308.37714,   sd_m=3587.054832,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::right net impulse":                                    dict(mean_m=68.5093847,    sd_m=20.79576466,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::right p1 impulse":                                     dict(mean_m=119.6996443,   sd_m=21.83592685,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::right p2 impulse":                                     dict(mean_m=102.5734112,   sd_m=15.31419339,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::right peak braking force":                             dict(mean_m=780.8451208,   sd_m=80.75976162,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::right peak braking power":                             dict(mean_m=-639.8207266,  sd_m=113.735113,     mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::right peak eccentric force":                           dict(mean_m=780.8451208,   sd_m=80.75976162,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::right peak eccentric power":                           dict(mean_m=639.8207266,   sd_m=113.735113,     mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::right peak force":                                     dict(mean_m=809.7462208,   sd_m=56.61055142,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::right peak landing force":                             dict(mean_m=2553.068662,   sd_m=451.6651501,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::right peak propulsive force":                          dict(mean_m=802.4362791,   sd_m=49.8834852,     mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::right peak propulsive power":                          dict(mean_m=1422.231903,   sd_m=188.1952753,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::right propulsive impulse":                             dict(mean_m=222.2730556,   sd_m=36.97426371,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::right propulsive rfd":                                 dict(mean_m=240.4057269,   sd_m=202.3362313,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::right propulsive work":                                dict(mean_m=255.7158379,   sd_m=56.76508398,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::right rebound avg braking force":                      dict(mean_m=1434.455681,   sd_m=270.3422927,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::right rebound avg braking power":                      dict(mean_m=-1553.458747,  sd_m=303.1381125,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::right rebound avg propulsive force":                   dict(mean_m=1077.457276,   sd_m=169.4206067,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::right rebound avg propulsive power":                   dict(mean_m=1349.576066,   sd_m=391.8033852,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::right rebound braking impulse":                        dict(mean_m=119.3992415,   sd_m=24.78727143,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::right rebound braking rfd":                            dict(mean_m=43741.73182,   sd_m=15374.78108,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::right rebound braking work":                           dict(mean_m=-132.0097569,  sd_m=40.12639873,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::right rebound p1 impulse":                             dict(mean_m=100.5700707,   sd_m=7.450367765,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::right rebound p2 impulse":                             dict(mean_m=32.09938547,   sd_m=6.162945969,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::right rebound peak braking force":                     dict(mean_m=2436.233546,   sd_m=402.7916678,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::right rebound peak braking power":                     dict(mean_m=-3127.126774,  sd_m=784.3403173,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::right rebound peak propulsive force":                  dict(mean_m=1967.363287,   sd_m=407.6387562,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::right rebound peak propulsive power":                  dict(mean_m=2520.644115,   sd_m=725.7776446,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::right rebound propulsive impulse":                     dict(mean_m=132.6694561,   sd_m=6.137379204,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::right rebound propulsive rfd":                         dict(mean_m=2209.276167,   sd_m=2771.005733,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::right rebound propulsive work":                        dict(mean_m=165.8657863,   sd_m=12.19224443,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::right rebound time to peak braking force":             dict(mean_m=0.06006944444, sd_m=0.01293606667,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::right rebound time to peak braking power":             dict(mean_m=0.04157986111, sd_m=0.007582785347, mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::right rebound time to peak propulsive force":          dict(mean_m=0.00390625,    sd_m=0.005253469545, mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::right rebound time to peak propulsive power":          dict(mean_m=0.06085069444, sd_m=0.01176591589,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::right time to peak braking force":                     dict(mean_m=0.3933159722,  sd_m=0.03680814871,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::right time to peak braking power":                     dict(mean_m=0.2510416667,  sd_m=0.03151507943,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::right time to peak eccentric force":                   dict(mean_m=0.5822048611,  sd_m=0.03513112814,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::right time to peak eccentric power":                   dict(mean_m=0.4399305556,  sd_m=0.02199317725,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::right time to peak force":                             dict(mean_m=0.6840277778,  sd_m=0.110550161,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::right time to peak landing force":                     dict(mean_m=0.265625,      sd_m=0.1546359537,   mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::right time to peak power":                             dict(mean_m=0.8808159722,  sd_m=0.06769282527,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::right time to peak propulsive force":                  dict(mean_m=0.09409722222, sd_m=0.1098810676,   mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::right time to peak propulsive power":                  dict(mean_m=0.2819444444,  sd_m=0.05058889951,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::rsi":                                                  dict(mean_m=0.4741065725,  sd_m=0.0550624094,   mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::rsi modified":                                         dict(mean_m=0.2128793762,  sd_m=0.0548849585,   mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::takeoff time":                                         dict(mean_m=1.575520833,   sd_m=0.1268159946,   mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::takeoff velocity":                                     dict(mean_m=1.965749015,   sd_m=0.2205937668,   mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::time to peak braking force":                           dict(mean_m=0.39296875,    sd_m=0.03673054791,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::time to peak braking force sym. index":                dict(mean_m=-0.2574830664, sd_m=0.858732875,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::time to peak braking power":                           dict(mean_m=0.2502604167,  sd_m=0.03149514826,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::time to peak braking power sym. index":                dict(mean_m=0.0896253609,  sd_m=0.8514944957,   mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::time to peak eccentric force":                         dict(mean_m=0.5818576389,  sd_m=0.03532619959,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::time to peak eccentric force sym. index":              dict(mean_m=-0.2088252287, sd_m=0.6281979504,   mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::time to peak eccentric power":                         dict(mean_m=0.4391493056,  sd_m=0.02235452334,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::time to peak eccentric power sym. index":              dict(mean_m=1.414115121,   sd_m=1.096064611,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::time to peak force":                                   dict(mean_m=0.63984375,    sd_m=0.08656836808,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::time to peak landing force":                           dict(mean_m=0.3116319444,  sd_m=0.1678472605,   mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::time to peak landing force sym. index":                dict(mean_m=22.5606532,    sd_m=13.97866016,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::time to peak power":                                   dict(mean_m=0.8797743056,  sd_m=0.06680359142,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::time to peak power sym. index":                        dict(mean_m=-0.1491433761, sd_m=0.265216585,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::time to peak propulsive force":                        dict(mean_m=0.07508680556, sd_m=0.08612435261,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::time to peak propulsive force sym. index":             dict(mean_m=-15.67716829,  sd_m=32.75819555,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::time to peak propulsive power":                        dict(mean_m=0.2809027778,  sd_m=0.04941709476,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::time to peak propulsive power sym. index":             dict(mean_m=-0.446575305,  sd_m=0.7787034111,   mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::time to peak si":                                      dict(mean_m=-4.004748726,  sd_m=6.413141523,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::time to takeoff":                                      dict(mean_m=0.9513020833,  sd_m=0.07328301653,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::unweighted duration":                                  dict(mean_m=0.1888888889,  sd_m=0.03663372714,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "cmrj::velocity peak power":                                  dict(mean_m=1.974623966,   sd_m=0.1941653341,   mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::body mass":                                            dict(mean_m=81.18866191,   sd_m=6.38699725,     mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::end of rise force":                                    dict(mean_m=1587.384473,   sd_m=164.4952327,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::end of rise force net":                                dict(mean_m=791.1956821,   sd_m=102.2728032,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::end of rise force relative":                           dict(mean_m=199.082687,    sd_m=5.24373448,     mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::end of rise force relative net":                       dict(mean_m=99.08268696,   sd_m=5.24373448,     mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::force 100ms":                                          dict(mean_m=1265.567491,   sd_m=224.0721329,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::force 100ms left":                                     dict(mean_m=664.0068544,   sd_m=104.4752667,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::force 100ms left net":                                 dict(mean_m=265.9124587,   sd_m=77.48032947,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::force 100ms left relative":                            dict(mean_m=83.08467012,   sd_m=7.787865018,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::force 100ms left relative net":                        dict(mean_m=33.08467012,   sd_m=7.787865018,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::force 100ms net":                                      dict(mean_m=469.3786993,   sd_m=179.1110366,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::force 100ms relative":                                 dict(mean_m=158.3707801,   sd_m=20.94016766,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::force 100ms relative net":                             dict(mean_m=58.37078012,   sd_m=20.94016766,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::force 100ms right":                                    dict(mean_m=601.5606362,   sd_m=130.499883,     mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::force 100ms right net":                                dict(mean_m=203.4662405,   sd_m=113.482689,     mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::force 100ms right relative":                           dict(mean_m=75.28611,      sd_m=14.41772456,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::force 100ms right relative net":                       dict(mean_m=25.28611,      sd_m=14.41772456,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::force 100ms si":                                       dict(mean_m=5.32395752,    sd_m=6.926089716,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::force 150ms":                                          dict(mean_m=1398.291189,   sd_m=214.4563327,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::force 150ms left":                                     dict(mean_m=733.6292547,   sd_m=99.7094913,     mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::force 150ms left net":                                 dict(mean_m=335.534859,    sd_m=71.27536114,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::force 150ms left relative":                            dict(mean_m=91.87831397,   sd_m=6.115639544,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::force 150ms left relative net":                        dict(mean_m=41.87831397,   sd_m=6.115639544,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::force 150ms net":                                      dict(mean_m=602.1023975,   sd_m=166.1386488,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::force 150ms relative":                                 dict(mean_m=175.1051766,   sd_m=18.10992688,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::force 150ms relative net":                             dict(mean_m=75.10517665,   sd_m=18.10992688,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::force 150ms right":                                    dict(mean_m=664.6619342,   sd_m=132.9188141,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::force 150ms right net":                                dict(mean_m=266.5675385,   sd_m=115.4750305,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::force 150ms right relative":                           dict(mean_m=83.22686268,   sd_m=14.43511783,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::force 150ms right relative net":                       dict(mean_m=33.22686268,   sd_m=14.43511783,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::force 150ms si":                                       dict(mean_m=5.261866258,   sd_m=7.782035655,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::force 200ms":                                          dict(mean_m=1505.275138,   sd_m=229.2062304,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::force 200ms left":                                     dict(mean_m=783.8829069,   sd_m=100.9311698,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::force 200ms left net":                                 dict(mean_m=385.7885112,   sd_m=72.18384794,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::force 200ms left relative":                            dict(mean_m=98.20762953,   sd_m=5.761925227,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::force 200ms left relative net":                        dict(mean_m=48.20762953,   sd_m=5.761925227,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::force 200ms net":                                      dict(mean_m=709.086347,    sd_m=175.758367,     mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::force 200ms relative":                                 dict(mean_m=188.4129652,   sd_m=17.62012398,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::force 200ms relative net":                             dict(mean_m=88.41296524,   sd_m=17.62012398,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::force 200ms right":                                    dict(mean_m=721.3922314,   sd_m=149.171822,     mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::force 200ms right net":                                dict(mean_m=323.2978357,   sd_m=128.0881702,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::force 200ms right relative":                           dict(mean_m=90.20533571,   sd_m=15.33210028,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::force 200ms right relative net":                       dict(mean_m=40.20533571,   sd_m=15.33210028,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::force 200ms si":                                       dict(mean_m=4.913967645,   sd_m=8.564057761,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::force 250ms":                                          dict(mean_m=1584.736357,   sd_m=186.7752748,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::force 250ms left":                                     dict(mean_m=817.9855637,   sd_m=72.46945279,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::force 250ms left net":                                 dict(mean_m=419.891168,    sd_m=46.29983224,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::force 250ms left relative":                            dict(mean_m=102.7336577,   sd_m=3.785826343,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::force 250ms left relative net":                        dict(mean_m=52.73365775,   sd_m=3.785826343,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::force 250ms net":                                      dict(mean_m=788.5475652,   sd_m=136.2052301,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::force 250ms relative":                                 dict(mean_m=198.7565016,   sd_m=13.25894907,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::force 250ms relative net":                             dict(mean_m=98.75650163,   sd_m=13.25894907,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::force 250ms right":                                    dict(mean_m=766.7507929,   sd_m=137.1042661,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::force 250ms right net":                                dict(mean_m=368.6563972,   sd_m=117.2141527,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::force 250ms right relative":                           dict(mean_m=96.02284388,   sd_m=13.97927259,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::force 250ms right relative net":                       dict(mean_m=46.02284388,   sd_m=13.97927259,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::force 250ms si":                                       dict(mean_m=4.051535058,   sd_m=8.307729257,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::force 50ms":                                           dict(mean_m=1174.823534,   sd_m=235.0358233,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::force 50ms left":                                      dict(mean_m=614.6892931,   sd_m=119.2090703,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::force 50ms left net":                                  dict(mean_m=216.5948975,   sd_m=91.37336549,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::force 50ms left relative":                             dict(mean_m=76.74769128,   sd_m=9.845610544,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::force 50ms left relative net":                         dict(mean_m=26.74769128,   sd_m=9.845610544,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::force 50ms net":                                       dict(mean_m=378.6347428,   sd_m=181.4994606,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::force 50ms relative":                                  dict(mean_m=146.6745793,   sd_m=20.69396239,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::force 50ms relative net":                              dict(mean_m=46.67457928,   sd_m=20.69396239,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::force 50ms right":                                     dict(mean_m=560.134241,    sd_m=119.6621736,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::force 50ms right net":                                 dict(mean_m=162.0398454,   sd_m=95.03080714,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::force 50ms right relative":                            dict(mean_m=69.92688799,   sd_m=11.45965604,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::force 50ms right relative net":                        dict(mean_m=19.92688799,   sd_m=11.45965604,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::force 50ms si":                                        dict(mean_m=4.769797463,   sd_m=4.069695171,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::force at max rfd":                                     dict(mean_m=1279.176942,   sd_m=104.2535806,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::force at max rfd left":                                dict(mean_m=677.1554652,   sd_m=92.07680089,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::force at max rfd left net":                            dict(mean_m=279.0610695,   sd_m=110.9511989,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::force at max rfd left relative":                       dict(mean_m=85.79623043,   sd_m=16.72212268,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::force at max rfd left relative net":                   dict(mean_m=35.79623043,   sd_m=16.72212268,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::force at max rfd net":                                 dict(mean_m=482.9881507,   sd_m=149.8896611,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::force at max rfd relative":                            dict(mean_m=161.8794599,   sd_m=23.68113932,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::force at max rfd relative net":                        dict(mean_m=61.87945991,   sd_m=23.68113932,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::force at max rfd right":                               dict(mean_m=602.0214768,   sd_m=24.32187408,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::force at max rfd right net":                           dict(mean_m=203.9270811,   sd_m=50.58233877,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::force at max rfd right relative":                      dict(mean_m=76.08322947,   sd_m=8.267176005,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::force at max rfd right relative net":                  dict(mean_m=26.08322947,   sd_m=8.267176005,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::force at max rfd si":                                  dict(mean_m=5.836895784,   sd_m=6.41647875,     mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::force is negative":                                    dict(mean_m=0.0,           sd_m=0.0,            mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::impulse 100ms":                                        dict(mean_m=114.2436548,   sd_m=21.56497837,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::impulse 150ms":                                        dict(mean_m=180.393482,    sd_m=32.49914249,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::impulse 200ms":                                        dict(mean_m=253.1585429,   sd_m=43.71286894,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::impulse 250ms":                                        dict(mean_m=330.2214901,   sd_m=54.17079686,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::impulse 50ms":                                         dict(mean_m=53.27960916,   sd_m=10.23857144,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::impulse at max rfd":                                   dict(mean_m=298.4860202,   sd_m=452.6065057,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::max rfd":                                              dict(mean_m=8378.113752,   sd_m=1799.006268,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::onset force":                                          dict(mean_m=976.8611463,   sd_m=149.7844439,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::onset force net":                                      dict(mean_m=180.6723549,   sd_m=93.10570406,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::onset force relative":                                 dict(mean_m=122.2097141,   sd_m=10.38251552,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::onset force relative net":                             dict(mean_m=22.20971409,   sd_m=10.38251552,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::onset time":                                           dict(mean_m=1.251475694,   sd_m=0.5288638903,   mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::peak force left":                                      dict(mean_m=1108.354195,   sd_m=84.44973236,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::peak force left net":                                  dict(mean_m=710.2597998,   sd_m=77.27301494,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::peak force left relative":                             dict(mean_m=139.6053309,   sd_m=11.80434589,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::peak force left relative net":                         dict(mean_m=89.60533094,   sd_m=11.80434589,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::peak force net":                                       dict(mean_m=1350.06914,    sd_m=158.4165471,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::peak force relative":                                  dict(mean_m=270.0957121,   sd_m=20.3701738,     mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::peak force relative net":                              dict(mean_m=170.0957121,   sd_m=20.3701738,     mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::peak force right":                                     dict(mean_m=1037.903736,   sd_m=141.1602062,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::peak force right net":                                 dict(mean_m=639.8093402,   sd_m=130.4697653,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::peak force right relative":                            dict(mean_m=130.4903812,   sd_m=16.09787706,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::peak force right relative net":                        dict(mean_m=80.49038119,   sd_m=16.09787706,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::peak force si":                                        dict(mean_m=3.485708797,   sd_m=7.158569893,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::rfd 100ms":                                            dict(mean_m=2887.063443,   sd_m=1003.700474,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::rfd 150ms":                                            dict(mean_m=2809.533617,   sd_m=551.3588302,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::rfd 200ms":                                            dict(mean_m=2642.06996,    sd_m=427.1848518,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::rfd 250ms":                                            dict(mean_m=2431.500841,   sd_m=210.85756,      mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::rfd 50ms":                                             dict(mean_m=3959.247758,   sd_m=1858.711166,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::rfd impulse":                                          dict(mean_m=487.7150611,   sd_m=347.1514344,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::steadiness rsme force":                                dict(mean_m=217.1770082,   sd_m=83.31369679,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::steadiness rsme rfd":                                  dict(mean_m=1176.461469,   sd_m=327.5452529,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::system weight":                                        dict(mean_m=796.1887914,   sd_m=62.63504658,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::time to force end of rise":                            dict(mean_m=0.6755208333,  sd_m=0.2513042272,   mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::time to peak force":                                   dict(mean_m=1.93046875,    sd_m=0.3812043941,   mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "imtp::time to peak rfd":                                     dict(mean_m=0.2185763889,  sd_m=0.2913999966,   mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::avg braking force sym. index":                           dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
-    "sj::avg braking power sym. index":                           dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
-    "sj::avg eccentric force":                                    dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
-    "sj::avg eccentric force sym. index":                         dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
-    "sj::avg eccentric power":                                    dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
-    "sj::avg eccentric power sym. index":                         dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
-    "sj::avg eccentric velocity":                                 dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
-    "sj::avg landing rfd":                                        dict(mean_m=150498.4107,   sd_m=135311.8604,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::avg landing rfd sym. index":                             dict(mean_m=-23.54177268,  sd_m=14.19831715,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::avg propulsive force sym. index":                        dict(mean_m=-1.217187679,  sd_m=1.638478117,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::avg propulsive power sym. index":                        dict(mean_m=-1.729617961,  sd_m=1.870217657,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::avg. braking force":                                     dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
-    "sj::avg. braking power":                                     dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
-    "sj::avg. braking velocity":                                  dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
-    "sj::avg. propulsive force":                                  dict(mean_m=1249.965264,   sd_m=104.9893852,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::avg. propulsive velocity":                               dict(mean_m=1.108137037,   sd_m=0.1163324378,   mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::avg. rfd":                                               dict(mean_m=2651.275136,   sd_m=616.8179175,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::avg. rfd sym. index":                                    dict(mean_m=-3.558923514,  sd_m=10.94731548,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::body mass":                                              dict(mean_m=80.63072001,   sd_m=5.896998517,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::body weight":                                            dict(mean_m=790.7172504,   sd_m=57.82980051,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::body weight sd":                                         dict(mean_m=6.98995392,    sd_m=0.03206918069,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::braking duration":                                       dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
-    "sj::braking end time":                                       dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
-    "sj::braking impulse":                                        dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
-    "sj::braking impulse sym. index":                             dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
-    "sj::braking rfd":                                            dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
-    "sj::braking rfd sym. index":                                 dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
-    "sj::braking work":                                           dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
-    "sj::braking work sym. index":                                dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
-    "sj::contact time":                                           dict(mean_m=0.4217881944,  sd_m=0.06355486796,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::decel rfd":                                              dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
-    "sj::decel rfd sym. index":                                   dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
-    "sj::displacement depth":                                     dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
-    "sj::eccentric impulse":                                      dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
-    "sj::eccentric impulse sym. index":                           dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
-    "sj::eccentric rfd":                                          dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
-    "sj::eccentric rfd sym. index":                               dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
-    "sj::eccentric work":                                         dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
-    "sj::eccentric work sym. index":                              dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
-    "sj::flight threshold":                                       dict(mean_m=4.012178612,   sd_m=0.8768708241,   mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::flight time":                                            dict(mean_m=0.4772135417,  sd_m=0.004818294822, mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::force at min displacement":                              dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
-    "sj::force peak power":                                       dict(mean_m=1506.716034,   sd_m=45.87729606,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::initiation threshold":                                   dict(mean_m=800.7172504,   sd_m=48.46324779,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::jump height ni":                                         dict(mean_m=24.55922356,   sd_m=1.404558508,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::jump momentum":                                          dict(mean_m=176.3776458,   sd_m=12.95299097,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::jump start time":                                        dict(mean_m=0.5424045139,  sd_m=0.0684465888,   mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::jump threshold time":                                    dict(mean_m=0.5424045139,  sd_m=0.0684465888,   mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::landing peak force time":                                dict(mean_m=1.479340278,   sd_m=0.04669633303,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::landing rfd 0-20ms":                                     dict(mean_m=158473.5269,   sd_m=120661.8738,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::landing rfd 0-20ms sym. index":                          dict(mean_m=-9.540198669,  sd_m=11.43730985,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::landing rfd 0-40ms":                                     dict(mean_m=63473.15537,   sd_m=19785.7883,     mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::landing rfd 0-40ms sym. index":                          dict(mean_m=-5.430341756,  sd_m=3.037135251,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::landing rfd 0-60ms":                                     dict(mean_m=31987.74641,   sd_m=8011.577492,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::landing rfd 0-60ms sym. index":                          dict(mean_m=-7.159002662,  sd_m=20.96389114,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::landing rfd 0-80ms":                                     dict(mean_m=21488.8561,    sd_m=3842.434838,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::landing rfd 0-80ms sym. index":                          dict(mean_m=-6.874408551,  sd_m=26.44480137,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::landing time":                                           dict(mean_m=1.44140625,    sd_m=0.06723234579,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::left avg braking force":                                 dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
-    "sj::left avg braking power":                                 dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
-    "sj::left avg eccentric force":                               dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
-    "sj::left avg eccentric power":                               dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
-    "sj::left avg landing rfd":                                   dict(mean_m=59629.08066,   sd_m=54830.16213,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::left avg propulsive force":                              dict(mean_m=617.5193276,   sd_m=55.89793744,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::left avg propulsive power":                              dict(mean_m=680.8933643,   sd_m=108.6282848,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::left avg rfd":                                           dict(mean_m=1357.341387,   sd_m=345.3027386,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::left braking impulse":                                   dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
-    "sj::left braking rfd":                                       dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
-    "sj::left braking work":                                      dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
-    "sj::left decel rfd":                                         dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
-    "sj::left eccentric impulse":                                 dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
-    "sj::left eccentric rfd":                                     dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
-    "sj::left eccentric work":                                    dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
-    "sj::left landing rfd 0-20ms":                                dict(mean_m=72113.35979,   sd_m=54377.75401,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::left landing rfd 0-40ms":                                dict(mean_m=29870.48211,   sd_m=8806.000583,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::left landing rfd 0-60ms":                                dict(mean_m=14622.92379,   sd_m=3571.240378,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::left landing rfd 0-80ms":                                dict(mean_m=9947.986234,   sd_m=2884.769674,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::left net impulse":                                       dict(mean_m=85.55714935,   sd_m=5.870250527,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::left p1 impulse":                                        dict(mean_m=116.7077937,   sd_m=17.84211306,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::left p2 impulse":                                        dict(mean_m=120.9836883,   sd_m=11.05024892,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::left peak braking force":                                dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
-    "sj::left peak braking power":                                dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
-    "sj::left peak eccentric force":                              dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
-    "sj::left peak eccentric power":                              dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
-    "sj::left peak force":                                        dict(mean_m=801.3646434,   sd_m=33.88398734,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::left peak landing force":                                dict(mean_m=1854.939664,   sd_m=750.1560774,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::left peak propulsive force":                             dict(mean_m=801.3646434,   sd_m=33.88398734,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::left peak propulsive power":                             dict(mean_m=1574.136374,   sd_m=90.35961657,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::left propulsive impulse":                                dict(mean_m=237.6914821,   sd_m=26.5843338,     mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::left propulsive rfd":                                    dict(mean_m=1421.736742,   sd_m=316.4454881,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::left propulsive work":                                   dict(mean_m=262.116554,    sd_m=45.78877258,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::left time to peak braking force":                        dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
-    "sj::left time to peak braking power":                        dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
-    "sj::left time to peak eccentric force":                      dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
-    "sj::left time to peak eccentric power":                      dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
-    "sj::left time to peak force":                                dict(mean_m=0.3110677083,  sd_m=0.05921918432,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::left time to peak landing force":                        dict(mean_m=0.04796006944, sd_m=0.03280419348,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::left time to peak power":                                dict(mean_m=0.3472222222,  sd_m=0.06087126756,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::left time to peak propulsive force":                     dict(mean_m=0.2747829861,  sd_m=0.04779981369,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::left time to peak propulsive power":                     dict(mean_m=0.3109375,     sd_m=0.04528422117,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::min braking velocity":                                   dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
-    "sj::min eccentric velocity":                                 dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
-    "sj::min unweight force":                                     dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
-    "sj::net impulse":                                            dict(mean_m=176.3776458,   sd_m=12.95299097,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::net impulse sym. index":                                 dict(mean_m=-2.937884114,  sd_m=1.365266932,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::p1 avg force":                                           dict(mean_m=1227.092194,   sd_m=179.7819899,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::p1 avg power":                                           dict(mean_m=554.2646894,   sd_m=214.9610213,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::p1 avg velocity":                                        dict(mean_m=0.3984892453,  sd_m=0.1165940929,   mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::p1 duration":                                            dict(mean_m=0.1930121528,  sd_m=0.02244999328,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::p1 impulse":                                             dict(mean_m=83.19941899,   sd_m=21.55261019,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::p1 impulse sym. index":                                  dict(mean_m=-0.9581995491, sd_m=2.230966828,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::p1 p2 duration ratio":                                   dict(mean_m=1.002654058,   sd_m=0.002117728447, mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::p1 p2 force ratio":                                      dict(mean_m=0.9617712539,  sd_m=0.123461301,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::p1 p2 power ratio":                                      dict(mean_m=0.2441999064,  sd_m=0.07805288144,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::p1 p2 velocity ratio":                                   dict(mean_m=0.2156493999,  sd_m=0.05103378182,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::p1 peak force":                                          dict(mean_m=1444.802554,   sd_m=153.7005842,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::p1 peak power":                                          dict(mean_m=1480.481296,   sd_m=393.180031,     mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::p1 peak velocity":                                       dict(mean_m=1.021105474,   sd_m=0.1937332898,   mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::p2 avg force":                                           dict(mean_m=1274.013184,   sd_m=41.9823336,     mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::p2 avg power":                                           dict(mean_m=2214.256537,   sd_m=178.9298808,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::p2 avg velocity":                                        dict(mean_m=1.819162075,   sd_m=0.1183741595,   mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::p2 duration":                                            dict(mean_m=0.1924913194,  sd_m=0.022347275,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::p2 impulse":                                             dict(mean_m=93.20086961,   sd_m=10.44470557,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::p2 impulse sym. index":                                  dict(mean_m=-1.355157188,  sd_m=1.752715433,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::p2 peak force":                                          dict(mean_m=1603.584938,   sd_m=56.20195177,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::p2 peak power":                                          dict(mean_m=3172.141439,   sd_m=128.9458901,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::p2 peak velocity":                                       dict(mean_m=2.351890097,   sd_m=0.08158942924,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::peak braking force":                                     dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
-    "sj::peak braking force sym. index":                          dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
-    "sj::peak braking power":                                     dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
-    "sj::peak braking power sym. index":                          dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
-    "sj::peak eccentric force":                                   dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
-    "sj::peak eccentric force sym. index":                        dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
-    "sj::peak eccentric power":                                   dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
-    "sj::peak eccentric power sym. index":                        dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
-    "sj::peak force":                                             dict(mean_m=1603.584938,   sd_m=56.20195177,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::peak force sym. index":                                  dict(mean_m=-0.1493856724, sd_m=1.233594343,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::peak force time":                                        dict(mean_m=0.85546875,    sd_m=0.06182010271,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::peak landing force":                                     dict(mean_m=4129.269029,   sd_m=1672.032176,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::peak landing force sym. index":                          dict(mean_m=-13.79246608,  sd_m=8.234816976,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::peak power":                                             dict(mean_m=3172.141439,   sd_m=128.9458901,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::peak propulsive force":                                  dict(mean_m=1603.584938,   sd_m=56.20195177,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::peak propulsive force sym. index":                       dict(mean_m=-0.1493856724, sd_m=1.233594343,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::peak propulsive power":                                  dict(mean_m=3172.141439,   sd_m=128.9458901,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::peak propulsive power sym. index":                       dict(mean_m=-0.8952765339, sd_m=1.714916103,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::peak propulsive velocity":                               dict(mean_m=2.351890097,   sd_m=0.08158942924,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::peak velocity":                                          dict(mean_m=2.351890097,   sd_m=0.08158942924,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::propulsive duration":                                    dict(mean_m=0.3855034722,  sd_m=0.04479514324,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::propulsive impulse":                                     dict(mean_m=176.4002886,   sd_m=12.97089345,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::propulsive impulse sym. index":                          dict(mean_m=-1.21201991,   sd_m=1.635945365,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::propulsive rfd":                                         dict(mean_m=2722.386731,   sd_m=570.1033953,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::propulsive rfd sym. index":                              dict(mean_m=-1.199156123,  sd_m=13.22896033,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::propulsive start time":                                  dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=3, F n=0
-    "sj::propulsive work":                                        dict(mean_m=532.2342132,   sd_m=83.95452516,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::propulsive work sym. index":                             dict(mean_m=-1.729617961,  sd_m=1.870217657,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::rel. avg. propulsive force":                             dict(mean_m=15.49780421,   sd_m=0.4912185155,   mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::rel. min unweight force":                                dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
-    "sj::rel. propulsive impulse":                                dict(mean_m=2.188460881,   sd_m=0.06418554494,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::relative force at min displacement":                     dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
-    "sj::relative peak force":                                    dict(mean_m=2.034026174,   sd_m=0.1234795421,   mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::relative peak landing force":                            dict(mean_m=5.128872982,   sd_m=1.743043436,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::relative peak power":                                    dict(mean_m=39.42832323,   sd_m=1.805667961,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::right avg braking force":                                dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
-    "sj::right avg braking power":                                dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
-    "sj::right avg eccentric force":                              dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
-    "sj::right avg eccentric power":                              dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
-    "sj::right avg landing rfd":                                  dict(mean_m=93867.5542,    sd_m=84117.94147,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::right avg propulsive force":                             dict(mean_m=632.4459368,   sd_m=50.85928759,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::right avg propulsive power":                             dict(mean_m=701.9887173,   sd_m=88.49012289,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::right avg rfd":                                          dict(mean_m=1501.586727,   sd_m=423.9004856,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::right braking impulse":                                  dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
-    "sj::right braking rfd":                                      dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
-    "sj::right braking work":                                     dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
-    "sj::right decel rfd":                                        dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
-    "sj::right eccentric impulse":                                dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
-    "sj::right eccentric rfd":                                    dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
-    "sj::right eccentric work":                                   dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
-    "sj::right landing rfd 0-20ms":                               dict(mean_m=86360.16716,   sd_m=66917.72453,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::right landing rfd 0-40ms":                               dict(mean_m=33602.67326,   sd_m=11066.51981,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::right landing rfd 0-60ms":                               dict(mean_m=17364.82262,   sd_m=7079.573751,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::right landing rfd 0-80ms":                               dict(mean_m=11540.86987,   sd_m=3747.289181,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::right net impulse":                                      dict(mean_m=90.82049644,   sd_m=7.274549646,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::right p1 impulse":                                       dict(mean_m=118.8976137,   sd_m=16.56033987,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::right p2 impulse":                                       dict(mean_m=124.2209596,   sd_m=10.29608578,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::right peak braking force":                               dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
-    "sj::right peak braking power":                               dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
-    "sj::right peak eccentric force":                             dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
-    "sj::right peak eccentric power":                             dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
-    "sj::right peak force":                                       dict(mean_m=803.6064319,   sd_m=24.25155516,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::right peak landing force":                               dict(mean_m=2424.446819,   sd_m=909.6909746,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::right peak propulsive force":                            dict(mean_m=803.6064319,   sd_m=24.25155516,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::right peak propulsive power":                            dict(mean_m=1600.36358,    sd_m=38.9557749,     mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::right propulsive impulse":                               dict(mean_m=243.1185733,   sd_m=20.86448101,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::right propulsive rfd":                                   dict(mean_m=1511.407429,   sd_m=412.1714729,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::right propulsive work":                                  dict(mean_m=270.1176592,   sd_m=38.26417726,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::right time to peak braking force":                       dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
-    "sj::right time to peak braking power":                       dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
-    "sj::right time to peak eccentric force":                     dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
-    "sj::right time to peak eccentric power":                     dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
-    "sj::right time to peak force":                               dict(mean_m=0.2908420139,  sd_m=0.08268013859,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::right time to peak landing force":                       dict(mean_m=0.03880208333, sd_m=0.0257621964,   mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::right time to peak power":                               dict(mean_m=0.3507378472,  sd_m=0.06118182577,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::right time to peak propulsive force":                    dict(mean_m=0.2545572917,  sd_m=0.05878189102,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::right time to peak propulsive power":                    dict(mean_m=0.314453125,   sd_m=0.04425355395,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::rsi":                                                    dict(mean_m=1.153854814,   sd_m=0.1839767605,   mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::rsi modified":                                           dict(mean_m=0.590689547,   sd_m=0.08637133436,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::takeoff time":                                           dict(mean_m=0.9641927083,  sd_m=0.06753901773,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::takeoff velocity":                                       dict(mean_m=2.188197528,   sd_m=0.06444188209,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::time to peak braking force":                             dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
-    "sj::time to peak braking force sym. index":                  dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
-    "sj::time to peak braking power":                             dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
-    "sj::time to peak braking power sym. index":                  dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
-    "sj::time to peak eccentric force":                           dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
-    "sj::time to peak eccentric force sym. index":                dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
-    "sj::time to peak eccentric power":                           dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
-    "sj::time to peak eccentric power sym. index":                dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
-    "sj::time to peak force":                                     dict(mean_m=0.3130642361,  sd_m=0.05999034328,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::time to peak landing force":                             dict(mean_m=0.03793402778, sd_m=0.02387578876,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::time to peak landing force sym. index":                  dict(mean_m=6.945161139,   sd_m=4.658275944,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::time to peak power":                                     dict(mean_m=0.3480902778,  sd_m=0.0612323214,   mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::time to peak power sym. index":                          dict(mean_m=-0.5207055316, sd_m=0.3248137835,   mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::time to peak propulsive force":                          dict(mean_m=0.2767795139,  sd_m=0.04900968688,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::time to peak propulsive force sym. index":               dict(mean_m=4.668229873,   sd_m=10.03608083,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::time to peak propulsive power":                          dict(mean_m=0.3118055556,  sd_m=0.04484143445,  mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::time to peak propulsive power sym. index":               dict(mean_m=-0.5912422522, sd_m=0.3726244265,   mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::time to peak si":                                        dict(mean_m=4.717487004,   sd_m=10.00235894,    mean_f=None,            sd_f=None),  # M n=4, F n=0
-    "sj::unweighted duration":                                    dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
-    "sj::velocity peak power":                                    dict(mean_m=2.10594129,    sd_m=0.09652073035,  mean_f=None,            sd_f=None),
-    }
-
+    "sj_net_rel_impulse":                                         dict(mean_m=2.068984343,   sd_m=0.2052907488,   mean_f=1.747268559,     sd_f=0.289720883),  # M n=27, F n=7
+    "cmj_net_rel_impulse":                                        dict(mean_m=2.164466521,   sd_m=0.2187441191,   mean_f=1.83811986,      sd_f=0.2473568718),  # M n=29, F n=7
+    "cmj::avg braking force sym. index":                          dict(mean_m=-1.283874338,  sd_m=4.567905442,    mean_f=None,            sd_f=None),  # M n=7, F n=0
+    "cmj::avg braking power sym. index":                          dict(mean_m=-2.014679971,  sd_m=5.147912942,    mean_f=None,            sd_f=None),  # M n=7, F n=0
+    "cmj::avg eccentric force":                                   dict(mean_m=745.4192827,   sd_m=62.67600186,    mean_f=579.6553571,     sd_f=71.64865143),  # M n=29, F n=7
+    "cmj::avg eccentric force sym. index":                        dict(mean_m=-2.123787774,  sd_m=3.05450951,     mean_f=None,            sd_f=None),  # M n=7, F n=0
+    "cmj::avg eccentric power":                                   dict(mean_m=425.7661879,   sd_m=159.5542961,    mean_f=243.5757143,     sd_f=91.713052),  # M n=29, F n=7
+    "cmj::avg eccentric power sym. index":                        dict(mean_m=4.615467338,   sd_m=1.899865328,    mean_f=None,            sd_f=None),  # M n=7, F n=0
+    "cmj::avg eccentric velocity":                                dict(mean_m=-0.5614223677, sd_m=0.1778622353,   mean_f=-0.4223916667,   sd_f=0.1488609183),  # M n=29, F n=7
+    "cmj::avg landing rfd":                                       dict(mean_m=75580.07792,   sd_m=80266.55714,    mean_f=18766.88548,     sd_f=7713.656784),  # M n=29, F n=7
+    "cmj::avg landing rfd sym. index":                            dict(mean_m=-10.73600121,  sd_m=20.83579186,    mean_f=-8.228892857,    sd_f=21.50964052),  # M n=29, F n=7
+    "cmj::avg propulsive force sym. index":                       dict(mean_m=0.9211969641,  sd_m=3.220836622,    mean_f=None,            sd_f=None),  # M n=7, F n=0
+    "cmj::avg propulsive power sym. index":                       dict(mean_m=0.3460774508,  sd_m=3.700549259,    mean_f=None,            sd_f=None),  # M n=7, F n=0
+    "cmj::avg. braking force":                                    dict(mean_m=831.4935555,   sd_m=89.34922972,    mean_f=656.7675,        sd_f=80.99452346),  # M n=29, F n=7
+    "cmj::avg. braking power":                                    dict(mean_m=-571.4624859,  sd_m=219.9142427,    mean_f=-343.7313095,    sd_f=137.5949572),  # M n=29, F n=7
+    "cmj::avg. braking velocity":                                 dict(mean_m=-0.7215096355, sd_m=0.2317863981,   mean_f=-0.5591919048,   sd_f=0.2011303812),  # M n=29, F n=7
+    "cmj::avg. propulsive force":                                 dict(mean_m=1195.192314,   sd_m=112.977886,     mean_f=903.7632143,     sd_f=100.6700524),  # M n=29, F n=7
+    "cmj::avg. propulsive power":                                 dict(mean_m=1419.991481,   sd_m=247.8939796,    mean_f=965.7507143,     sd_f=206.2718446),  # M n=29, F n=7
+    "cmj::avg. propulsive velocity":                              dict(mean_m=1.249643622,   sd_m=0.1496184117,   mean_f=1.149063214,     sd_f=0.1868537814),  # M n=29, F n=7
+    "cmj::avg. rfd":                                              dict(mean_m=1066.100142,   sd_m=519.405147,     mean_f=779.8270238,     sd_f=284.1496252),  # M n=29, F n=7
+    "cmj::avg. rfd sym. index":                                   dict(mean_m=6.044548984,   sd_m=14.46858527,    mean_f=-2.961511905,    sd_f=11.65234951),  # M n=29, F n=7
+    "cmj::body mass":                                             dict(mean_m=76.01744807,   sd_m=6.386407519,    mean_f=59.10444762,     sd_f=7.307141415),  # M n=29, F n=7
+    "cmj::body weight":                                           dict(mean_m=745.4763463,   sd_m=62.62948753,    mean_f=579.6159524,     sd_f=71.65834131),  # M n=29, F n=7
+    "cmj::body weight sd":                                        dict(mean_m=8.001687375,   sd_m=4.031599956,    mean_f=6.997619048,     sd_f=0.04597812627),  # M n=29, F n=7
+    "cmj::braking duration":                                      dict(mean_m=0.5051323372,  sd_m=0.1823467476,   mean_f=0.4477560714,    sd_f=0.1547879393),  # M n=29, F n=7
+    "cmj::braking end time":                                      dict(mean_m=1.238084005,   sd_m=0.1922224867,   mean_f=1.16462019,      sd_f=0.1289832579),  # M n=29, F n=7
+    "cmj::braking impulse":                                       dict(mean_m=36.9475585,    sd_m=13.9339882,     mean_f=25.61028571,     sd_f=10.9055815),  # M n=29, F n=7
+    "cmj::braking impulse sym. index":                            dict(mean_m=-1.086503598,  sd_m=4.65030897,     mean_f=-2.868,          sd_f=10.43484252),  # M n=29, F n=7
+    "cmj::braking rfd":                                           dict(mean_m=2433.042695,   sd_m=1339.749901,    mean_f=1923.350952,     sd_f=1311.921491),  # M n=29, F n=7
+    "cmj::braking rfd sym. index":                                dict(mean_m=-3.258399006,  sd_m=11.11789102,    mean_f=-6.610190476,    sd_f=16.58915156),  # M n=29, F n=7
+    "cmj::braking work":                                          dict(mean_m=-265.3351088,  sd_m=84.62152654,    mean_f=-137.6044048,    sd_f=49.48938667),  # M n=29, F n=7
+    "cmj::braking work sym. index":                               dict(mean_m=-2.014679971,  sd_m=5.147912942,    mean_f=None,            sd_f=None),  # M n=7, F n=0
+    "cmj::contact time":                                          dict(mean_m=1.080237668,   sd_m=0.2548163801,   mean_f=1.011172262,     sd_f=0.1552416033),  # M n=29, F n=7
+    "cmj::decel rfd":                                             dict(mean_m=2496.173244,   sd_m=1754.937924,    mean_f=2364.419762,     sd_f=2147.632715),  # M n=29, F n=7
+    "cmj::decel rfd sym. index":                                  dict(mean_m=-5.073555755,  sd_m=15.20120724,    mean_f=13.19258333,     sd_f=59.0494613),  # M n=29, F n=7
+    "cmj::displacement depth":                                    dict(mean_m=36.590639,     sd_m=8.757035117,    mean_f=26.66908333,     sd_f=6.886689241),  # M n=29, F n=7
+    "cmj::eccentric impulse":                                     dict(mean_m=0.3179454925,  sd_m=0.1489970417,   mean_f=0.1834880952,    sd_f=0.08639428925),  # M n=29, F n=7
+    "cmj::eccentric impulse sym. index":                          dict(mean_m=4.027171659,   sd_m=1.702269482,    mean_f=6.981833333,     sd_f=4.669336443),  # M n=29, F n=7
+    "cmj::eccentric rfd":                                         dict(mean_m=1222.715074,   sd_m=391.8417603,    mean_f=None,            sd_f=None),  # M n=7, F n=0
+    "cmj::eccentric rfd sym. index":                              dict(mean_m=12.08988933,   sd_m=18.55535311,    mean_f=None,            sd_f=None),  # M n=7, F n=0
+    "cmj::eccentric work":                                        dict(mean_m=276.4773863,   sd_m=84.45775619,    mean_f=155.5054762,     sd_f=50.71117946),  # M n=29, F n=7
+    "cmj::eccentric work sym. index":                             dict(mean_m=4.615467338,   sd_m=1.899865328,    mean_f=None,            sd_f=None),  # M n=7, F n=0
+    "cmj::flight threshold":                                      dict(mean_m=4.128647027,   sd_m=0.8213404967,   mean_f=3.834642857,     sd_f=0.8806342224),  # M n=29, F n=7
+    "cmj::flight time":                                           dict(mean_m=0.4571966504,  sd_m=0.03934019512,  mean_f=0.3852175,       sd_f=0.04072917934),  # M n=29, F n=7
+    "cmj::force at min displacement":                             dict(mean_m=1320.630716,   sd_m=247.6553851,    mean_f=996.7366667,     sd_f=183.4907541),  # M n=29, F n=7
+    "cmj::force peak power":                                      dict(mean_m=1349.308908,   sd_m=93.16028104,    mean_f=1002.725833,     sd_f=105.5555289),  # M n=29, F n=7
+    "cmj::initiation threshold":                                  dict(mean_m=725.4763463,   sd_m=62.62948753,    mean_f=559.6159524,     sd_f=71.65834131),  # M n=29, F n=7
+    "cmj::jump height ni":                                        dict(mean_m=24.21058136,   sd_m=4.841453487,    mean_f=17.51415476,     sd_f=4.691357054),  # M n=29, F n=7
+    "cmj::jump momentum":                                         dict(mean_m=163.9341166,   sd_m=16.11722175,    mean_f=108.6190952,     sd_f=18.69768302),  # M n=29, F n=7
+    "cmj::jump start time":                                       dict(mean_m=0.5351612563,  sd_m=0.09560935146,  mean_f=0.494419,        sd_f=0.02648049526),  # M n=29, F n=7
+    "cmj::jump threshold time":                                   dict(mean_m=0.5351612563,  sd_m=0.09560935146,  mean_f=0.494419,        sd_f=0.02648049526),  # M n=29, F n=7
+    "cmj::landing peak force time":                               dict(mean_m=2.136692238,   sd_m=0.2365313852,   mean_f=1.977145667,     sd_f=0.1362204257),  # M n=29, F n=7
+    "cmj::landing rfd 0-20ms":                                    dict(mean_m=133723.7332,   sd_m=103480.955,     mean_f=None,            sd_f=None),  # M n=11, F n=0
+    "cmj::landing rfd 0-20ms sym. index":                         dict(mean_m=-14.66682641,  sd_m=20.95357809,    mean_f=None,            sd_f=None),  # M n=11, F n=0
+    "cmj::landing rfd 0-40ms":                                    dict(mean_m=51077.8562,    sd_m=18642.0073,     mean_f=None,            sd_f=None),  # M n=11, F n=0
+    "cmj::landing rfd 0-40ms sym. index":                         dict(mean_m=-2.873608939,  sd_m=13.64968472,    mean_f=None,            sd_f=None),  # M n=11, F n=0
+    "cmj::landing rfd 0-60ms":                                    dict(mean_m=30092.43387,   sd_m=11456.27427,    mean_f=None,            sd_f=None),  # M n=11, F n=0
+    "cmj::landing rfd 0-60ms sym. index":                         dict(mean_m=-8.516970208,  sd_m=15.53101063,    mean_f=None,            sd_f=None),  # M n=11, F n=0
+    "cmj::landing rfd 0-80ms":                                    dict(mean_m=21732.44946,   sd_m=5814.751302,    mean_f=None,            sd_f=None),  # M n=11, F n=0
+    "cmj::landing rfd 0-80ms sym. index":                         dict(mean_m=10.09340666,   sd_m=18.82619665,    mean_f=None,            sd_f=None),  # M n=11, F n=0
+    "cmj::landing time":                                          dict(mean_m=2.072583858,   sd_m=0.2323587047,   mean_f=1.890811738,     sd_f=0.1466932824),  # M n=29, F n=7
+    "cmj::left avg braking force":                                dict(mean_m=422.3928235,   sd_m=43.86876305,    mean_f=None,            sd_f=None),  # M n=7, F n=0
+    "cmj::left avg braking power":                                dict(mean_m=-329.2849762,  sd_m=80.20487688,    mean_f=None,            sd_f=None),  # M n=7, F n=0
+    "cmj::left avg eccentric force":                              dict(mean_m=363.4733604,   sd_m=29.62052833,    mean_f=None,            sd_f=None),  # M n=7, F n=0
+    "cmj::left avg eccentric power":                              dict(mean_m=231.5180989,   sd_m=62.88726217,    mean_f=None,            sd_f=None),  # M n=7, F n=0
+    "cmj::left avg landing rfd":                                  dict(mean_m=38278.88664,   sd_m=37006.24225,    mean_f=9940.630238,     sd_f=4949.647224),  # M n=29, F n=7
+    "cmj::left avg propulsive force":                             dict(mean_m=608.5094535,   sd_m=35.74745391,    mean_f=None,            sd_f=None),  # M n=7, F n=0
+    "cmj::left avg propulsive power":                             dict(mean_m=726.8364654,   sd_m=59.19256686,    mean_f=None,            sd_f=None),  # M n=7, F n=0
+    "cmj::left avg rfd":                                          dict(mean_m=566.6538118,   sd_m=264.3752168,    mean_f=392.1611905,     sd_f=148.4841529),  # M n=29, F n=7
+    "cmj::left braking impulse":                                  dict(mean_m=204.6393793,   sd_m=61.10919352,    mean_f=138.9076905,     sd_f=44.04923923),  # M n=29, F n=7
+    "cmj::left braking rfd":                                      dict(mean_m=1218.042251,   sd_m=693.5061294,    mean_f=943.5578571,     sd_f=657.788664),  # M n=29, F n=7
+    "cmj::left braking work":                                     dict(mean_m=-136.517673,   sd_m=40.71763253,    mean_f=None,            sd_f=None),  # M n=7, F n=0
+    "cmj::left decel rfd":                                        dict(mean_m=1202.01287,    sd_m=832.6476837,    mean_f=1138.89,         sd_f=1010.802827),  # M n=29, F n=7
+    "cmj::left eccentric impulse":                                dict(mean_m=256.413889,    sd_m=75.83192136,    mean_f=189.6994405,     sd_f=45.77027153),  # M n=29, F n=7
+    "cmj::left eccentric rfd":                                    dict(mean_m=732.448205,    sd_m=176.4833185,    mean_f=None,            sd_f=None),  # M n=7, F n=0
+    "cmj::left eccentric work":                                   dict(mean_m=142.164055,    sd_m=39.9518942,     mean_f=None,            sd_f=None),  # M n=7, F n=0
+    "cmj::left landing rfd 0-20ms":                               dict(mean_m=59956.79218,   sd_m=49075.02806,    mean_f=None,            sd_f=None),  # M n=11, F n=0
+    "cmj::left landing rfd 0-40ms":                               dict(mean_m=24475.52437,   sd_m=8848.107799,    mean_f=None,            sd_f=None),  # M n=11, F n=0
+    "cmj::left landing rfd 0-60ms":                               dict(mean_m=12897.01427,   sd_m=4229.621983,    mean_f=None,            sd_f=None),  # M n=11, F n=0
+    "cmj::left landing rfd 0-80ms":                               dict(mean_m=11907.87022,   sd_m=3560.886867,    mean_f=None,            sd_f=None),  # M n=11, F n=0
+    "cmj::left net impulse":                                      dict(mean_m=91.90915858,   sd_m=35.64805302,    mean_f=46.01940476,     sd_f=20.30572621),  # M n=29, F n=7
+    "cmj::left p1 impulse":                                       dict(mean_m=107.5969954,   sd_m=17.4082105,     mean_f=65.94152381,     sd_f=17.02713105),  # M n=29, F n=7
+    "cmj::left p2 impulse":                                       dict(mean_m=113.0814973,   sd_m=19.6794222,     mean_f=84.78896429,     sd_f=16.85055704),  # M n=29, F n=7
+    "cmj::left peak braking force":                               dict(mean_m=727.9164598,   sd_m=77.44833963,    mean_f=None,            sd_f=None),  # M n=7, F n=0
+    "cmj::left peak braking power":                               dict(mean_m=-533.7599268,  sd_m=153.4906374,    mean_f=None,            sd_f=None),  # M n=7, F n=0
+    "cmj::left peak eccentric force":                             dict(mean_m=729.8455074,   sd_m=75.46030974,    mean_f=None,            sd_f=None),  # M n=7, F n=0
+    "cmj::left peak eccentric power":                             dict(mean_m=533.7599268,   sd_m=153.4906374,    mean_f=None,            sd_f=None),  # M n=7, F n=0
+    "cmj::left peak force":                                       dict(mean_m=744.2566333,   sd_m=73.56977433,    mean_f=552.1463095,     sd_f=71.8399128),  # M n=29, F n=7
+    "cmj::left peak landing force":                               dict(mean_m=1968.411975,   sd_m=604.0179334,    mean_f=1075.641667,     sd_f=306.6480585),  # M n=29, F n=7
+    "cmj::left peak propulsive force":                            dict(mean_m=749.6438267,   sd_m=60.27617447,    mean_f=None,            sd_f=None),  # M n=7, F n=0
+    "cmj::left peak propulsive power":                            dict(mean_m=1390.075236,   sd_m=197.0865648,    mean_f=None,            sd_f=None),  # M n=7, F n=0
+    "cmj::left propulsive impulse":                               dict(mean_m=220.6785302,   sd_m=29.44718033,    mean_f=150.7306667,     sd_f=33.30365148),  # M n=29, F n=7
+    "cmj::left propulsive rfd":                                   dict(mean_m=238.998821,    sd_m=154.7555268,    mean_f=None,            sd_f=None),  # M n=7, F n=0
+    "cmj::left propulsive work":                                  dict(mean_m=257.8816468,   sd_m=48.57305488,    mean_f=None,            sd_f=None),  # M n=7, F n=0
+    "cmj::left time to peak braking force":                       dict(mean_m=0.4089640476,  sd_m=0.07794495693,  mean_f=None,            sd_f=None),  # M n=7, F n=0
+    "cmj::left time to peak braking power":                       dict(mean_m=0.2180276786,  sd_m=0.02531508121,  mean_f=None,            sd_f=None),  # M n=7, F n=0
+    "cmj::left time to peak eccentric force":                     dict(mean_m=0.5851492857,  sd_m=0.09443814468,  mean_f=None,            sd_f=None),  # M n=7, F n=0
+    "cmj::left time to peak eccentric power":                     dict(mean_m=0.5001167262,  sd_m=0.2606272855,   mean_f=None,            sd_f=None),  # M n=7, F n=0
+    "cmj::left time to peak force":                               dict(mean_m=0.8734300718,  sd_m=0.3182199552,   mean_f=0.7958702381,    sd_f=0.2238504915),  # M n=29, F n=7
+    "cmj::left time to peak landing force":                       dict(mean_m=0.07344472126, sd_m=0.04279809263,  mean_f=0.08740047619,   sd_f=0.01643824827),  # M n=29, F n=7
+    "cmj::left time to peak power":                               dict(mean_m=0.9788568452,  sd_m=0.3012327389,   mean_f=None,            sd_f=None),  # M n=7, F n=0
+    "cmj::left time to peak propulsive force":                    dict(mean_m=0.1101469643,  sd_m=0.1051945626,   mean_f=None,            sd_f=None),  # M n=7, F n=0
+    "cmj::left time to peak propulsive power":                    dict(mean_m=0.2819716071,  sd_m=0.04852137445,  mean_f=None,            sd_f=None),  # M n=7, F n=0
+    "cmj::min braking velocity":                                  dict(mean_m=-0.9988823336, sd_m=0.3235025962,   mean_f=-0.785587381,    sd_f=0.2695163129),  # M n=29, F n=7
+    "cmj::min eccentric velocity":                                dict(mean_m=-0.9988820539, sd_m=0.3235005315,   mean_f=-0.7855845238,   sd_f=0.26951911),  # M n=29, F n=7
+    "cmj::min unweight force":                                    dict(mean_m=322.931018,    sd_m=151.127919,     mean_f=375.9175,        sd_f=109.4623308),  # M n=29, F n=7
+    "cmj::net impulse":                                           dict(mean_m=163.9344977,   sd_m=16.11704161,    mean_f=108.6190476,     sd_f=18.69761578),  # M n=29, F n=7
+    "cmj::net impulse sym. index":                                dict(mean_m=11.72232041,   sd_m=40.45476649,    mean_f=-21.13422619,    sd_f=35.91525297),  # M n=29, F n=7
+    "cmj::p1 avg force":                                          dict(mean_m=1274.718555,   sd_m=174.1358605,    mean_f=1012.2425,       sd_f=148.398949),  # M n=29, F n=7
+    "cmj::p1 avg power":                                          dict(mean_m=881.2147977,   sd_m=93.09418531,    mean_f=None,            sd_f=None),  # M n=7, F n=0
+    "cmj::p1 avg velocity":                                       dict(mean_m=0.6921596731,  sd_m=0.04709084327,  mean_f=None,            sd_f=None),  # M n=7, F n=0
+    "cmj::p1 duration":                                           dict(mean_m=0.1792500556,  sd_m=0.05276516856,  mean_f=0.1361853571,    sd_f=0.03207944089),  # M n=29, F n=7
+    "cmj::p1 impulse":                                            dict(mean_m=86.18354574,   sd_m=10.2085248,     mean_f=54.40139286,     sd_f=9.348430138),  # M n=29, F n=7
+    "cmj::p1 impulse sym. index":                                 dict(mean_m=-1.762549892,  sd_m=4.828224717,    mean_f=-2.678547619,    sd_f=7.235339588),  # M n=29, F n=7
+    "cmj::p1 p2 duration ratio":                                  dict(mean_m=0.9154253315,  sd_m=0.2620035648,   mean_f=0.66325,         sd_f=0.138618197),  # M n=29, F n=7
+    "cmj::p1 p2 force ratio":                                     dict(mean_m=1.11856942,    sd_m=0.1292332331,   mean_f=1.202260714,     sd_f=0.1444295683),  # M n=29, F n=7
+    "cmj::p1 p2 power ratio":                                     dict(mean_m=0.4417746539,  sd_m=0.0787736173,   mean_f=None,            sd_f=None),  # M n=7, F n=0
+    "cmj::p1 p2 velocity ratio":                                  dict(mean_m=0.3670994876,  sd_m=0.02695620909,  mean_f=None,            sd_f=None),  # M n=7, F n=0
+    "cmj::p1 peak force":                                         dict(mean_m=1438.476813,   sd_m=145.5961656,    mean_f=None,            sd_f=None),  # M n=7, F n=0
+    "cmj::p1 peak power":                                         dict(mean_m=1586.213613,   sd_m=164.0349537,    mean_f=None,            sd_f=None),  # M n=7, F n=0
+    "cmj::p1 peak velocity":                                      dict(mean_m=1.29016999,    sd_m=0.0707056485,   mean_f=None,            sd_f=None),  # M n=7, F n=0
+    "cmj::p2 avg force":                                          dict(mean_m=1140.60181,    sd_m=89.82393816,    mean_f=844.3629167,     sd_f=95.92365901),  # M n=29, F n=7
+    "cmj::p2 avg power":                                          dict(mean_m=2019.531938,   sd_m=219.0206761,    mean_f=None,            sd_f=None),  # M n=7, F n=0
+    "cmj::p2 avg velocity":                                       dict(mean_m=1.883972849,   sd_m=0.05420784586,  mean_f=None,            sd_f=None),  # M n=7, F n=0
+    "cmj::p2 duration":                                           dict(mean_m=0.1980591485,  sd_m=0.02767332942,  mean_f=0.2047872619,    sd_f=0.01836124363),  # M n=29, F n=7
+    "cmj::p2 impulse":                                            dict(mean_m=78.06844589,   sd_m=12.60440429,    mean_f=54.40139286,     sd_f=9.348430138),  # M n=29, F n=7
+    "cmj::p2 impulse sym. index":                                 dict(mean_m=-0.3057448739, sd_m=3.54318127,     mean_f=-2.686738095,    sd_f=4.372825482),  # M n=29, F n=7
+    "cmj::p2 peak force":                                         dict(mean_m=1388.484526,   sd_m=119.9621809,    mean_f=None,            sd_f=None),  # M n=7, F n=0
+    "cmj::p2 peak power":                                         dict(mean_m=2768.892486,   sd_m=363.2299718,    mean_f=None,            sd_f=None),  # M n=7, F n=0
+    "cmj::p2 peak velocity":                                      dict(mean_m=2.286741268,   sd_m=0.1224723262,   mean_f=None,            sd_f=None),  # M n=7, F n=0
+    "cmj::peak braking force":                                    dict(mean_m=1329.187767,   sd_m=255.9187917,    mean_f=1003.98881,      sd_f=180.1962172),  # M n=29, F n=7
+    "cmj::peak braking force sym. index":                         dict(mean_m=2.231996502,   sd_m=3.904065343,    mean_f=None,            sd_f=None),  # M n=7, F n=0
+    "cmj::peak braking power":                                    dict(mean_m=-903.2861798,  sd_m=386.0320261,    mean_f=-535.6211905,    sd_f=219.3164297),  # M n=29, F n=7
+    "cmj::peak braking power sym. index":                         dict(mean_m=-1.421507443,  sd_m=4.654902724,    mean_f=None,            sd_f=None),  # M n=7, F n=0
+    "cmj::peak eccentric force":                                  dict(mean_m=1329.187767,   sd_m=255.9187917,    mean_f=1003.98881,      sd_f=180.1962172),  # M n=29, F n=7
+    "cmj::peak eccentric force sym. index":                       dict(mean_m=1.747425074,   sd_m=3.631232187,    mean_f=None,            sd_f=None),  # M n=7, F n=0
+    "cmj::peak eccentric power":                                  dict(mean_m=903.2861798,   sd_m=386.0320261,    mean_f=535.6211905,     sd_f=219.3164297),  # M n=29, F n=7
+    "cmj::peak eccentric power sym. index":                       dict(mean_m=4.616289021,   sd_m=1.735169264,    mean_f=None,            sd_f=None),  # M n=7, F n=0
+    "cmj::peak force":                                            dict(mean_m=1485.870195,   sd_m=147.5038474,    mean_f=1112.489762,     sd_f=133.2046309),  # M n=29, F n=7
+    "cmj::peak force sym. index":                                 dict(mean_m=-0.1586381212, sd_m=2.943141557,    mean_f=-1.590857143,    sd_f=4.506607364),  # M n=29, F n=7
+    "cmj::peak force time":                                       dict(mean_m=1.479018887,   sd_m=0.2727479506,   mean_f=1.350297452,     sd_f=0.2110012807),  # M n=29, F n=7
+    "cmj::peak landing force":                                    dict(mean_m=3762.483539,   sd_m=1104.441963,    mean_f=2065.308929,     sd_f=510.1916488),  # M n=29, F n=7
+    "cmj::peak landing force sym. index":                         dict(mean_m=-7.353858571,  sd_m=13.16039451,    mean_f=-4.3045,         sd_f=12.13235497),  # M n=29, F n=7
+    "cmj::peak power":                                            dict(mean_m=2860.136931,   sd_m=378.100051,     mean_f=1869.766429,     sd_f=313.9298769),  # M n=29, F n=7
+    "cmj::peak propulsive force":                                 dict(mean_m=1478.877237,   sd_m=139.5580459,    mean_f=1111.963929,     sd_f=133.7642298),  # M n=29, F n=7
+    "cmj::peak propulsive force sym. index":                      dict(mean_m=1.301297442,   sd_m=2.448162269,    mean_f=None,            sd_f=None),  # M n=7, F n=0
+    "cmj::peak propulsive power":                                 dict(mean_m=2860.136931,   sd_m=378.100051,     mean_f=1869.766429,     sd_f=313.9298769),  # M n=29, F n=7
+    "cmj::peak propulsive power sym. index":                      dict(mean_m=0.1874845024,  sd_m=3.454593022,    mean_f=None,            sd_f=None),  # M n=7, F n=0
+    "cmj::peak propulsive velocity":                              dict(mean_m=2.329324245,   sd_m=0.2144278294,   mean_f=2.040116071,     sd_f=0.2238878461),  # M n=29, F n=7
+    "cmj::peak velocity":                                         dict(mean_m=2.329324245,   sd_m=0.2144278294,   mean_f=2.040116071,     sd_f=0.2238878461),  # M n=29, F n=7
+    "cmj::propulsive duration":                                   dict(mean_m=0.3773091044,  sd_m=0.06489383675,  mean_f=0.3409710714,    sd_f=0.04556881351),  # M n=29, F n=7
+    "cmj::propulsive impulse":                                    dict(mean_m=164.2520248,   sd_m=16.13309524,    mean_f=108.802619,      sd_f=18.69672413),  # M n=29, F n=7
+    "cmj::propulsive impulse sym. index":                         dict(mean_m=-1.019429934,  sd_m=3.951657842,    mean_f=-2.705904762,    sd_f=5.500288311),  # M n=29, F n=7
+    "cmj::propulsive rfd":                                        dict(mean_m=452.0829327,   sd_m=312.7027469,    mean_f=None,            sd_f=None),  # M n=7, F n=0
+    "cmj::propulsive rfd sym. index":                             dict(mean_m=2.646816695,   sd_m=34.12700339,    mean_f=None,            sd_f=None),  # M n=7, F n=0
+    "cmj::propulsive work":                                       dict(mean_m=523.2500146,   sd_m=64.1348539,     mean_f=325.9303571,     sd_f=71.63100674),  # M n=29, F n=7
+    "cmj::propulsive work sym. index":                            dict(mean_m=0.3460774508,  sd_m=3.700549259,    mean_f=None,            sd_f=None),  # M n=7, F n=0
+    "cmj::rel. avg. propulsive force":                            dict(mean_m=15.96179277,   sd_m=0.8039504665,   mean_f=None,            sd_f=None),  # M n=7, F n=0
+    "cmj::rel. min unweight force":                               dict(mean_m=0.4423243432,  sd_m=0.2200104011,   mean_f=0.6428619048,    sd_f=0.1487256136),  # M n=29, F n=7
+    "cmj::rel. propulsive impulse":                               dict(mean_m=2.138224426,   sd_m=0.1285512741,   mean_f=None,            sd_f=None),  # M n=7, F n=0
+    "cmj::relative force at min displacement":                    dict(mean_m=1.766406822,   sd_m=0.2736212203,   mean_f=1.740880952,     sd_f=0.3850055683),  # M n=29, F n=7
+    "cmj::relative peak force":                                   dict(mean_m=1.964797331,   sd_m=0.1270118111,   mean_f=None,            sd_f=None),  # M n=11, F n=0
+    "cmj::relative peak landing force":                           dict(mean_m=5.007013115,   sd_m=1.259638162,    mean_f=3.538022619,     sd_f=0.6785418318),  # M n=29, F n=7
+    "cmj::relative peak power":                                   dict(mean_m=37.86612606,   sd_m=5.781970104,    mean_f=31.70033333,     sd_f=4.520388642),  # M n=29, F n=7
+    "cmj::right avg braking force":                               dict(mean_m=432.6739303,   sd_m=32.79886802,    mean_f=None,            sd_f=None),  # M n=7, F n=0
+    "cmj::right avg braking power":                               dict(mean_m=-339.9812961,  sd_m=63.4490855,     mean_f=None,            sd_f=None),  # M n=7, F n=0
+    "cmj::right avg eccentric force":                             dict(mean_m=379.2680059,   sd_m=31.5693921,     mean_f=None,            sd_f=None),  # M n=7, F n=0
+    "cmj::right avg eccentric power":                             dict(mean_m=240.2657731,   sd_m=55.91345859,    mean_f=None,            sd_f=None),  # M n=7, F n=0
+    "cmj::right avg landing rfd":                                 dict(mean_m=47224.02168,   sd_m=49523.1993,     mean_f=11761.14417,     sd_f=5177.011359),  # M n=29, F n=7
+    "cmj::right avg propulsive force":                            dict(mean_m=598.2663882,   sd_m=50.03244899,    mean_f=None,            sd_f=None),  # M n=7, F n=0
+    "cmj::right avg propulsive power":                            dict(mean_m=722.0776267,   sd_m=71.2695762,     mean_f=None,            sd_f=None),  # M n=7, F n=0
+    "cmj::right avg rfd":                                         dict(mean_m=513.7414821,   sd_m=269.6889969,    mean_f=412.4552381,     sd_f=135.7648812),  # M n=29, F n=7
+    "cmj::right braking impulse":                                 dict(mean_m=207.5917216,   sd_m=62.37242955,    mean_f=150.7294762,     sd_f=64.24221291),  # M n=29, F n=7
+    "cmj::right braking rfd":                                     dict(mean_m=1236.360142,   sd_m=677.9186199,    mean_f=979.7930952,     sd_f=664.6437094),  # M n=29, F n=7
+    "cmj::right braking work":                                    dict(mean_m=-140.7476396,  sd_m=36.91975367,    mean_f=None,            sd_f=None),  # M n=7, F n=0
+    "cmj::right decel rfd":                                       dict(mean_m=1294.159855,   sd_m=939.4255825,    mean_f=1225.529762,     sd_f=1151.122621),  # M n=29, F n=7
+    "cmj::right eccentric impulse":                               dict(mean_m=265.7782552,   sd_m=79.03054941,    mean_f=202.8498095,     sd_f=66.17376158),  # M n=29, F n=7
+    "cmj::right eccentric rfd":                                   dict(mean_m=569.5640666,   sd_m=227.781265,     mean_f=None,            sd_f=None),  # M n=7, F n=0
+    "cmj::right eccentric work":                                  dict(mean_m=147.5314935,   sd_m=37.17526783,    mean_f=None,            sd_f=None),  # M n=7, F n=0
+    "cmj::right landing rfd 0-20ms":                              dict(mean_m=73766.94112,   sd_m=55528.26819,    mean_f=None,            sd_f=None),  # M n=11, F n=0
+    "cmj::right landing rfd 0-40ms":                              dict(mean_m=26602.33061,   sd_m=10522.57372,    mean_f=None,            sd_f=None),  # M n=11, F n=0
+    "cmj::right landing rfd 0-60ms":                              dict(mean_m=17195.4196,    sd_m=8162.861566,    mean_f=None,            sd_f=None),  # M n=11, F n=0
+    "cmj::right landing rfd 0-80ms":                              dict(mean_m=9824.579386,   sd_m=3608.593974,    mean_f=None,            sd_f=None),  # M n=11, F n=0
+    "cmj::right net impulse":                                     dict(mean_m=79.1658889,    sd_m=25.31515381,    mean_f=64.57690476,     sd_f=16.57612326),  # M n=29, F n=7
+    "cmj::right p1 impulse":                                      dict(mean_m=111.599897,    sd_m=19.52652595,    mean_f=69.02939286,     sd_f=15.45017743),  # M n=29, F n=7
+    "cmj::right p2 impulse":                                      dict(mean_m=113.3759189,   sd_m=17.45723277,    mean_f=88.80921429,     sd_f=13.45170714),  # M n=29, F n=7
+    "cmj::right peak braking force":                              dict(mean_m=698.613356,    sd_m=93.88160848,    mean_f=None,            sd_f=None),  # M n=7, F n=0
+    "cmj::right peak braking power":                              dict(mean_m=-543.2581634,  sd_m=118.0127841,    mean_f=None,            sd_f=None),  # M n=7, F n=0
+    "cmj::right peak eccentric force":                            dict(mean_m=706.4057369,   sd_m=84.89156276,    mean_f=None,            sd_f=None),  # M n=7, F n=0
+    "cmj::right peak eccentric power":                            dict(mean_m=543.2581634,   sd_m=118.0127841,    mean_f=None,            sd_f=None),  # M n=7, F n=0
+    "cmj::right peak force":                                      dict(mean_m=747.123974,    sd_m=79.79842385,    mean_f=569.2147619,     sd_f=68.48561869),  # M n=29, F n=7
+    "cmj::right peak landing force":                              dict(mean_m=2260.323364,   sd_m=721.8077427,    mean_f=1192.170476,     sd_f=351.5441988),  # M n=29, F n=7
+    "cmj::right peak propulsive force":                           dict(mean_m=731.8705714,   sd_m=75.53969056,    mean_f=None,            sd_f=None),  # M n=7, F n=0
+    "cmj::right peak propulsive power":                           dict(mean_m=1381.340172,   sd_m=177.8663145,    mean_f=None,            sd_f=None),  # M n=7, F n=0
+    "cmj::right propulsive impulse":                              dict(mean_m=224.9757763,   sd_m=28.1463867,     mean_f=157.838631,      sd_f=27.90587316),  # M n=29, F n=7
+    "cmj::right propulsive rfd":                                  dict(mean_m=281.1045619,   sd_m=245.2368558,    mean_f=None,            sd_f=None),  # M n=7, F n=0
+    "cmj::right propulsive work":                                 dict(mean_m=254.3040776,   sd_m=40.05653251,    mean_f=None,            sd_f=None),  # M n=7, F n=0
+    "cmj::right time to peak braking force":                      dict(mean_m=0.4072444643,  sd_m=0.0812577874,   mean_f=None,            sd_f=None),  # M n=7, F n=0
+    "cmj::right time to peak braking power":                      dict(mean_m=0.2203660714,  sd_m=0.03596834058,  mean_f=None,            sd_f=None),  # M n=7, F n=0
+    "cmj::right time to peak eccentric force":                    dict(mean_m=0.5649282738,  sd_m=0.1140679045,   mean_f=None,            sd_f=None),  # M n=7, F n=0
+    "cmj::right time to peak eccentric power":                    dict(mean_m=0.5024555952,  sd_m=0.2339271316,   mean_f=None,            sd_f=None),  # M n=7, F n=0
+    "cmj::right time to peak force":                              dict(mean_m=0.8615480517,  sd_m=0.3187569257,   mean_f=0.8048982143,    sd_f=0.1998165974),  # M n=29, F n=7
+    "cmj::right time to peak landing force":                      dict(mean_m=0.06422751149, sd_m=0.02579041539,  mean_f=0.0813747619,    sd_f=0.01166980298),  # M n=29, F n=7
+    "cmj::right time to peak power":                              dict(mean_m=0.980109881,   sd_m=0.3002808468,   mean_f=None,            sd_f=None),  # M n=7, F n=0
+    "cmj::right time to peak propulsive force":                   dict(mean_m=0.1231202381,  sd_m=0.09683243001,  mean_f=None,            sd_f=None),  # M n=7, F n=0
+    "cmj::right time to peak propulsive power":                   dict(mean_m=0.2832255952,  sd_m=0.04762405669,  mean_f=None,            sd_f=None),  # M n=7, F n=0
+    "cmj::rsi":                                                   dict(mean_m=0.4587134001,  sd_m=0.1154783678,   mean_f=0.4024614286,    sd_f=0.07388949977),  # M n=29, F n=7
+    "cmj::takeoff time":                                          dict(mean_m=1.615405077,   sd_m=0.2371859245,   mean_f=1.505593048,     sd_f=0.1570323719),  # M n=29, F n=7
+    "cmj::takeoff velocity":                                      dict(mean_m=2.164460402,   sd_m=0.2187432916,   mean_f=1.838122381,     sd_f=0.2473622151),  # M n=29, F n=7
+    "cmj::time to peak braking force":                            dict(mean_m=0.4091054167,  sd_m=0.08042203703,  mean_f=None,            sd_f=None),  # M n=7, F n=0
+    "cmj::time to peak braking force sym. index":                 dict(mean_m=0.3950759926,  sd_m=1.40065473,     mean_f=None,            sd_f=None),  # M n=7, F n=0
+    "cmj::time to peak braking power":                            dict(mean_m=0.2165948214,  sd_m=0.02609744894,  mean_f=None,            sd_f=None),  # M n=7, F n=0
+    "cmj::time to peak braking power sym. index":                 dict(mean_m=-0.1829410079, sd_m=8.626403681,    mean_f=None,            sd_f=None),  # M n=7, F n=0
+    "cmj::time to peak eccentric force":                          dict(mean_m=0.6911927976,  sd_m=0.2851664213,   mean_f=None,            sd_f=None),  # M n=7, F n=0
+    "cmj::time to peak eccentric force sym. index":               dict(mean_m=4.996714951,   sd_m=12.52392211,    mean_f=None,            sd_f=None),  # M n=7, F n=0
+    "cmj::time to peak eccentric power":                          dict(mean_m=0.4986822024,  sd_m=0.2569363944,   mean_f=None,            sd_f=None),  # M n=7, F n=0
+    "cmj::time to peak eccentric power sym. index":               dict(mean_m=2.688453471,   sd_m=2.911707697,    mean_f=None,            sd_f=None),  # M n=7, F n=0
+    "cmj::time to peak force":                                    dict(mean_m=0.8731181667,  sd_m=0.3271564761,   mean_f=0.8156992857,    sd_f=0.2119515243),  # M n=29, F n=7
+    "cmj::time to peak landing force":                            dict(mean_m=0.06410156609, sd_m=0.02493723118,  mean_f=0.08633416667,   sd_f=0.01484382506),  # M n=29, F n=7
+    "cmj::time to peak landing force sym. index":                 dict(mean_m=2.147433933,   sd_m=7.655545864,    mean_f=3.262166667,     sd_f=8.5870422),  # M n=29, F n=7
+    "cmj::time to peak power":                                    dict(mean_m=1.008751739,   sd_m=0.2538497865,   mean_f=0.9358632143,    sd_f=0.1555869409),  # M n=29, F n=7
+    "cmj::time to peak power sym. index":                         dict(mean_m=-0.07661756588, sd_m=0.2126857256,   mean_f=None,            sd_f=None),  # M n=7, F n=0
+    "cmj::time to peak propulsive force":                         dict(mean_m=0.1207227976,  sd_m=0.1255060838,   mean_f=None,            sd_f=None),  # M n=7, F n=0
+    "cmj::time to peak propulsive force sym. index":              dict(mean_m=-6.373193234,  sd_m=48.32726866,    mean_f=None,            sd_f=None),  # M n=7, F n=0
+    "cmj::time to peak propulsive power":                         dict(mean_m=0.2819382738,  sd_m=0.04808031112,  mean_f=None,            sd_f=None),  # M n=7, F n=0
+    "cmj::time to peak propulsive power sym. index":              dict(mean_m=-0.2852290783, sd_m=0.6530385507,   mean_f=None,            sd_f=None),  # M n=7, F n=0
+    "cmj::time to peak si":                                       dict(mean_m=0.7204079334,  sd_m=4.459644435,    mean_f=-0.6537857143,   sd_f=5.27757631),  # M n=29, F n=7
+    "cmj::time to takeoff":                                       dict(mean_m=1.080237668,   sd_m=0.2548163801,   mean_f=1.011172262,     sd_f=0.1552416033),  # M n=29, F n=7
+    "cmj::unweighted duration":                                   dict(mean_m=0.1977968429,  sd_m=0.1263457414,   mean_f=0.222444881,     sd_f=0.0886230704),  # M n=29, F n=7
+    "cmj::velocity peak power":                                   dict(mean_m=2.116554343,   sd_m=0.1862647212,   mean_f=1.858947262,     sd_f=0.2066470676),  # M n=29, F n=7
+    "cmrj::avg braking force sym. index":                         dict(mean_m=-0.3088876575, sd_m=3.592502577,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::avg braking power sym. index":                         dict(mean_m=-0.07757401762, sd_m=4.092558211,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::avg eccentric force":                                  dict(mean_m=745.2024462,   sd_m=61.67684596,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::avg eccentric force sym. index":                       dict(mean_m=-1.281749032,  sd_m=2.927714875,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::avg eccentric power":                                  dict(mean_m=424.3482687,   sd_m=155.7213472,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::avg eccentric power sym. index":                       dict(mean_m=4.013452489,   sd_m=1.458027551,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::avg eccentric velocity":                               dict(mean_m=-0.5603169845, sd_m=0.2017579139,   mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::avg landing rfd":                                      dict(mean_m=46654.36282,   sd_m=15068.37643,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::avg landing rfd sym. index":                           dict(mean_m=-7.830044046,  sd_m=32.80982327,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::avg propulsive force sym. index":                      dict(mean_m=0.03461328643, sd_m=3.101503743,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::avg propulsive power sym. index":                      dict(mean_m=0.02058444946, sd_m=3.54980517,     mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::avg. braking force":                                   dict(mean_m=828.408005,    sd_m=62.74533796,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::avg. braking power":                                   dict(mean_m=-565.1980275,  sd_m=222.4162261,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::avg. braking velocity":                                dict(mean_m=-0.7273061136, sd_m=0.2715899397,   mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::avg. propulsive force":                                dict(mean_m=1191.803085,   sd_m=79.94723483,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::avg. propulsive power":                                dict(mean_m=1352.269387,   sd_m=162.5897949,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::avg. propulsive velocity":                             dict(mean_m=1.224920086,   sd_m=0.1042580011,   mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::avg. rfd":                                             dict(mean_m=1422.53845,    sd_m=510.270933,     mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::avg. rfd sym. index":                                  dict(mean_m=8.01165469,    sd_m=9.642430065,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::body mass":                                            dict(mean_m=75.98490433,   sd_m=6.293856142,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::body weight":                                          dict(mean_m=745.1571065,   sd_m=61.72240862,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::body weight sd":                                       dict(mean_m=7.466551327,   sd_m=0.7568757819,   mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::braking duration":                                     dict(mean_m=1.512789097,   sd_m=2.693782936,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::braking end time":                                     dict(mean_m=2.255371069,   sd_m=2.754702291,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::braking impulse":                                      dict(mean_m=41.85660976,   sd_m=13.64845903,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::braking impulse sym. index":                           dict(mean_m=-0.308346674,  sd_m=3.594853303,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::braking rfd":                                          dict(mean_m=2684.406741,   sd_m=1160.481336,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::braking rfd sym. index":                               dict(mean_m=4.337816333,   sd_m=8.457715527,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::braking work":                                         dict(mean_m=-244.8651879,  sd_m=81.33807114,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::braking work sym. index":                              dict(mean_m=-0.07757401762, sd_m=4.092558211,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::contact time":                                         dict(mean_m=2.067635648,   sd_m=2.838635624,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::decel rfd":                                            dict(mean_m=2824.931551,   sd_m=1538.256151,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::decel rfd sym. index":                                 dict(mean_m=-8.432914167,  sd_m=24.51134879,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::displacement depth":                                   dict(mean_m=42.61999224,   sd_m=15.50569679,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::eccentric impulse":                                    dict(mean_m=0.3153287789,  sd_m=0.1074812478,   mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::eccentric impulse sym. index":                         dict(mean_m=2.982993124,   sd_m=0.5653186637,   mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::eccentric rfd":                                        dict(mean_m=1471.424949,   sd_m=489.4998227,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::eccentric rfd sym. index":                             dict(mean_m=5.649901547,   sd_m=11.29597507,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::eccentric work":                                       dict(mean_m=319.4705241,   sd_m=122.9976393,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::eccentric work sym. index":                            dict(mean_m=4.013452489,   sd_m=1.458027551,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::flight threshold":                                     dict(mean_m=4.21625919,    sd_m=0.4831380282,   mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::flight time":                                          dict(mean_m=0.4323059491,  sd_m=0.02545299451,  mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::force at min displacement":                            dict(mean_m=1416.604223,   sd_m=149.3786123,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::force peak power":                                     dict(mean_m=1359.411868,   sd_m=160.8042825,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::initiation threshold":                                 dict(mean_m=725.1571065,   sd_m=61.72240862,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::jump height ft":                                       dict(mean_m=22.98643503,   sd_m=2.693924456,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::jump height ni":                                       dict(mean_m=19.99513985,   sd_m=3.240849513,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::jump momentum":                                        dict(mean_m=149.8019217,   sd_m=18.30803777,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::jump start time":                                      dict(mean_m=0.5264740787,  sd_m=0.09705668695,  mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::jump threshold time":                                  dict(mean_m=0.5264740787,  sd_m=0.09705668695,  mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::landing peak force time":                              dict(mean_m=3.091936463,   sd_m=2.761826721,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::landing rfd 0-20ms":                                   dict(mean_m=55486.41809,   sd_m=20434.33849,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::landing rfd 0-20ms sym. index":                        dict(mean_m=15.49846063,   sd_m=29.54773695,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::landing rfd 0-40ms":                                   dict(mean_m=61644.1529,    sd_m=34743.20936,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::landing rfd 0-40ms sym. index":                        dict(mean_m=3.528711974,   sd_m=12.13115275,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::landing rfd 0-60ms":                                   dict(mean_m=60910.56241,   sd_m=15153.97766,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::landing rfd 0-60ms sym. index":                        dict(mean_m=-6.62241504,   sd_m=15.93231695,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::landing rfd 0-80ms":                                   dict(mean_m=41867.89466,   sd_m=9963.972234,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::landing rfd 0-80ms sym. index":                        dict(mean_m=0.7284973407,  sd_m=4.614949734,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::landing time":                                         dict(mean_m=3.026392481,   sd_m=2.758971518,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::left avg braking force":                               dict(mean_m=413.0823293,   sd_m=37.91177029,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::left avg braking power":                               dict(mean_m=-281.4016782,  sd_m=112.9486085,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::left avg eccentric force":                             dict(mean_m=367.809926,    sd_m=31.50146763,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::left avg eccentric power":                             dict(mean_m=210.5300296,   sd_m=78.42943177,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::left avg landing rfd":                                 dict(mean_m=17997.75212,   sd_m=14616.73613,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::left avg propulsive force":                            dict(mean_m=595.4456481,   sd_m=30.99294113,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::left avg propulsive power":                            dict(mean_m=675.2781111,   sd_m=69.34621266,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::left avg rfd":                                         dict(mean_m=813.7434342,   sd_m=377.4107004,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::left braking impulse":                                 dict(mean_m=592.7732675,   sd_m=1029.677336,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::left braking rfd":                                     dict(mean_m=1731.833603,   sd_m=523.5533047,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::left braking work":                                    dict(mean_m=-124.7550571,  sd_m=37.92361462,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::left decel rfd":                                       dict(mean_m=1423.374912,   sd_m=822.3545027,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::left eccentric impulse":                               dict(mean_m=648.9643228,   sd_m=1071.759565,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::left eccentric rfd":                                   dict(mean_m=830.5184566,   sd_m=367.871118,     mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::left eccentric work":                                  dict(mean_m=160.0163415,   sd_m=64.92929748,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::left landing rfd 0-20ms":                              dict(mean_m=30340.2595,    sd_m=12926.90703,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::left landing rfd 0-40ms":                              dict(mean_m=31301.73818,   sd_m=15704.1346,     mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::left landing rfd 0-60ms":                              dict(mean_m=28447.69997,   sd_m=9553.703323,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::left landing rfd 0-80ms":                              dict(mean_m=21271.9791,    sd_m=5970.677361,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::left net impulse":                                     dict(mean_m=104.9158434,   sd_m=65.98433353,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::left p1 impulse":                                      dict(mean_m=110.5855862,   sd_m=16.75125216,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::left p2 impulse":                                      dict(mean_m=91.92704832,   sd_m=19.80874424,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::left peak braking force":                              dict(mean_m=1048.101792,   sd_m=787.0112833,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::left peak braking power":                              dict(mean_m=-1148.891276,  sd_m=1440.558702,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::left peak eccentric force":                            dict(mean_m=1048.101792,   sd_m=787.0112833,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::left peak eccentric power":                            dict(mean_m=1148.891276,   sd_m=1440.558702,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::left peak force":                                      dict(mean_m=1080.685941,   sd_m=780.7973544,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::left peak landing force":                              dict(mean_m=2654.593554,   sd_m=528.7005598,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::left peak propulsive force":                           dict(mean_m=746.5212684,   sd_m=49.48664269,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::left peak propulsive power":                           dict(mean_m=1299.878041,   sd_m=190.9595941,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::left propulsive impulse":                              dict(mean_m=202.5126484,   sd_m=35.32748091,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::left propulsive rfd":                                  dict(mean_m=265.8264671,   sd_m=233.7238466,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::left propulsive work":                                 dict(mean_m=230.2508386,   sd_m=46.10162418,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::left rebound avg braking force":                       dict(mean_m=1310.858708,   sd_m=175.8684588,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "cmrj::left rebound avg braking power":                       dict(mean_m=-1419.964293,  sd_m=48.50127382,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "cmrj::left rebound avg propulsive force":                    dict(mean_m=1127.810469,   sd_m=284.0832616,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "cmrj::left rebound avg propulsive power":                    dict(mean_m=1455.658224,   sd_m=483.648889,     mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "cmrj::left rebound braking impulse":                         dict(mean_m=109.6826604,   sd_m=14.26824229,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "cmrj::left rebound braking rfd":                             dict(mean_m=39256.93596,   sd_m=16342.40656,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "cmrj::left rebound braking work":                            dict(mean_m=-121.7572288,  sd_m=29.53398492,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "cmrj::left rebound p1 impulse":                              dict(mean_m=101.7503196,   sd_m=6.305373358,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "cmrj::left rebound p2 impulse":                              dict(mean_m=33.21146755,   sd_m=6.772156751,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "cmrj::left rebound peak braking force":                      dict(mean_m=2246.992256,   sd_m=450.2198281,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "cmrj::left rebound peak braking power":                      dict(mean_m=-2766.270867,  sd_m=342.2030437,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "cmrj::left rebound peak propulsive force":                   dict(mean_m=1959.797673,   sd_m=655.1282569,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "cmrj::left rebound peak propulsive power":                   dict(mean_m=2739.59415,    sd_m=1069.601712,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "cmrj::left rebound propulsive impulse":                      dict(mean_m=134.9617872,   sd_m=5.976759291,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "cmrj::left rebound propulsive rfd":                          dict(mean_m=4485.66828,    sd_m=4467.586479,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "cmrj::left rebound propulsive work":                         dict(mean_m=175.6988231,   sd_m=11.95566353,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "cmrj::left rebound time to peak braking force":              dict(mean_m=0.06195023148, sd_m=0.01722698479,  mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "cmrj::left rebound time to peak braking power":              dict(mean_m=0.04357638889, sd_m=0.01057603779,  mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "cmrj::left rebound time to peak propulsive force":           dict(mean_m=0.01212384259, sd_m=0.005091523851, mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "cmrj::left rebound time to peak propulsive power":           dict(mean_m=0.06021412037, sd_m=0.0138563892,   mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "cmrj::left time to peak braking force":                      dict(mean_m=0.4958623611,  sd_m=0.2476011052,   mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::left time to peak braking power":                      dict(mean_m=0.3628044444,  sd_m=0.2820358534,   mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::left time to peak eccentric force":                    dict(mean_m=0.7119065046,  sd_m=0.376510135,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::left time to peak eccentric power":                    dict(mean_m=0.5788481713,  sd_m=0.4144303895,   mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::left time to peak force":                              dict(mean_m=0.8080000463,  sd_m=0.3876352703,   mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::left time to peak landing force":                      dict(mean_m=0.4018518056,  sd_m=0.199285085,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::left time to peak power":                              dict(mean_m=1.347467315,   sd_m=1.253649562,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::left time to peak propulsive force":                   dict(mean_m=0.1323500926,  sd_m=0.1121526319,   mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::left time to peak propulsive power":                   dict(mean_m=0.2665501852,  sd_m=0.04591363757,  mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::min braking velocity":                                 dict(mean_m=-1.285192629,  sd_m=0.3013727812,   mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::min eccentric velocity":                               dict(mean_m=-1.285193601,  sd_m=0.3013840202,   mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::min unweight force":                                   dict(mean_m=263.1718471,   sd_m=59.56411356,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::net impulse":                                          dict(mean_m=149.8019772,   sd_m=18.30803479,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::net impulse sym. index":                               dict(mean_m=3.145018442,   sd_m=19.23381938,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::p1 avg force":                                         dict(mean_m=1306.137216,   sd_m=95.90401294,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::p1 avg power":                                         dict(mean_m=840.9273079,   sd_m=158.7796528,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::p1 avg velocity":                                      dict(mean_m=0.657416984,   sd_m=0.093581984,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::p1 duration":                                          dict(mean_m=0.1699083102,  sd_m=0.02467463281,  mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::p1 impulse":                                           dict(mean_m=93.57705347,   sd_m=12.14353699,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::p1 impulse sym. index":                                dict(mean_m=0.02109588385, sd_m=2.961833887,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::p1 p2 duration ratio":                                 dict(mean_m=1.006206652,   sd_m=0.002601308649, mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::p1 p2 force ratio":                                    dict(mean_m=1.227270761,   sd_m=0.1840590859,   mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::p1 p2 power ratio":                                    dict(mean_m=0.4548450736,  sd_m=0.1109585427,   mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::p1 p2 velocity ratio":                                 dict(mean_m=0.3647725836,  sd_m=0.04022756272,  mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::p1 peak force":                                        dict(mean_m=1440.234851,   sd_m=143.8799831,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::p1 peak power":                                        dict(mean_m=1543.518464,   sd_m=250.9712008,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::p1 peak velocity":                                     dict(mean_m=1.230887001,   sd_m=0.1631582026,   mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::p2 avg force":                                         dict(mean_m=1077.139593,   sd_m=119.4971591,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::p2 avg power":                                         dict(mean_m=1868.087144,   sd_m=258.4187019,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::p2 avg velocity":                                      dict(mean_m=1.796055585,   sd_m=0.1376350536,   mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::p2 duration":                                          dict(mean_m=0.1688945139,  sd_m=0.02489243367,  mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::p2 impulse":                                           dict(mean_m=56.54007199,   sd_m=14.82689349,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::p2 impulse sym. index":                                dict(mean_m=0.06648964846, sd_m=3.602888156,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::p2 peak force":                                        dict(mean_m=1393.852775,   sd_m=132.4000611,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::p2 peak power":                                        dict(mean_m=2612.754626,   sd_m=384.3160936,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::p2 peak velocity":                                     dict(mean_m=2.153177166,   sd_m=0.1534029792,   mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::peak braking force":                                   dict(mean_m=1848.252701,   sd_m=974.8344228,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::peak braking force sym. index":                        dict(mean_m=1.617360758,   sd_m=5.246393015,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::peak braking power":                                   dict(mean_m=-1815.997038,  sd_m=1744.787877,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::peak braking power sym. index":                        dict(mean_m=3.319144898,   sd_m=7.648195329,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::peak eccentric force":                                 dict(mean_m=1848.252701,   sd_m=974.8344228,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::peak eccentric force sym. index":                      dict(mean_m=1.617360758,   sd_m=5.246393015,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::peak eccentric power":                                 dict(mean_m=1815.997038,   sd_m=1744.787877,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::peak eccentric power sym. index":                      dict(mean_m=6.708693761,   sd_m=5.195771045,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::peak force":                                           dict(mean_m=1905.988382,   sd_m=954.0549824,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::peak force sym. index":                                dict(mean_m=1.979123419,   sd_m=5.128328473,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::peak force time":                                      dict(mean_m=1.468198037,   sd_m=0.4781538224,   mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::peak landing force":                                   dict(mean_m=4673.736133,   sd_m=707.5679653,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::peak landing force sym. index":                        dict(mean_m=0.824024308,   sd_m=6.041559757,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::peak power":                                           dict(mean_m=2640.148376,   sd_m=390.7757078,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::peak propulsive force":                                dict(mean_m=1489.77021,    sd_m=114.0745574,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::peak propulsive force sym. index":                     dict(mean_m=0.1788659621,  sd_m=2.40485256,     mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::peak propulsive power":                                dict(mean_m=2612.754626,   sd_m=384.3160936,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::peak propulsive power sym. index":                     dict(mean_m=-0.69975264,   sd_m=3.087773021,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::peak propulsive velocity":                             dict(mean_m=2.153179249,   sd_m=0.1534052335,   mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::peak velocity":                                        dict(mean_m=2.160720499,   sd_m=0.1564670577,   mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::propulsive duration":                                  dict(mean_m=0.3388024074,  sd_m=0.04956628992,  mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::propulsive impulse":                                   dict(mean_m=150.1172088,   sd_m=18.26653603,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::propulsive impulse sym. index":                        dict(mean_m=0.03517169658, sd_m=3.102075871,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::propulsive rfd":                                       dict(mean_m=438.0649602,   sd_m=298.7413223,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::propulsive rfd sym. index":                            dict(mean_m=-7.035622744,  sd_m=39.24234508,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::propulsive work":                                      dict(mean_m=459.8909142,   sd_m=91.03058,       mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::propulsive work sym. index":                           dict(mean_m=0.02058444946, sd_m=3.54980517,     mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::rebound avg braking force":                            dict(mean_m=2370.054493,   sd_m=473.9753078,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::rebound avg braking force sym. index":                 dict(mean_m=1.519861111,   sd_m=11.88981246,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "cmrj::rebound avg braking force symmetry index":             dict(mean_m=-1.026325777,  sd_m=7.364919162,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "cmrj::rebound avg braking power":                            dict(mean_m=-2592.131282,  sd_m=446.9131447,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::rebound avg braking power sym. index":                 dict(mean_m=3.825388889,   sd_m=15.47802655,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "cmrj::rebound avg braking power symmetry index":             dict(mean_m=-0.7698779897, sd_m=8.94176023,     mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "cmrj::rebound avg braking velocity":                         dict(mean_m=-1.369896032,  sd_m=0.08829804203,  mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::rebound avg propulsive force":                         dict(mean_m=1920.633016,   sd_m=455.7771747,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::rebound avg propulsive force sym. index":              dict(mean_m=0.8807222222,  sd_m=3.875223658,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "cmrj::rebound avg propulsive force symmetry index":          dict(mean_m=0.6286094571,  sd_m=3.910505213,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "cmrj::rebound avg propulsive power":                         dict(mean_m=2311.052898,   sd_m=866.155871,     mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::rebound avg propulsive power sym. index":              dict(mean_m=1.544,         sd_m=3.353302402,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "cmrj::rebound avg propulsive power symmetry index":          dict(mean_m=-0.2448032573, sd_m=3.927747215,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "cmrj::rebound avg propulsive velocity":                      dict(mean_m=1.485574495,   sd_m=0.2168124989,   mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::rebound braking impulse":                              dict(mean_m=149.7432972,   sd_m=18.47228396,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::rebound braking impulse sym. index":                   dict(mean_m=1.523916667,   sd_m=11.94148496,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "cmrj::rebound braking impulse symmetry index":               dict(mean_m=-1.022768867,  sd_m=7.394159999,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "cmrj::rebound braking rfd":                                  dict(mean_m=72793.55796,   sd_m=25049.65171,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::rebound braking rfd sym. index":                       dict(mean_m=-2.94125,      sd_m=22.32402322,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "cmrj::rebound braking rfd symmetry index":                   dict(mean_m=-0.9772253298, sd_m=3.247808523,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "cmrj::rebound braking work":                                 dict(mean_m=-246.4157803,  sd_m=51.08155526,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::rebound braking work sym. index":                      dict(mean_m=3.825388889,   sd_m=15.47802655,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "cmrj::rebound braking work symmetry index":                  dict(mean_m=-0.7698779897, sd_m=8.94176023,     mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "cmrj::rebound flight time":                                  dict(mean_m=0.3810758333,  sd_m=0.059274043,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::rebound force at min displacement":                    dict(mean_m=3302.626473,   sd_m=896.6719619,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::rebound jump momentum":                                dict(mean_m=147.2085496,   sd_m=29.26979238,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::rebound min braking velocity":                         dict(mean_m=-2.047641702,  sd_m=0.1585925736,   mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::rebound p1 avg force":                                 dict(mean_m=2898.046927,   sd_m=751.2625072,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::rebound p1 avg power":                                 dict(mean_m=2710.814847,   sd_m=1139.222515,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::rebound p1 avg velocity":                              dict(mean_m=0.9624238764,  sd_m=0.1377001754,   mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::rebound p1 duration":                                  dict(mean_m=0.06547997685, sd_m=0.01101798185,  mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::rebound p1 impulse":                                   dict(mean_m=135.166529,    sd_m=20.53237563,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::rebound p1 impulse sym. index":                        dict(mean_m=0.0145,        sd_m=4.279990975,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "cmrj::rebound p1 impulse symmetry index":                    dict(mean_m=1.923556612,   sd_m=4.379299738,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "cmrj::rebound p1 p2 duration ratio":                         dict(mean_m=1.010346302,   sd_m=0.006122078764, mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::rebound p1 p2 force ratio":                            dict(mean_m=3.151494578,   sd_m=0.4923081955,   mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::rebound p1 p2 power ratio":                            dict(mean_m=1.451602583,   sd_m=0.2574185303,   mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::rebound p1 p2 velocity ratio":                         dict(mean_m=0.4810399715,  sd_m=0.03032300446,  mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::rebound p1 peak force":                                dict(mean_m=3377.103654,   sd_m=886.1412531,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::rebound p1 peak power":                                dict(mean_m=4180.602865,   sd_m=1733.050685,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::rebound p1 peak velocity":                             dict(mean_m=1.780415303,   sd_m=0.2530199689,   mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::rebound p2 avg force":                                 dict(mean_m=938.6890889,   sd_m=203.8408639,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::rebound p2 avg power":                                 dict(mean_m=1938.226073,   sd_m=675.640731,     mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::rebound p2 avg velocity":                              dict(mean_m=2.018842221,   sd_m=0.3076368415,   mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::rebound p2 duration":                                  dict(mean_m=0.06481490741, sd_m=0.01093072323,  mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::rebound p2 impulse":                                   dict(mean_m=12.1006173,    sd_m=9.700630567,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::rebound p2 impulse sym. index":                        dict(mean_m=4.056055556,   sd_m=2.331789193,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "cmrj::rebound p2 impulse symmetry index":                    dict(mean_m=-3.87998528,   sd_m=3.487900287,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "cmrj::rebound p2 peak force":                                dict(mean_m=2210.013701,   sd_m=611.459314,     mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::rebound p2 peak power":                                dict(mean_m=4099.331923,   sd_m=1775.40652,     mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::rebound p2 peak velocity":                             dict(mean_m=2.11475195,    sd_m=0.3149991393,   mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::rebound peak braking force":                           dict(mean_m=4395.990671,   sd_m=665.2804423,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::rebound peak braking force sym. index":                dict(mean_m=-0.8921666667, sd_m=13.2299212,     mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "cmrj::rebound peak braking force symmetry index":            dict(mean_m=-1.617184007,  sd_m=5.313808935,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "cmrj::rebound peak braking power":                           dict(mean_m=-5631.105459,  sd_m=920.5732659,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::rebound peak braking power sym. index":                dict(mean_m=1.417555556,   sd_m=24.65876549,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "cmrj::rebound peak braking power symmetry index":            dict(mean_m=-1.37836184,   sd_m=8.171100596,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "cmrj::rebound peak propulsive force":                        dict(mean_m=3377.103654,   sd_m=886.1412531,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::rebound peak propulsive force sym. index":             dict(mean_m=-0.02286111111, sd_m=5.105193085,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "cmrj::rebound peak propulsive force symmetry index":         dict(mean_m=0.3852528581,  sd_m=4.322273639,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "cmrj::rebound peak propulsive power":                        dict(mean_m=4201.221568,   sd_m=1762.427248,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::rebound peak propulsive power sym. index":             dict(mean_m=0.08588888889, sd_m=3.272947811,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "cmrj::rebound peak propulsive power symmetry index":         dict(mean_m=0.781054956,   sd_m=4.939031295,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "cmrj::rebound peak propulsive velocity":                     dict(mean_m=2.114751672,   sd_m=0.3149971334,   mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::rebound propulsive impulse sym. index":                dict(mean_m=0.8853333333,  sd_m=3.869679132,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "cmrj::rebound propulsive impulse symmetry index":            dict(mean_m=0.6392929777,  sd_m=3.921175734,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "cmrj::rebound propulsive rfd":                               dict(mean_m=7920.649788,   sd_m=7162.316139,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::rebound propulsive rfd sym. index":                    dict(mean_m=-13.61311111,  sd_m=34.12883968,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "cmrj::rebound propulsive rfd symmetry index":                dict(mean_m=22.66401569,   sd_m=11.70821061,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "cmrj::rebound propulsive work":                              dict(mean_m=293.6717574,   sd_m=68.77765404,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::rebound propulsive work sym. index":                   dict(mean_m=1.544,         sd_m=3.353302402,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "cmrj::rebound propulsive work symmetry index":               dict(mean_m=-0.2448032573, sd_m=3.927747215,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "cmrj::rebound relative force at min displacement":           dict(mean_m=4.446161081,   sd_m=1.223957643,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::rebound rsi":                                          dict(mean_m=1.763856333,   sd_m=0.5748974904,   mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::rebound time to peak braking force":                   dict(mean_m=0.06474222222, sd_m=0.01166905226,  mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::rebound time to peak braking force sym. index":        dict(mean_m=2.376416667,   sd_m=10.11140768,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "cmrj::rebound time to peak braking force symmetry index":    dict(mean_m=-0.6417016035, sd_m=2.592582952,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "cmrj::rebound time to peak braking power":                   dict(mean_m=0.05044824074, sd_m=0.01088793097,  mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::rebound time to peak braking power sym. index":        dict(mean_m=1.197277778,   sd_m=16.25835877,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "cmrj::rebound time to peak braking power symmetry index":    dict(mean_m=4.231369348,   sd_m=3.684171352,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "cmrj::rebound time to peak propulsive force":                dict(mean_m=0.006640162037, sd_m=0.005371342681, mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::rebound time to peak propulsive force sym. index":     dict(mean_m=-13.61619444,  sd_m=17.96297738,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "cmrj::rebound time to peak propulsive force symmetry index": dict(mean_m=25.23809524,   sd_m=7.797189899,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "cmrj::rebound time to peak propulsive power":                dict(mean_m=0.06051837963, sd_m=0.01286216128,  mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::rebound time to peak propulsive power sym. index":     dict(mean_m=1.483027778,   sd_m=1.841713956,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "cmrj::rebound time to peak propulsive power symmetry index": dict(mean_m=-2.45332181,   sd_m=1.249614062,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "cmrj::rebound time to takeoff":                              dict(mean_m=0.2273584028,  sd_m=0.04543635166,  mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::rel. avg. propulsive force":                           dict(mean_m=15.72244346,   sd_m=0.9210749415,   mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::rel. min unweight force":                              dict(mean_m=0.3528211431,  sd_m=0.07594130792,  mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::rel. propulsive impulse":                              dict(mean_m=1.974121576,   sd_m=0.1596148872,   mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::relative force at min displacement":                   dict(mean_m=1.907142944,   sd_m=0.2112626581,   mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::relative peak force":                                  dict(mean_m=2.565139865,   sd_m=1.28302465,     mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::relative peak landing force":                          dict(mean_m=6.261720101,   sd_m=0.6896387198,   mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::relative peak power":                                  dict(mean_m=34.65790787,   sd_m=3.556905258,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::right avg braking force":                              dict(mean_m=415.3248423,   sd_m=31.08320384,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::right avg braking power":                              dict(mean_m=-283.7959326,  sd_m=110.7130694,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::right avg eccentric force":                            dict(mean_m=377.3925202,   sd_m=33.82319051,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::right avg eccentric power":                            dict(mean_m=213.8176835,   sd_m=78.09577377,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::right avg landing rfd":                                dict(mean_m=20344.22064,   sd_m=6371.738834,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::right avg propulsive force":                           dict(mean_m=596.356881,    sd_m=54.23683163,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::right avg propulsive power":                           dict(mean_m=676.9911372,   sd_m=98.21337801,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::right avg rfd":                                        dict(mean_m=669.5096999,   sd_m=280.4044578,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::right braking impulse":                                dict(mean_m=575.962928,    sd_m=983.7828199,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::right braking rfd":                                    dict(mean_m=1562.146337,   sd_m=436.3974703,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::right braking work":                                   dict(mean_m=-120.1097141,  sd_m=44.76622825,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::right decel rfd":                                      dict(mean_m=1401.557055,   sd_m=723.4389477,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::right eccentric impulse":                              dict(mean_m=638.4208102,   sd_m=1027.072291,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::right eccentric rfd":                                  dict(mean_m=709.7919119,   sd_m=254.9171754,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::right eccentric work":                                 dict(mean_m=159.4555715,   sd_m=58.32334803,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::right landing rfd 0-20ms":                             dict(mean_m=25146.16025,   sd_m=11056.92657,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::right landing rfd 0-40ms":                             dict(mean_m=30342.41431,   sd_m=19658.12227,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::right landing rfd 0-60ms":                             dict(mean_m=32462.86285,   sd_m=7685.401314,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::right landing rfd 0-80ms":                             dict(mean_m=20595.91681,   sd_m=4151.318114,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::right net impulse":                                    dict(mean_m=92.59530046,   sd_m=56.37265956,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::right p1 impulse":                                     dict(mean_m=110.5092883,   sd_m=16.84602911,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::right p2 impulse":                                     dict(mean_m=91.38092986,   sd_m=18.38127427,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::right peak braking force":                             dict(mean_m=929.3971287,   sd_m=498.7734556,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::right peak braking power":                             dict(mean_m=-853.4845434,  sd_m=751.517089,     mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::right peak eccentric force":                           dict(mean_m=929.3971287,   sd_m=498.7734556,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::right peak eccentric power":                           dict(mean_m=853.4845434,   sd_m=751.517089,     mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::right peak force":                                     dict(mean_m=957.9207995,   sd_m=483.6111449,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::right peak landing force":                             dict(mean_m=2564.999906,   sd_m=391.6927293,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::right peak propulsive force":                          dict(mean_m=745.0732495,   sd_m=68.67518736,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::right peak propulsive power":                          dict(mean_m=1317.108759,   sd_m=203.1686154,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::right propulsive impulse":                             dict(mean_m=201.8902042,   sd_m=33.67681232,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::right propulsive rfd":                                 dict(mean_m=261.2807556,   sd_m=106.8238315,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::right propulsive work":                                dict(mean_m=229.6388255,   sd_m=46.61326393,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::right rebound avg braking force":                      dict(mean_m=1350.486112,   sd_m=279.2936515,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "cmrj::right rebound avg braking power":                      dict(mean_m=-1445.491049,  sd_m=301.2025086,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "cmrj::right rebound avg propulsive force":                   dict(mean_m=1100.331118,   sd_m=198.2937301,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "cmrj::right rebound avg propulsive power":                   dict(mean_m=1445.770628,   sd_m=428.7725498,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "cmrj::right rebound braking impulse":                        dict(mean_m=112.2750626,   sd_m=25.40224337,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "cmrj::right rebound braking rfd":                            dict(mean_m=41334.52127,   sd_m=19088.13035,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "cmrj::right rebound braking work":                           dict(mean_m=-123.5121095,  sd_m=42.54978248,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "cmrj::right rebound p1 impulse":                             dict(mean_m=98.10346702,   sd_m=2.110477428,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "cmrj::right rebound p2 impulse":                             dict(mean_m=35.27803024,   sd_m=6.088792913,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "cmrj::right rebound peak braking force":                     dict(mean_m=2326.17088,    sd_m=464.8873591,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "cmrj::right rebound peak braking power":                     dict(mean_m=-2889.955578,  sd_m=853.1092751,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "cmrj::right rebound peak propulsive force":                  dict(mean_m=1915.582068,   sd_m=465.1322914,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "cmrj::right rebound peak propulsive power":                  dict(mean_m=2645.523399,   sd_m=836.1372719,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "cmrj::right rebound propulsive impulse":                     dict(mean_m=133.3814973,   sd_m=8.105131672,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "cmrj::right rebound propulsive rfd":                         dict(mean_m=2687.914389,   sd_m=2889.442479,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "cmrj::right rebound propulsive work":                        dict(mean_m=175.8258029,   sd_m=7.282261169,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "cmrj::right rebound time to peak braking force":             dict(mean_m=0.06276041667, sd_m=0.01693998796,  mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "cmrj::right rebound time to peak braking power":             dict(mean_m=0.04056712963, sd_m=0.009004934597, mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "cmrj::right rebound time to peak propulsive force":          dict(mean_m=0.004282407407, sd_m=0.00417148641,  mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "cmrj::right rebound time to peak propulsive power":          dict(mean_m=0.06316550926, sd_m=0.01493063967,  mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "cmrj::right time to peak braking force":                     dict(mean_m=0.524609838,   sd_m=0.304936573,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::right time to peak braking power":                     dict(mean_m=0.4068577315,  sd_m=0.3954306765,   mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::right time to peak eccentric force":                   dict(mean_m=0.7406535648,  sd_m=0.4349209932,   mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::right time to peak eccentric power":                   dict(mean_m=0.6229020139,  sd_m=0.5280614446,   mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::right time to peak force":                             dict(mean_m=0.8618922685,  sd_m=0.4109011711,   mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::right time to peak landing force":                     dict(mean_m=0.3418260648,  sd_m=0.1357890887,   mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::right time to peak power":                             dict(mean_m=1.37884838,    sd_m=1.329133856,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::right time to peak propulsive force":                  dict(mean_m=0.1418112963,  sd_m=0.1137559946,   mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::right time to peak propulsive power":                  dict(mean_m=0.2662041667,  sd_m=0.04816471114,  mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::rsi":                                                  dict(mean_m=0.433235387,   sd_m=0.1389351626,   mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::rsi modified":                                         dict(mean_m=0.1975809749,  sd_m=0.06989192782,  mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::takeoff time":                                         dict(mean_m=2.594132644,   sd_m=2.767455488,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::takeoff velocity":                                     dict(mean_m=1.969976539,   sd_m=0.1607820564,   mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::time to peak braking force":                           dict(mean_m=0.4997976852,  sd_m=0.2468107092,   mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::time to peak braking force sym. index":                dict(mean_m=-1.349782343,  sd_m=1.992338061,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::time to peak braking power":                           dict(mean_m=0.363802037,   sd_m=0.2820740002,   mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::time to peak braking power sym. index":                dict(mean_m=-0.8820012037, sd_m=4.147627428,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::time to peak eccentric force":                         dict(mean_m=0.715841412,   sd_m=0.3756776924,   mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::time to peak eccentric force sym. index":              dict(mean_m=-1.065135605,  sd_m=1.637224978,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::time to peak eccentric power":                         dict(mean_m=0.5798467361,  sd_m=0.4145913767,   mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::time to peak eccentric power sym. index":              dict(mean_m=2.517655864,   sd_m=2.45913231,     mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::time to peak force":                                   dict(mean_m=0.8144671065,  sd_m=0.3851712042,   mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::time to peak landing force":                           dict(mean_m=0.2136136111,  sd_m=0.1756915116,   mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::time to peak landing force sym. index":                dict(mean_m=8.678298392,   sd_m=29.54750433,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::time to peak power":                                   dict(mean_m=1.347525255,   sd_m=1.252853791,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::time to peak power sym. index":                        dict(mean_m=-1.165092014,  sd_m=2.852776599,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::time to peak propulsive force":                        dict(mean_m=0.1356484028,  sd_m=0.1120923396,   mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::time to peak propulsive force sym. index":             dict(mean_m=-16.00399681,  sd_m=22.76778748,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::time to peak propulsive power":                        dict(mean_m=0.266694375,   sd_m=0.04757530731,  mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::time to peak propulsive power sym. index":             dict(mean_m=0.1278980357,  sd_m=0.9323514974,   mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::time to peak si":                                      dict(mean_m=-2.925316729,  sd_m=5.217038816,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::time to takeoff":                                      dict(mean_m=2.067635648,   sd_m=2.838635624,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::unweighted duration":                                  dict(mean_m=0.2160446991,  sd_m=0.1354259755,   mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "cmrj::velocity peak power":                                  dict(mean_m=1.949283646,   sd_m=0.1469544127,   mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "dj::avg braking force sym. index":                           dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::avg braking power sym. index":                           dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::avg landing rfd":                                        dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::avg landing rfd sym. index":                             dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::avg propulsive force sym. index":                        dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::avg propulsive power sym. index":                        dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::avg. braking force":                                     dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::avg. braking power":                                     dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::avg. braking velocity":                                  dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::avg. propulsive force":                                  dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::avg. propulsive power":                                  dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::avg. propulsive velocity":                               dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::body mass":                                              dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::body weight":                                            dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::braking end time":                                       dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::braking impulse":                                        dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::braking impulse sym. index":                             dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::braking rfd":                                            dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::braking rfd sym. index":                                 dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::braking work":                                           dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::braking work sym. index":                                dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::contact time":                                           dict(mean_m=0.6795453,     sd_m=0.230528902,    mean_f=0.492447,        sd_f=0.1804647816),  # M n=5, F n=5
+    "dj::flight threshold":                                       dict(mean_m=4.100833333,   sd_m=0.8168552078,   mean_f=3.616333333,     sd_f=0.3790945902),  # M n=5, F n=5
+    "dj::flight time":                                            dict(mean_m=0.4168710667,  sd_m=0.04747289328,  mean_f=0.3858511667,    sd_f=0.03478029051),  # M n=5, F n=5
+    "dj::force peak power":                                       dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::initiation threshold":                                   dict(mean_m=10.0,          sd_m=0.0,            mean_f=10.0,            sd_f=0.0),  # M n=5, F n=5
+    "dj::jump height ft":                                         dict(mean_m=21.55295667,   sd_m=4.783238661,    mean_f=18.38935,        sd_f=3.300743096),  # M n=5, F n=5
+    "dj::jump momentum":                                          dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::jump start time":                                        dict(mean_m=-0.003470953333, sd_m=0.0008854626265, mean_f=-0.00506965,     sd_f=0.001001158767),  # M n=5, F n=5
+    "dj::jump threshold time":                                    dict(mean_m=0.4965290467,  sd_m=0.0008854626265, mean_f=0.49493035,      sd_f=0.001001158767),  # M n=5, F n=5
+    "dj::landing peak force time":                                dict(mean_m=1.66877878,    sd_m=0.2590177157,   mean_f=1.46059135,      sd_f=0.1418753962),  # M n=5, F n=5
+    "dj::landing rfd 0-20ms":                                     dict(mean_m=32980.5705,    sd_m=14423.45845,    mean_f=26491.43083,     sd_f=3877.954435),  # M n=5, F n=5
+    "dj::landing rfd 0-20ms sym. index":                          dict(mean_m=22.9519,       sd_m=31.32000659,    mean_f=15.63631667,     sd_f=43.7860939),  # M n=5, F n=5
+    "dj::landing rfd 0-40ms":                                     dict(mean_m=29474.6932,    sd_m=3876.709158,    mean_f=23096.37867,     sd_f=4681.593669),  # M n=5, F n=5
+    "dj::landing rfd 0-40ms sym. index":                          dict(mean_m=13.78975667,   sd_m=4.180841933,    mean_f=-1.5859,         sd_f=29.59948834),  # M n=5, F n=5
+    "dj::landing rfd 0-60ms":                                     dict(mean_m=43046.3538,    sd_m=16221.33487,    mean_f=23504.04283,     sd_f=5360.608382),  # M n=5, F n=5
+    "dj::landing rfd 0-60ms sym. index":                          dict(mean_m=5.614386667,   sd_m=6.635505133,    mean_f=-9.514566667,    sd_f=22.62569296),  # M n=5, F n=5
+    "dj::landing rfd 0-80ms":                                     dict(mean_m=24586.60583,   sd_m=2726.101471,    mean_f=18600.7575,      sd_f=7021.892624),  # M n=5, F n=5
+    "dj::landing rfd 0-80ms sym. index":                          dict(mean_m=9.89909,       sd_m=3.219072677,    mean_f=-6.621733333,    sd_f=23.26235617),  # M n=5, F n=5
+    "dj::landing time":                                           dict(mean_m=1.594558447,   sd_m=0.2524950337,   mean_f=1.37574685,      sd_f=0.1493417895),  # M n=5, F n=5
+    "dj::left avg braking force":                                 dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::left avg braking power":                                 dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::left avg landing rfd":                                   dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::left avg propulsive force":                              dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::left avg propulsive power":                              dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::left braking impulse":                                   dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::left braking rfd":                                       dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::left braking work":                                      dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::left landing rfd 0-20ms":                                dict(mean_m=19121.51943,   sd_m=6187.214836,    mean_f=14697.06733,     sd_f=5755.944092),  # M n=5, F n=5
+    "dj::left landing rfd 0-40ms":                                dict(mean_m=16746.09407,   sd_m=2113.565583,    mean_f=11668.52367,     sd_f=4835.069431),  # M n=5, F n=5
+    "dj::left landing rfd 0-60ms":                                dict(mean_m=22140.24493,   sd_m=7562.912806,    mean_f=10379.7255,      sd_f=3261.815377),  # M n=5, F n=5
+    "dj::left landing rfd 0-80ms":                                dict(mean_m=13483.45703,   sd_m=1796.527372,    mean_f=8950.404167,     sd_f=4437.376056),  # M n=5, F n=5
+    "dj::left p1 impulse":                                        dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::left p2 impulse":                                        dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::left peak braking force":                                dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::left peak braking power":                                dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::left peak landing force":                                dict(mean_m=2242.284533,   sd_m=857.6879708,    mean_f=1037.088833,     sd_f=395.7337959),  # M n=5, F n=5
+    "dj::left peak propulsive force":                             dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::left peak propulsive power":                             dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::left propulsive impulse":                                dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::left propulsive rfd":                                    dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::left propulsive work":                                   dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::left time to peak braking force":                        dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::left time to peak braking power":                        dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::left time to peak landing force":                        dict(mean_m=0.0754064,     sd_m=0.01631822761,  mean_f=0.07718783333,   sd_f=0.006893734212),  # M n=5, F n=5
+    "dj::left time to peak propulsive force":                     dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::left time to peak propulsive power":                     dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::min braking velocity":                                   dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::net impulse":                                            dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::p1 avg force":                                           dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::p1 avg power":                                           dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::p1 avg velocity":                                        dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::p1 duration":                                            dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::p1 impulse":                                             dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::p1 impulse sym. index":                                  dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::p1 p2 duration ratio":                                   dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::p1 p2 force ratio":                                      dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::p1 p2 power ratio":                                      dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::p1 p2 velocity ratio":                                   dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::p1 peak force":                                          dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::p1 peak power":                                          dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::p1 peak velocity":                                       dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::p2 avg force":                                           dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::p2 avg power":                                           dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::p2 avg velocity":                                        dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::p2 duration":                                            dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::p2 impulse":                                             dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::p2 impulse sym. index":                                  dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::p2 peak force":                                          dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::p2 peak power":                                          dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::p2 peak velocity":                                       dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::peak braking force":                                     dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::peak braking force sym. index":                          dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::peak braking power":                                     dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::peak braking power sym. index":                          dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::peak force":                                             dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::peak force time":                                        dict(mean_m=0.9528775467,  sd_m=0.3070480167,   mean_f=0.8099991833,    sd_f=0.1942274497),  # M n=5, F n=5
+    "dj::peak landing force":                                     dict(mean_m=3819.637633,   sd_m=1117.046231,    mean_f=2023.346667,     sd_f=487.9441822),  # M n=5, F n=5
+    "dj::peak landing force sym. index":                          dict(mean_m=0.4380666667,  sd_m=4.860994728,    mean_f=-7.465183333,    sd_f=19.95757423),  # M n=5, F n=5
+    "dj::peak power":                                             dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::peak propulsive force":                                  dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::peak propulsive force sym. index":                       dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::peak propulsive power":                                  dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::peak propulsive power sym. index":                       dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::peak propulsive velocity":                               dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::peak velocity":                                          dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::propulsive impulse":                                     dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::propulsive impulse sym. index":                          dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::propulsive rfd":                                         dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::propulsive rfd sym. index":                              dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::propulsive work":                                        dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::propulsive work sym. index":                             dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::rel. avg. propulsive force":                             dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::rel. propulsive impulse":                                dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::relative peak force":                                    dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::relative peak landing force":                            dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::relative peak power":                                    dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::right avg braking force":                                dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::right avg braking power":                                dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::right avg landing rfd":                                  dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::right avg propulsive force":                             dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::right avg propulsive power":                             dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::right braking impulse":                                  dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::right braking rfd":                                      dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::right braking work":                                     dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::right landing rfd 0-20ms":                               dict(mean_m=13859.05007,   sd_m=10388.49505,    mean_f=11794.364,       sd_f=6333.061822),  # M n=5, F n=5
+    "dj::right landing rfd 0-40ms":                               dict(mean_m=12728.59847,   sd_m=1904.882171,    mean_f=11427.854,       sd_f=2529.792172),  # M n=5, F n=5
+    "dj::right landing rfd 0-60ms":                               dict(mean_m=20906.10897,   sd_m=8760.949915,    mean_f=13124.31733,     sd_f=4264.595737),  # M n=5, F n=5
+    "dj::right landing rfd 0-80ms":                               dict(mean_m=11103.14873,   sd_m=1121.993537,    mean_f=9650.353,        sd_f=3280.045945),  # M n=5, F n=5
+    "dj::right p1 impulse":                                       dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::right p2 impulse":                                       dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::right peak braking force":                               dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::right peak braking power":                               dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::right peak landing force":                               dict(mean_m=2141.633333,   sd_m=731.7270853,    mean_f=1198.810333,     sd_f=225.8852822),  # M n=5, F n=5
+    "dj::right peak propulsive force":                            dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::right peak propulsive power":                            dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::right propulsive impulse":                               dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::right propulsive rfd":                                   dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::right propulsive work":                                  dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::right time to peak braking force":                       dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::right time to peak braking power":                       dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::right time to peak landing force":                       dict(mean_m=0.07678116667, sd_m=0.02166365501,  mean_f=0.09826466667,   sd_f=0.01540453421),  # M n=5, F n=5
+    "dj::right time to peak propulsive force":                    dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::right time to peak propulsive power":                    dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::rsi":                                                    dict(mean_m=0.7132011333,  sd_m=0.3422324564,   mean_f=0.9402826667,    sd_f=0.5172975235),  # M n=5, F n=5
+    "dj::rsi exponential":                                        dict(mean_m=0.2923863333,  sd_m=0.1171333813,   mean_f=0.3753955,       sd_f=0.2410939153),  # M n=5, F n=5
+    "dj::rsi modified":                                           dict(mean_m=0.3584141,     sd_m=0.1435851458,   mean_f=0.4601715,       sd_f=0.2955394924),  # M n=5, F n=5
+    "dj::takeoff time":                                           dict(mean_m=1.17762038,    sd_m=0.2301071003,   mean_f=0.9898956833,    sd_f=0.180610468),  # M n=5, F n=5
+    "dj::takeoff velocity":                                       dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::time to peak braking force":                             dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::time to peak braking force sym. index":                  dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::time to peak braking power":                             dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::time to peak braking power sym. index":                  dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::time to peak force":                                     dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::time to peak landing force":                             dict(mean_m=0.074267,      sd_m=0.01931402465,  mean_f=0.08484416667,   sd_f=0.009186407569),  # M n=5, F n=5
+    "dj::time to peak landing force sym. index":                  dict(mean_m=-0.2294033333, sd_m=5.377922294,    mean_f=-9.773433333,    sd_f=7.486294946),  # M n=5, F n=5
+    "dj::time to peak power":                                     dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::time to peak propulsive force":                          dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::time to peak propulsive force sym. index":               dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::time to peak propulsive power":                          dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::time to peak propulsive power sym. index":               dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "dj::time to takeoff":                                        dict(mean_m=1.1811044,     sd_m=0.2307441303,   mean_f=0.994967,        sd_f=0.1807839374),  # M n=5, F n=5
+    "dj::velocity peak power":                                    dict(mean_m=None,          sd_m=None,           mean_f=None,            sd_f=None),  # M n=1, F n=0
+    "imtp::body mass":                                            dict(mean_m=79.20867491,   sd_m=6.137467679,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::end of rise force":                                    dict(mean_m=1523.961092,   sd_m=136.9321555,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::end of rise force net":                                dict(mean_m=747.1893402,   sd_m=76.91488566,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::end of rise force relative":                           dict(mean_m=196.0730325,   sd_m=2.501719629,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::end of rise force relative net":                       dict(mean_m=96.07303249,   sd_m=2.501719629,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::force 100ms":                                          dict(mean_m=1210.326155,   sd_m=229.1400671,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::force 100ms left":                                     dict(mean_m=630.5832969,   sd_m=88.28968974,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::force 100ms left net":                                 dict(mean_m=242.197421,    sd_m=62.19708479,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::force 100ms left relative":                            dict(mean_m=80.9740452,    sd_m=6.399078482,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::force 100ms left relative net":                        dict(mean_m=30.9740452,    sd_m=6.399078482,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::force 100ms net":                                      dict(mean_m=433.5544029,   sd_m=190.5582987,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::force 100ms relative":                                 dict(mean_m=155.3415833,   sd_m=23.43465285,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::force 100ms relative net":                             dict(mean_m=55.34158326,   sd_m=23.43465285,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::force 100ms right":                                    dict(mean_m=579.7428578,   sd_m=148.8558613,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::force 100ms right net":                                dict(mean_m=191.3569819,   sd_m=134.1204937,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::force 100ms right relative":                           dict(mean_m=74.36753806,   sd_m=17.35370678,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::force 100ms right relative net":                       dict(mean_m=24.36753806,   sd_m=17.35370678,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::force 100ms si":                                       dict(mean_m=4.903969552,   sd_m=8.338373594,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::force 150ms":                                          dict(mean_m=1342.725779,   sd_m=214.5459009,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::force 150ms left":                                     dict(mean_m=699.4465416,   sd_m=78.49055452,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::force 150ms left net":                                 dict(mean_m=311.0606657,   sd_m=48.88304728,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::force 150ms left relative":                            dict(mean_m=89.89319794,   sd_m=3.324200087,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::force 150ms left relative net":                        dict(mean_m=39.89319794,   sd_m=3.324200087,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::force 150ms net":                                      dict(mean_m=565.9540267,   sd_m=171.8458105,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::force 150ms relative":                                 dict(mean_m=172.4388907,   sd_m=19.94668788,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::force 150ms relative net":                             dict(mean_m=72.43889071,   sd_m=19.94668788,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::force 150ms right":                                    dict(mean_m=643.279237,    sd_m=152.421325,     mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::force 150ms right net":                                dict(mean_m=254.8933611,   sd_m=136.9452251,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::force 150ms right relative":                           dict(mean_m=82.54569277,   sd_m=17.45773121,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::force 150ms right relative net":                       dict(mean_m=32.54569277,   sd_m=17.45773121,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::force 150ms si":                                       dict(mean_m=4.77802251,    sd_m=9.442558103,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::force 200ms":                                          dict(mean_m=1423.362375,   sd_m=199.7597338,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::force 200ms left":                                     dict(mean_m=738.8545681,   sd_m=62.13382313,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::force 200ms left net":                                 dict(mean_m=350.4686922,   sd_m=32.30464854,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::force 200ms left relative":                            dict(mean_m=95.08981276,   sd_m=0.9629414045,   mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::force 200ms left relative net":                        dict(mean_m=45.08981276,   sd_m=0.9629414045,   mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::force 200ms net":                                      dict(mean_m=646.5906233,   sd_m=155.5093119,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::force 200ms relative":                                 dict(mean_m=182.9033104,   sd_m=17.33047843,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::force 200ms relative net":                             dict(mean_m=82.90331036,   sd_m=17.33047843,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::force 200ms right":                                    dict(mean_m=684.507807,    sd_m=159.0375251,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::force 200ms right net":                                dict(mean_m=296.1219311,   sd_m=142.3009257,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::force 200ms right relative":                           dict(mean_m=87.8134976,    sd_m=17.86588759,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::force 200ms right relative net":                       dict(mean_m=37.8134976,    sd_m=17.86588759,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::force 200ms si":                                       dict(mean_m=4.724551473,   sd_m=10.5346349,     mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::force 250ms":                                          dict(mean_m=1515.402173,   sd_m=161.8796202,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::force 250ms left":                                     dict(mean_m=780.9306405,   sd_m=33.06207303,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::force 250ms left net":                                 dict(mean_m=392.5447646,   sd_m=10.73601744,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::force 250ms left relative":                            dict(mean_m=100.7240925,   sd_m=3.948712211,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::force 250ms left relative net":                        dict(mean_m=50.72409253,   sd_m=3.948712211,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::force 250ms net":                                      dict(mean_m=738.6304208,   sd_m=124.194812,     mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::force 250ms relative":                                 dict(mean_m=195.0624717,   sd_m=14.65691568,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::force 250ms relative net":                             dict(mean_m=95.0624717,    sd_m=14.65691568,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::force 250ms right":                                    dict(mean_m=734.471532,    sd_m=148.7816583,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::force 250ms right net":                                dict(mean_m=346.0856561,   sd_m=133.1296,       mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::force 250ms right relative":                           dict(mean_m=94.33837917,   sd_m=16.67994333,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::force 250ms right relative net":                       dict(mean_m=44.33837917,   sd_m=16.67994333,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::force 250ms si":                                       dict(mean_m=3.993564004,   sd_m=10.28921831,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::force 50ms":                                           dict(mean_m=1101.60925,    sd_m=222.4149525,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::force 50ms left":                                      dict(mean_m=571.319908,    sd_m=96.90692298,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::force 50ms left net":                                  dict(mean_m=182.9340321,   sd_m=71.5338827,     mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::force 50ms left relative":                             dict(mean_m=73.27720039,   sd_m=8.060317038,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::force 50ms left relative net":                         dict(mean_m=23.27720039,   sd_m=8.060317038,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::force 50ms net":                                       dict(mean_m=324.8374986,   sd_m=175.8190597,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::force 50ms relative":                                  dict(mean_m=141.1697588,   sd_m=21.10751705,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::force 50ms relative net":                              dict(mean_m=41.16975878,   sd_m=21.10751705,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::force 50ms right":                                     dict(mean_m=530.2893423,   sd_m=126.6728514,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::force 50ms right net":                                 dict(mean_m=141.9034664,   sd_m=105.0801217,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::force 50ms right relative":                            dict(mean_m=67.89255839,   sd_m=13.08725874,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::force 50ms right relative net":                        dict(mean_m=17.89255839,   sd_m=13.08725874,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::force 50ms si":                                        dict(mean_m=4.164748002,   sd_m=4.606495155,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::force at max rfd":                                     dict(mean_m=1287.16018,    sd_m=127.3614888,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::force at max rfd left":                                dict(mean_m=677.5552222,   sd_m=116.4238211,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::force at max rfd left net":                            dict(mean_m=289.1693463,   sd_m=136.3976346,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::force at max rfd left relative":                       dict(mean_m=88.016684,     sd_m=19.9933343,     mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::force at max rfd left relative net":                   dict(mean_m=38.016684,     sd_m=19.9933343,     mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::force at max rfd net":                                 dict(mean_m=510.3884281,   sd_m=170.9231272,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::force at max rfd relative":                            dict(mean_m=166.8574981,   sd_m=26.28835773,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::force at max rfd relative net":                        dict(mean_m=66.85749809,   sd_m=26.28835773,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::force at max rfd right":                               dict(mean_m=609.6049577,   sd_m=11.34799041,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::force at max rfd right net":                           dict(mean_m=221.2190818,   sd_m=39.69699698,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::force at max rfd right relative":                      dict(mean_m=78.84081409,   sd_m=7.078210995,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::force at max rfd right relative net":                  dict(mean_m=28.84081409,   sd_m=7.078210995,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::force at max rfd si":                                  dict(mean_m=5.19610329,    sd_m=7.931903825,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::impulse 100ms":                                        dict(mean_m=107.604006,    sd_m=20.48650919,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::impulse 150ms":                                        dict(mean_m=171.1020911,   sd_m=31.7411947,     mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::impulse 200ms":                                        dict(mean_m=240.4120784,   sd_m=42.2886357,     mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::impulse 250ms":                                        dict(mean_m=313.5982278,   sd_m=51.29450942,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::impulse 50ms":                                         dict(mean_m=49.97245195,   sd_m=9.486313578,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::impulse at max rfd":                                   dict(mean_m=385.7619896,   sd_m=509.8016989,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::max rfd":                                              dict(mean_m=7912.470566,   sd_m=1774.841924,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::onset force":                                          dict(mean_m=924.0386702,   sd_m=126.667605,     mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::onset force net":                                      dict(mean_m=147.2669184,   sd_m=74.31056037,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::onset force relative":                                 dict(mean_m=118.6587175,   sd_m=8.685733515,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::onset force relative net":                             dict(mean_m=18.65871751,   sd_m=8.685733515,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::onset time":                                           dict(mean_m=0.99375,       sd_m=0.07825067053,  mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::peak force left":                                      dict(mean_m=1108.790149,   sd_m=85.77347775,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::peak force left net":                                  dict(mean_m=720.4042732,   sd_m=69.73497486,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::peak force left relative":                             dict(mean_m=142.9398225,   sd_m=9.527935491,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::peak force left relative net":                         dict(mean_m=92.93982249,   sd_m=9.527935491,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::peak force net":                                       dict(mean_m=1385.278746,   sd_m=128.4643445,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::peak force relative":                                  dict(mean_m=278.2288637,   sd_m=5.145940523,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::peak force relative net":                              dict(mean_m=178.2288637,   sd_m=5.145940523,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::peak force right":                                     dict(mean_m=1053.260348,   sd_m=161.4747751,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::peak force right net":                                 dict(mean_m=664.8744725,   sd_m=138.9666137,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::peak force right relative":                            dict(mean_m=135.2890412,   sd_m=14.67362607,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::peak force right relative net":                        dict(mean_m=85.28904122,   sd_m=14.67362607,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::peak force si":                                        dict(mean_m=2.806707117,   sd_m=8.835167329,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::rfd 100ms":                                            dict(mean_m=2862.874845,   sd_m=1216.020661,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::rfd 150ms":                                            dict(mean_m=2791.247389,   sd_m=668.9765617,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::rfd 200ms":                                            dict(mean_m=2496.618524,   sd_m=417.1194758,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::rfd 250ms":                                            dict(mean_m=2365.454009,   sd_m=247.1212051,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::rfd 50ms":                                             dict(mean_m=3551.411602,   sd_m=2042.414923,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::rfd impulse":                                          dict(mean_m=536.4724127,   sd_m=389.9685186,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::steadiness rsme force":                                dict(mean_m=263.8841782,   sd_m=83.0368858,     mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::steadiness rsme rfd":                                  dict(mean_m=1320.877514,   sd_m=244.3802331,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::system weight":                                        dict(mean_m=776.7717518,   sd_m=60.18799741,    mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::time to force end of rise":                            dict(mean_m=0.7089699074,  sd_m=0.2926359521,   mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::time to peak force":                                   dict(mean_m=1.715451389,   sd_m=0.1056544504,   mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "imtp::time to peak rfd":                                     dict(mean_m=0.2789641204,  sd_m=0.3221964079,   mean_f=None,            sd_f=None),  # M n=3, F n=0
+    "sj::avg landing rfd":                                        dict(mean_m=65977.58745,   sd_m=59884.86857,    mean_f=22213.27319,     sd_f=8655.286239),  # M n=27, F n=7
+    "sj::avg landing rfd sym. index":                             dict(mean_m=0.02791790886, sd_m=19.26076667,    mean_f=-9.468238095,    sd_f=31.04272154),  # M n=27, F n=7
+    "sj::avg propulsive force sym. index":                        dict(mean_m=1.526568028,   sd_m=3.179438036,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "sj::avg propulsive power sym. index":                        dict(mean_m=1.82807541,    sd_m=4.242535756,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "sj::avg. propulsive force":                                  dict(mean_m=1094.548791,   sd_m=117.1205223,    mean_f=848.5694286,     sd_f=130.7908577),  # M n=27, F n=7
+    "sj::avg. propulsive velocity":                               dict(mean_m=0.8791385468,  sd_m=0.1775566088,   mean_f=0.8639187381,    sd_f=0.1732585256),  # M n=27, F n=7
+    "sj::avg. rfd":                                               dict(mean_m=2628.069404,   sd_m=1103.608254,    mean_f=2554.597595,     sd_f=1582.937917),  # M n=27, F n=7
+    "sj::avg. rfd sym. index":                                    dict(mean_m=2.701856139,   sd_m=7.373163581,    mean_f=0.5604666667,    sd_f=9.165245273),  # M n=27, F n=7
+    "sj::body mass":                                              dict(mean_m=75.8377476,    sd_m=5.706161302,    mean_f=59.0726681,      sd_f=7.364086646),  # M n=27, F n=7
+    "sj::body weight":                                            dict(mean_m=743.7141451,   sd_m=55.95819883,    mean_f=579.3050238,     sd_f=72.21671568),  # M n=27, F n=7
+    "sj::body weight sd":                                         dict(mean_m=7.238277076,   sd_m=1.175088731,    mean_f=7.0095,          sd_f=0.02672718827),  # M n=27, F n=7
+    "sj::contact time":                                           dict(mean_m=0.5386239352,  sd_m=0.2871596477,   mean_f=0.4117931667,    sd_f=0.09942743726),  # M n=27, F n=7
+    "sj::flight threshold":                                       dict(mean_m=4.658666341,   sd_m=1.598653463,    mean_f=4.19802381,      sd_f=1.402824243),  # M n=27, F n=7
+    "sj::flight time":                                            dict(mean_m=0.4199480144,  sd_m=0.04995830114,  mean_f=0.3559515714,    sd_f=0.04338801605),  # M n=27, F n=7
+    "sj::force peak power":                                       dict(mean_m=1431.020116,   sd_m=118.549825,     mean_f=1100.686405,     sd_f=163.6533862),  # M n=27, F n=7
+    "sj::initiation threshold":                                   dict(mean_m=763.7141451,   sd_m=55.95819883,    mean_f=599.3050238,     sd_f=72.21671568),  # M n=27, F n=7
+    "sj::jump height ni":                                         dict(mean_m=22.13511541,   sd_m=4.261191488,    mean_f=15.96734048,     sd_f=5.275230264),  # M n=27, F n=7
+    "sj::jump momentum":                                          dict(mean_m=156.9383124,   sd_m=19.85484848,    mean_f=103.062681,      sd_f=19.40308509),  # M n=27, F n=7
+    "sj::jump start time":                                        dict(mean_m=0.5782893354,  sd_m=0.1008244541,   mean_f=0.5734454643,    sd_f=0.0811708251),  # M n=27, F n=7
+    "sj::jump threshold time":                                    dict(mean_m=0.5782893354,  sd_m=0.1008244541,   mean_f=0.5734454643,    sd_f=0.0811708251),  # M n=27, F n=7
+    "sj::landing peak force time":                                dict(mean_m=1.601149099,   sd_m=0.2871547376,   mean_f=1.42192125,      sd_f=0.1521357942),  # M n=27, F n=7
+    "sj::landing rfd 0-20ms":                                     dict(mean_m=97110.99393,   sd_m=79120.5688,     mean_f=None,            sd_f=None),  # M n=10, F n=0
+    "sj::landing rfd 0-20ms sym. index":                          dict(mean_m=8.019013875,   sd_m=28.84350342,    mean_f=None,            sd_f=None),  # M n=10, F n=0
+    "sj::landing rfd 0-40ms":                                     dict(mean_m=51879.27313,   sd_m=24666.64024,    mean_f=None,            sd_f=None),  # M n=10, F n=0
+    "sj::landing rfd 0-40ms sym. index":                          dict(mean_m=8.263552685,   sd_m=21.33525637,    mean_f=None,            sd_f=None),  # M n=10, F n=0
+    "sj::landing rfd 0-60ms":                                     dict(mean_m=33008.63058,   sd_m=13456.45456,    mean_f=None,            sd_f=None),  # M n=10, F n=0
+    "sj::landing rfd 0-60ms sym. index":                          dict(mean_m=6.223702474,   sd_m=18.83556753,    mean_f=None,            sd_f=None),  # M n=10, F n=0
+    "sj::landing rfd 0-80ms":                                     dict(mean_m=22545.17289,   sd_m=5752.531736,    mean_f=None,            sd_f=None),  # M n=10, F n=0
+    "sj::landing rfd 0-80ms sym. index":                          dict(mean_m=7.682662403,   sd_m=21.50436673,    mean_f=None,            sd_f=None),  # M n=10, F n=0
+    "sj::landing time":                                           dict(mean_m=1.536869557,   sd_m=0.2769426016,   mean_f=1.341190393,     sd_f=0.1484076113),  # M n=27, F n=7
+    "sj::left avg landing rfd":                                   dict(mean_m=38304.89857,   sd_m=30580.90775,    mean_f=11369.25224,     sd_f=5700.585643),  # M n=27, F n=7
+    "sj::left avg propulsive force":                              dict(mean_m=551.1077256,   sd_m=30.47162288,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "sj::left avg propulsive power":                              dict(mean_m=532.8730804,   sd_m=58.69969483,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "sj::left avg rfd":                                           dict(mean_m=1347.347516,   sd_m=545.8036993,    mean_f=1295.747524,     sd_f=810.5727266),  # M n=27, F n=7
+    "sj::left landing rfd 0-20ms":                                dict(mean_m=44764.83574,   sd_m=33240.46716,    mean_f=None,            sd_f=None),  # M n=10, F n=0
+    "sj::left landing rfd 0-40ms":                                dict(mean_m=26955.24464,   sd_m=11150.40386,    mean_f=None,            sd_f=None),  # M n=10, F n=0
+    "sj::left landing rfd 0-60ms":                                dict(mean_m=16813.44501,   sd_m=6723.919239,    mean_f=None,            sd_f=None),  # M n=10, F n=0
+    "sj::left landing rfd 0-80ms":                                dict(mean_m=11906.9459,    sd_m=3135.181582,    mean_f=None,            sd_f=None),  # M n=10, F n=0
+    "sj::left net impulse":                                       dict(mean_m=80.58877186,   sd_m=13.42444355,    mean_f=50.48216667,     sd_f=12.75901017),  # M n=27, F n=7
+    "sj::left p1 impulse":                                        dict(mean_m=163.5323024,   sd_m=92.45383488,    mean_f=90.65827857,     sd_f=18.27389845),  # M n=27, F n=7
+    "sj::left p2 impulse":                                        dict(mean_m=110.7431948,   sd_m=23.32052179,    mean_f=75.2089,         sd_f=15.08457261),  # M n=27, F n=7
+    "sj::left peak force":                                        dict(mean_m=777.4638555,   sd_m=74.77417154,    mean_f=588.0704524,     sd_f=111.9066317),  # M n=27, F n=7
+    "sj::left peak landing force":                                dict(mean_m=2184.724637,   sd_m=754.3737521,    mean_f=1159.05581,      sd_f=408.0442183),  # M n=27, F n=7
+    "sj::left peak propulsive force":                             dict(mean_m=753.8561658,   sd_m=36.73130497,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "sj::left peak propulsive power":                             dict(mean_m=1384.176658,   sd_m=167.1211741,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "sj::left propulsive impulse":                                dict(mean_m=274.2755064,   sd_m=89.04031071,    mean_f=165.8670762,     sd_f=30.39315934),  # M n=27, F n=7
+    "sj::left propulsive rfd":                                    dict(mean_m=1319.157153,   sd_m=434.7278716,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "sj::left propulsive work":                                   dict(mean_m=224.8418923,   sd_m=32.51897793,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "sj::left time to peak force":                                dict(mean_m=0.4142316204,  sd_m=0.2904990313,   mean_f=0.2956688571,    sd_f=0.1142009455),  # M n=27, F n=7
+    "sj::left time to peak landing force":                        dict(mean_m=0.067340607,   sd_m=0.02808291717,  mean_f=0.08273995238,   sd_f=0.01287218304),  # M n=27, F n=7
+    "sj::left time to peak power":                                dict(mean_m=0.35901625,    sd_m=0.08444537666,  mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "sj::left time to peak propulsive force":                     dict(mean_m=0.3213335417,  sd_m=0.09685659247,  mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "sj::left time to peak propulsive power":                     dict(mean_m=0.35901625,    sd_m=0.08444537666,  mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "sj::net impulse":                                            dict(mean_m=156.9383216,   sd_m=19.85496354,    mean_f=103.0617143,     sd_f=19.40332676),  # M n=27, F n=7
+    "sj::net impulse sym. index":                                 dict(mean_m=-0.4143571852, sd_m=8.662198527,    mean_f=-3.116538095,    sd_f=7.663940702),  # M n=27, F n=7
+    "sj::p1 avg force":                                           dict(mean_m=1045.457705,   sd_m=133.4284002,    mean_f=836.3189214,     sd_f=142.3672102),  # M n=27, F n=7
+    "sj::p1 avg power":                                           dict(mean_m=304.6837354,   sd_m=54.25763057,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "sj::p1 avg velocity":                                        dict(mean_m=0.2645028921,  sd_m=0.03257921234,  mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "sj::p1 duration":                                            dict(mean_m=0.3544230298,  sd_m=0.2950361582,   mean_f=0.2347714524,    sd_f=0.07995558856),  # M n=27, F n=7
+    "sj::p1 impulse":                                             dict(mean_m=74.14897776,   sd_m=13.71902194,    mean_f=51.53148571,     sd_f=9.701523646),  # M n=27, F n=7
+    "sj::p1 impulse sym. index":                                  dict(mean_m=-1.114079453,  sd_m=4.775043166,    mean_f=-2.091985714,    sd_f=6.530603923),  # M n=27, F n=7
+    "sj::p1 p2 duration ratio":                                   dict(mean_m=2.060343801,   sd_m=1.90804627,     mean_f=1.3323,          sd_f=0.3983375874),  # M n=27, F n=7
+    "sj::p1 p2 force ratio":                                      dict(mean_m=0.871086982,   sd_m=0.0853360395,   mean_f=0.9533838095,    sd_f=0.06717003219),  # M n=27, F n=7
+    "sj::p1 p2 power ratio":                                      dict(mean_m=0.166729886,   sd_m=0.01848091169,  mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "sj::p1 p2 velocity ratio":                                   dict(mean_m=0.1627855325,  sd_m=0.01604597694,  mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "sj::p1 peak force":                                          dict(mean_m=1239.879148,   sd_m=142.9425055,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "sj::p1 peak power":                                          dict(mean_m=964.9962849,   sd_m=207.9171508,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "sj::p1 peak velocity":                                       dict(mean_m=0.7683736022,  sd_m=0.09330140674,  mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "sj::p2 avg force":                                           dict(mean_m=1200.237334,   sd_m=97.23183002,    mean_f=874.9725667,     sd_f=120.2021125),  # M n=27, F n=7
+    "sj::p2 avg power":                                           dict(mean_m=1795.620893,   sd_m=227.6492361,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "sj::p2 avg velocity":                                        dict(mean_m=1.59883442,    sd_m=0.1097220102,   mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "sj::p2 duration":                                            dict(mean_m=0.1842006276,  sd_m=0.03777833973,  mean_f=0.1770217143,    sd_f=0.02989708077),  # M n=27, F n=7
+    "sj::p2 impulse":                                             dict(mean_m=82.78939941,   sd_m=12.84633326,    mean_f=51.53148571,     sd_f=9.701523646),  # M n=27, F n=7
+    "sj::p2 impulse sym. index":                                  dict(mean_m=0.2589806082,  sd_m=3.871317771,    mean_f=-2.472416667,    sd_f=4.447886051),  # M n=27, F n=7
+    "sj::p2 peak force":                                          dict(mean_m=1490.830066,   sd_m=92.503424,      mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "sj::p2 peak power":                                          dict(mean_m=2751.605499,   sd_m=353.7531182,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "sj::p2 peak velocity":                                       dict(mean_m=2.215796426,   sd_m=0.117235742,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "sj::peak force":                                             dict(mean_m=1558.855748,   sd_m=155.6730896,    mean_f=1191.274357,     sd_f=206.132843),  # M n=27, F n=7
+    "sj::peak force sym. index":                                  dict(mean_m=-0.3085892747, sd_m=3.435017053,    mean_f=-1.572021429,    sd_f=3.086769741),  # M n=27, F n=7
+    "sj::peak force time":                                        dict(mean_m=0.9961489033,  sd_m=0.285608796,    mean_f=0.8698112262,    sd_f=0.1591651596),  # M n=27, F n=7
+    "sj::peak landing force":                                     dict(mean_m=3713.033771,   sd_m=989.739567,     mean_f=2239.300524,     sd_f=550.1556684),  # M n=27, F n=7
+    "sj::peak landing force sym. index":                          dict(mean_m=0.4680042603,  sd_m=12.12877951,    mean_f=-6.55265,        sd_f=21.3058373),  # M n=27, F n=7
+    "sj::peak power":                                             dict(mean_m=2854.956418,   sd_m=426.6425153,    mean_f=1923.715524,     sd_f=392.1503108),  # M n=27, F n=7
+    "sj::peak propulsive force":                                  dict(mean_m=1558.855748,   sd_m=155.6730896,    mean_f=1191.274357,     sd_f=206.132843),  # M n=27, F n=7
+    "sj::peak propulsive force sym. index":                       dict(mean_m=1.140945307,   sd_m=2.175582471,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "sj::peak propulsive power":                                  dict(mean_m=2854.956418,   sd_m=426.6425153,    mean_f=1923.715524,     sd_f=392.1503108),  # M n=27, F n=7
+    "sj::peak propulsive power sym. index":                       dict(mean_m=0.6229356967,  sd_m=3.085900669,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "sj::peak propulsive velocity":                               dict(mean_m=2.238616783,   sd_m=0.1868493258,   mean_f=1.964956595,     sd_f=0.2559748807),  # M n=27, F n=7
+    "sj::peak velocity":                                          dict(mean_m=2.238616783,   sd_m=0.1868493258,   mean_f=1.964956595,     sd_f=0.2559748807),  # M n=27, F n=7
+    "sj::propulsive duration":                                    dict(mean_m=0.5386239352,  sd_m=0.2871596477,   mean_f=0.4117931667,    sd_f=0.09942743726),  # M n=27, F n=7
+    "sj::propulsive impulse":                                     dict(mean_m=156.9383124,   sd_m=19.85484848,    mean_f=103.062681,      sd_f=19.40308509),  # M n=27, F n=7
+    "sj::propulsive impulse sym. index":                          dict(mean_m=-0.6438762731, sd_m=4.147847499,    mean_f=-2.327045238,    sd_f=4.978517299),  # M n=27, F n=7
+    "sj::propulsive rfd":                                         dict(mean_m=2563.826548,   sd_m=866.3818558,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "sj::propulsive rfd sym. index":                              dict(mean_m=3.440158301,   sd_m=2.680952212,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "sj::propulsive start time":                                  dict(mean_m=47.26620931,   sd_m=29.31089311,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "sj::propulsive work":                                        dict(mean_m=470.7070834,   sd_m=90.39599742,    mean_f=288.552619,      sd_f=74.92955267),  # M n=27, F n=7
+    "sj::propulsive work sym. index":                             dict(mean_m=1.82807541,    sd_m=4.242535756,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "sj::rel. avg. propulsive force":                             dict(mean_m=14.7492519,    sd_m=0.848108288,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "sj::rel. propulsive impulse":                                dict(mean_m=2.060311938,   sd_m=0.1222242191,   mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "sj::relative peak force":                                    dict(mean_m=1.930494163,   sd_m=0.1907426975,   mean_f=None,            sd_f=None),  # M n=10, F n=0
+    "sj::relative peak landing force":                            dict(mean_m=4.976291969,   sd_m=1.254889319,    mean_f=3.860813095,     sd_f=0.8224170076),  # M n=27, F n=7
+    "sj::relative peak power":                                    dict(mean_m=37.75580789,   sd_m=5.598079098,    mean_f=32.71387381,     sd_f=6.512457139),  # M n=27, F n=7
+    "sj::right avg landing rfd":                                  dict(mean_m=36509.39221,   sd_m=27496.14649,    mean_f=14951.3091,      sd_f=8871.744867),  # M n=27, F n=7
+    "sj::right avg propulsive force":                             dict(mean_m=535.4948892,   sd_m=50.39325357,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "sj::right avg propulsive power":                             dict(mean_m=516.0240664,   sd_m=84.9666805,     mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "sj::right avg rfd":                                          dict(mean_m=1283.061449,   sd_m=550.4697158,    mean_f=1281.794071,     sd_f=809.8352887),  # M n=27, F n=7
+    "sj::right landing rfd 0-20ms":                               dict(mean_m=52346.15786,   sd_m=47324.54843,    mean_f=None,            sd_f=None),  # M n=10, F n=0
+    "sj::right landing rfd 0-40ms":                               dict(mean_m=24924.029,     sd_m=14234.10769,    mean_f=None,            sd_f=None),  # M n=10, F n=0
+    "sj::right landing rfd 0-60ms":                               dict(mean_m=16195.1859,    sd_m=7950.990251,    mean_f=None,            sd_f=None),  # M n=10, F n=0
+    "sj::right landing rfd 0-80ms":                               dict(mean_m=10638.227,     sd_m=4088.625609,    mean_f=None,            sd_f=None),  # M n=10, F n=0
+    "sj::right net impulse":                                      dict(mean_m=79.38066087,   sd_m=12.85351318,    mean_f=52.58109524,     sd_f=7.038013416),  # M n=27, F n=7
+    "sj::right p1 impulse":                                       dict(mean_m=172.6469502,   sd_m=124.239025,     mean_f=95.20240238,     sd_f=24.19650892),  # M n=27, F n=7
+    "sj::right p2 impulse":                                       dict(mean_m=109.8025022,   sd_m=20.50492097,    mean_f=78.77213571,     sd_f=13.86921153),  # M n=27, F n=7
+    "sj::right peak force":                                       dict(mean_m=783.7408264,   sd_m=90.00031741,    mean_f=603.9181429,     sd_f=96.62871006),  # M n=27, F n=7
+    "sj::right peak landing force":                               dict(mean_m=2106.18407,    sd_m=602.8381636,    mean_f=1338.532286,     sd_f=418.570436),  # M n=27, F n=7
+    "sj::right peak propulsive force":                            dict(mean_m=738.1633876,   sd_m=58.90390356,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "sj::right peak propulsive power":                            dict(mean_m=1369.732279,   sd_m=195.9409925,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "sj::right propulsive impulse":                               dict(mean_m=282.4494895,   sd_m=122.1301579,    mean_f=173.9744905,     sd_f=31.95417947),  # M n=27, F n=7
+    "sj::right propulsive rfd":                                   dict(mean_m=1239.469951,   sd_m=423.9803721,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "sj::right propulsive work":                                  dict(mean_m=216.4843784,   sd_m=30.23923374,    mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "sj::right time to peak force":                               dict(mean_m=0.4199460031,  sd_m=0.2846569085,   mean_f=0.2954826667,    sd_f=0.1155658074),  # M n=27, F n=7
+    "sj::right time to peak landing force":                       dict(mean_m=0.065656857,   sd_m=0.02401273541,  mean_f=0.08068995238,   sd_f=0.01750147983),  # M n=27, F n=7
+    "sj::right time to peak power":                               dict(mean_m=0.3583920833,  sd_m=0.08198885468,  mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "sj::right time to peak propulsive force":                    dict(mean_m=0.3248407639,  sd_m=0.09465374744,  mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "sj::right time to peak propulsive power":                    dict(mean_m=0.3583920833,  sd_m=0.08198885468,  mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "sj::rsi":                                                    dict(mean_m=0.9519319968,  sd_m=0.2561298335,   mean_f=0.936050119,     sd_f=0.2982867443),  # M n=27, F n=7
+    "sj::rsi modified":                                           dict(mean_m=0.4992246588,  sd_m=0.1620858051,   mean_f=0.4209962381,    sd_f=0.1832986393),  # M n=27, F n=7
+    "sj::takeoff time":                                           dict(mean_m=1.116903394,   sd_m=0.2869676072,   mean_f=0.9852371548,    sd_f=0.1439164514),  # M n=27, F n=7
+    "sj::takeoff velocity":                                       dict(mean_m=2.068984873,   sd_m=0.2052908925,   mean_f=1.747288452,     sd_f=0.2897216536),  # M n=27, F n=7
+    "sj::time to peak force":                                     dict(mean_m=0.4178564506,  sd_m=0.2876142256,   mean_f=0.2963667381,    sd_f=0.1140381587),  # M n=27, F n=7
+    "sj::time to peak landing force":                             dict(mean_m=0.0642671965,  sd_m=0.02367809108,  mean_f=0.08072854762,   sd_f=0.01440232233),  # M n=27, F n=7
+    "sj::time to peak landing force sym. index":                  dict(mean_m=-0.01997719699, sd_m=9.454646077,    mean_f=1.724354762,     sd_f=6.92335907),  # M n=27, F n=7
+    "sj::time to peak power":                                     dict(mean_m=0.4631534465,  sd_m=0.287667575,    mean_f=0.3333034048,    sd_f=0.1005039097),  # M n=27, F n=7
+    "sj::time to peak power sym. index":                          dict(mean_m=0.03490947328, sd_m=0.6470212336,   mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "sj::time to peak propulsive force":                          dict(mean_m=0.3222688889,  sd_m=0.09652100901,  mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "sj::time to peak propulsive force sym. index":               dict(mean_m=-0.6844778174, sd_m=0.6569702332,   mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "sj::time to peak propulsive power":                          dict(mean_m=0.3585826389,  sd_m=0.08266406749,  mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "sj::time to peak propulsive power sym. index":               dict(mean_m=0.03490947328, sd_m=0.6470212336,   mean_f=None,            sd_f=None),  # M n=6, F n=0
+    "sj::time to peak si":                                        dict(mean_m=-1.368052624,  sd_m=4.222750871,    mean_f=0.1534333333,    sd_f=1.156432921),  # M n=27, F n=7
+    "sj::velocity peak power":                                    dict(mean_m=1.986256307,   sd_m=0.1582177313,   mean_f=1.744664357,     sd_f=0.2399024865),  # M n=27, F n=7
+}
 # Set di norme selezionabili dalla barra laterale. Il primo è il default.
 NORM_SETS = {
     "Letteratura": LITERATURE_POP,
